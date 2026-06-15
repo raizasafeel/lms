@@ -888,8 +888,8 @@ def get_transformed_fields(meta: list, data: dict = None):
 		if row.fieldtype not in ["Column Break", "Section Break"]:
 			if row.fieldtype in ["Attach", "Attach Image"]:
 				fieldtype = "Upload"
-				if data and data.get(row.fieldname):
-					data[row.fieldname] = get_file_info(data.get(row.fieldname))
+				# Leave the raw file_url string in place. SettingFields.vue renders
+				# the preview <img> and file name from a string; a dict breaks both.
 			elif row.fieldtype == "Check":
 				fieldtype = "checkbox"
 			else:

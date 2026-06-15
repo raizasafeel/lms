@@ -4,11 +4,13 @@ import re
 import zipfile
 
 import frappe
+from frappe.tests import UnitTestCase
 
 from lms.lms.api import (
 	export_course_as_zip,
 	get_certified_participants,
 	get_course_assessment_progress,
+	get_transformed_fields,
 	import_course_from_zip,
 )
 from lms.lms.course_import_export import sanitize_string
@@ -177,3 +179,23 @@ class TestLMSAPI(BaseTestUtils):
 			"John#Doe$", allow_spaces=True, max_length=50, replacement_char=None, escape_html_content=True
 		)
 		self.assertEqual(result, "JohnDoe")
+
+
+class TestTransformedFields(UnitTestCase):
+	def test_attach_field_stays_a_url_string(self):
+		# get_transformed_fields must leave Attach/Attach Image values as the
+		# raw file_url string. SettingFields.vue renders the preview <img> and
+		# file name from a string; a {file_url, file_name, ...} dict breaks both
+		# (TypeError on .split, and src="[object Object]").
+		meta = [
+			frappe._dict(fieldtype="Attach Image", fieldname="header_img", label="Header Image"),
+			frappe._dict(fieldtype="Attach", fieldname="doc", label="Doc"),
+		]
+		data = {"header_img": "/files/logo.png", "doc": "/files/terms.pdf"}
+
+		fields = get_transformed_fields(meta, data)
+
+		self.assertEqual(data["header_img"], "/files/logo.png")
+		self.assertEqual(data["doc"], "/files/terms.pdf")
+		self.assertEqual(fields[0]["type"], "Upload")
+		self.assertEqual(fields[1]["type"], "Upload")
