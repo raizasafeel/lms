@@ -1,12 +1,17 @@
 # Copyright (c) 2021, FOSS United and Contributors
 # See license.txt
 
+import threading
+import time
+from unittest.mock import patch
+
 import frappe
 import frappe.client
 from frappe.exceptions import FrappeTypeError
 from frappe.utils import add_days, nowdate
 
 from lms.lms.api import save_certificate_details, save_evaluation_details
+from lms.lms.doctype.lms_certificate import lms_certificate as cert_module
 from lms.lms.doctype.lms_certificate.lms_certificate import (
 	get_default_certificate_template,
 	is_certified,
@@ -303,3 +308,88 @@ class TestLMSCertificate(BaseTestUtils):
 
 		frappe.set_user(self.member_a)
 		self.assertEqual(is_certified(self.course.name), course_level.name)
+
+	def test_create_certificate_returns_the_course_level_certificate_over_any_batch(self):
+		course_level = self._certificate(self.member_a, None, self.evaluator_a)
+		newer = self._certificate(self.member_a, self.batch_b, self.evaluator_b)
+		frappe.db.set_value("LMS Certificate", newer.name, "issue_date", add_days(nowdate(), 1))
+
+		frappe.set_user(self.member_a)
+		self.assertEqual(cert_module.create_certificate(self.course.name).name, course_level.name)
+
+
+class TestCreateCertificateRace(BaseTestUtils):
+	"""Regression test for #2408: parallel create_certificate requests must
+	not produce duplicate certificates for the same member and course."""
+
+	def setUp(self):
+		super().setUp()
+		self.member = self._create_user("racer2408@example.com", "Race", "User", ["LMS Student"])
+		self.course = self._create_course(title="Race Cert Course 2408")
+		frappe.db.set_value("LMS Course", self.course.name, "enable_certification", 1)
+		self.enrollment = self._create_enrollment(self.member.email, self.course.name).name
+		frappe.db.set_value("LMS Enrollment", self.enrollment, "progress", 100)
+		# Other connections (the worker threads) only see committed data.
+		frappe.db.commit()  # nosemgrep: frappe-manual-commit - worker threads only see committed fixtures
+
+	def tearDown(self):
+		certificates = frappe.get_all(
+			"LMS Certificate",
+			filters={"member": self.member.email, "course": self.course.name},
+			pluck="name",
+		)
+		for name in certificates:
+			frappe.delete_doc("LMS Certificate", name, force=True)
+		# Committed for the worker threads, so the savepoint rollback cannot undo them.
+		frappe.delete_doc("LMS Enrollment", self.enrollment, force=True)
+		frappe.delete_doc("LMS Course", self.course.name, force=True)
+		frappe.delete_doc("User", self.member.name, force=True)
+		frappe.db.commit()  # nosemgrep: frappe-manual-commit - fixtures were committed, so the savepoint cannot undo them
+		# The commits released the savepoint BaseTestUtils.tearDown rolls back to.
+		frappe.db.savepoint("lms_test")
+		super().tearDown()
+
+	def _issue_in_thread(self, site, results, idx):
+		frappe.init(site=site)
+		frappe.connect()
+		frappe.set_user(self.member.email)
+		try:
+			cert_module.create_certificate(self.course.name)
+			frappe.db.commit()  # nosemgrep: frappe-manual-commit - each worker is its own request with no enclosing commit
+			results[idx] = "ok"
+		except Exception as e:  # noqa: BLE001 - surfaced via results for assertion
+			frappe.db.rollback()
+			results[idx] = repr(e)
+		finally:
+			frappe.destroy()
+
+	def test_parallel_requests_create_single_certificate(self):
+		site = frappe.local.site
+		results = [None, None]
+
+		# Slow the window between the existence check and the insert so both
+		# threads interleave deterministically. Under the fixed code the second
+		# thread blocks on the enrollment lock before reaching this point.
+		original = cert_module.get_default_certificate_template
+
+		def slow_template():
+			time.sleep(0.6)
+			return original()
+
+		with patch.object(cert_module, "get_default_certificate_template", slow_template):
+			threads = [
+				threading.Thread(target=self._issue_in_thread, args=(site, results, i)) for i in range(2)
+			]
+			for t in threads:
+				t.start()
+			for t in threads:
+				t.join(timeout=30)
+
+		# Both workers must have actually run create_certificate to completion,
+		# otherwise the test would pass for the wrong reason (only one writer).
+		self.assertEqual(results, ["ok", "ok"], f"both workers must succeed; got {results}")
+
+		# Refresh this connection's snapshot so it sees the threads' commits.
+		frappe.db.rollback()
+		count = frappe.db.count("LMS Certificate", {"member": self.member.email, "course": self.course.name})
+		self.assertEqual(count, 1, f"expected one certificate, got {count}; worker results={results}")

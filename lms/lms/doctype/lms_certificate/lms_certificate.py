@@ -161,14 +161,14 @@ def has_website_permission(doc, ptype, user, verbose=False):
 	return False
 
 
-def get_latest_certificate(member, course):
+def get_latest_certificate(member, course, for_update=False):
 	"""A member can hold one certificate per batch of a course plus one
 	course-level (no batch) certificate; prefer the course-level one, else
 	the most recently issued."""
 	Certificate = frappe.qb.DocType("LMS Certificate")
 	no_batch = Certificate.batch_name.isnull() | (Certificate.batch_name == "")
 	has_batch = Case().when(no_batch, 0).else_(1)
-	rows = (
+	query = (
 		frappe.qb.from_(Certificate)
 		.select(Certificate.name, Certificate.template, Certificate.issue_date)
 		.where(Certificate.member == member)
@@ -177,8 +177,10 @@ def get_latest_certificate(member, course):
 		.orderby(Certificate.issue_date, order=frappe.qb.desc)
 		.orderby(Certificate.creation, order=frappe.qb.desc)
 		.limit(1)
-		.run(as_dict=True)
 	)
+	if for_update:
+		query = query.for_update()
+	rows = query.run(as_dict=True)
 	return rows[0] if rows else None
 
 
@@ -189,26 +191,39 @@ def is_certified(course):
 
 @frappe.whitelist()
 def create_certificate(course: str):
-	certificate = is_certified(course)
-	if certificate:
+	member = frappe.session.user
+
+	# Serialize concurrent issuance for this member+course (#2408). Without a
+	# lock, two parallel requests both pass the is_certified() check under
+	# MariaDB's REPEATABLE READ snapshot and both insert, creating duplicate
+	# certificates. Lock the enrollment row (primary key, already indexed) so
+	# the second request waits for the first to commit.
+	enrollment = frappe.db.get_value("LMS Enrollment", {"course": course, "member": member}, "name")
+	if enrollment:
+		frappe.db.get_value("LMS Enrollment", enrollment, "name", for_update=True)
+
+	# A locking read returns the latest committed row even when it was inserted
+	# after this transaction's snapshot started, so the second request finds the
+	# first request's certificate instead of inserting a duplicate.
+	existing = get_latest_certificate(member, course, for_update=True)
+	if existing:
 		return frappe.db.get_value(
-			"LMS Certificate", certificate, ["name", "course", "template"], as_dict=True
+			"LMS Certificate", existing.name, ["name", "course", "template"], as_dict=True
 		)
 
-	else:
-		validate_certification_eligibility(course)
-		default_certificate_template = get_default_certificate_template()
-		certificate = frappe.get_doc(
-			{
-				"doctype": "LMS Certificate",
-				"member": frappe.session.user,
-				"course": course,
-				"issue_date": nowdate(),
-				"template": default_certificate_template,
-			}
-		)
-		certificate.save(ignore_permissions=True)
-		return certificate
+	validate_certification_eligibility(course)
+	default_certificate_template = get_default_certificate_template()
+	certificate = frappe.get_doc(
+		{
+			"doctype": "LMS Certificate",
+			"member": member,
+			"course": course,
+			"issue_date": nowdate(),
+			"template": default_certificate_template,
+		}
+	)
+	certificate.save(ignore_permissions=True)
+	return certificate
 
 
 def get_default_certificate_template():
