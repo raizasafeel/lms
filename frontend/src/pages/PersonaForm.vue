@@ -71,17 +71,10 @@ const leaveHome = async (persist) => {
 const submitPersona = (answers) => {
 	capture('onboarding_persona', answers)
 	const responses = JSON.stringify({ site: user.data?.sitename, ...answers })
-	// External analytics call; fire without blocking the transition.
-	call('lms.lms.api.capture_user_persona', { responses })
-	// Persist the flag ourselves so a reload can't reopen the form.
-	leaveHome(
-		call('frappe.client.set_value', {
-			doctype: 'LMS Settings',
-			name: 'LMS Settings',
-			fieldname: 'persona_captured',
-			value: 1,
-		})
-	)
+	// capture_user_persona flips persona_captured on success. Persist through it
+	// so a failed capture leaves the flag unset and the form reopens to retry,
+	// instead of silently marking onboarding done with nothing captured.
+	leaveHome(call('lms.lms.api.capture_user_persona', { responses }))
 }
 
 const skipPersonaForm = () => {
