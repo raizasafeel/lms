@@ -879,6 +879,18 @@ def resolve_page_length(limit_page_length=None) -> int:
 	return min(max(page_length, 1), MAX_PAGE_LENGTH)
 
 
+def _restrict_to_published(filters: dict, *, allow_unpublished: bool = False) -> None:
+	"""Force filters["published"] = 1 in place, overriding any caller-supplied value, unless exempt."""
+	# Same set the frontend shows the "Unpublished" tab to (Courses.vue/Batches.vue).
+	if PRIVILEGED_ROLES & set(frappe.get_roles()):
+		return
+	# Set only for the `created`/`enrolled` pseudo-filters, already scoped to rows the
+	# caller is entitled to -- forcing published=1 on top would hide their own unpublished rows.
+	if allow_unpublished:
+		return
+	filters["published"] = 1
+
+
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
 @rate_limit(limit=500, seconds=60 * 60)
 def get_courses(filters: dict = None, start: int = 0, limit_page_length: int | str = None) -> list:
@@ -890,7 +902,9 @@ def get_courses(filters: dict = None, start: int = 0, limit_page_length: int | s
 	if not filters:
 		filters = {}
 
+	allow_unpublished = bool(filters.get("created")) or bool(filters.get("enrolled"))
 	filters, or_filters, show_featured = update_course_filters(filters)
+	_restrict_to_published(filters, allow_unpublished=allow_unpublished)
 	fields = get_course_fields()
 	page_length = resolve_page_length(limit_page_length)
 	start = cint(start)
@@ -942,7 +956,9 @@ def get_course_count(filters: dict = None) -> int:
 	if not filters:
 		filters = {}
 
+	allow_unpublished = bool(filters.get("created")) or bool(filters.get("enrolled"))
 	filters, or_filters, show_featured = update_course_filters(filters)
+	_restrict_to_published(filters, allow_unpublished=allow_unpublished)
 	total = count_matching("LMS Course", filters, or_filters)
 	if show_featured:
 		# `update_course_filters` narrowed the query to featured=0 for the live
@@ -2845,7 +2861,9 @@ def get_batches(
 	if not filters:
 		filters = {}
 
+	allow_unpublished = bool(filters.get("enrolled"))
 	update_batch_filters(filters)
+	_restrict_to_published(filters, allow_unpublished=allow_unpublished)
 
 	batches = frappe.get_all(
 		"LMS Batch",
@@ -2906,7 +2924,9 @@ def get_batch_count(filters: dict = None) -> int:
 	if not filters:
 		filters = {}
 
+	allow_unpublished = bool(filters.get("enrolled"))
 	update_batch_filters(filters)
+	_restrict_to_published(filters, allow_unpublished=allow_unpublished)
 	total = count_matching("LMS Batch", filters)
 
 	batch_type = get_batch_type(filters)
