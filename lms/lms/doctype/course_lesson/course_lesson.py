@@ -23,6 +23,7 @@ from lms.lms.utils import (
 	get_course_progress,
 	get_editorjs_blocks,
 	guest_access_allowed,
+	has_moderator_role,
 	is_demo_course,
 	recalculate_course_progress,
 	sanitize_editorjs,
@@ -165,26 +166,87 @@ def get_permission_query_conditions(user=None):
 STUDENT_CONTENT_FIELDS = ("content", "body")
 
 
-def _resolve_lesson_references(file_url: str) -> list[tuple[str, bool]]:
-	"""Every (lesson, instructor_only) pair that references file_url.
+def _uploader_authorized_on_course(owner: str, course: str, *, lesson_owner: str | None = None) -> bool:
+	"""Whether `owner` could legitimately have placed content into `course`."""
+	# Checked against the FILE's owner, not the caller -- the caller's own access is
+	# still checked separately by can_access_lesson.
+	#
+	# `lesson_owner` is the owner (creator) of the MATCHED Course Lesson, and is
+	# required whenever `owner` is Administrator or a Moderator. A global role has
+	# write access to every course, so "could `owner` have placed content in `course`"
+	# is trivially true for it regardless of which course matched -- it cannot gate
+	# anything on its own. Without also requiring the matched lesson itself to have
+	# been authored by a privileged account, any lesson containing a pasted url to a
+	# privileged-owned file would qualify, including one an attacker wrote themselves:
+	# the attack this whole function exists to close, just with the file owner swapped
+	# from an ordinary Course Creator to Administrator/Moderator (a common case --
+	# seeded/bulk-imported/officially-uploaded files are routinely Administrator-owned).
+	# Known, deliberate cost: an Administrator/Moderator who legitimately attaches or
+	# references a file on an ORDINARY instructor's lesson (e.g. seeding official content
+	# into their course) is denied here too, same as an attacker would be -- "is
+	# lesson_owner a Course Instructor of course" is not a usable substitute signal, since
+	# it is trivially true of any lesson's own author, attacker included (their own
+	# lesson's course lists them as its instructor by construction). No signal in
+	# (course, lesson_owner) alone distinguishes "Administrator seeded this" from
+	# "attacker pasted this" once owner is privileged, so this fails closed rather than
+	# reopening the exploit. See test_attacker_reads_administrator_owned_file_by_pasting_url_into_own_lesson.
+	if owner == "Administrator" or has_moderator_role(owner):
+		return lesson_owner == "Administrator" or bool(lesson_owner and has_moderator_role(lesson_owner))
+	return bool(
+		frappe.db.exists(
+			"Course Instructor", {"instructor": owner, "parent": course, "parenttype": "LMS Course"}
+		)
+	)
 
-	Two sources, unioned:
-	- File attachments (fast path). Gives the exact attached_to_field.
-	- A search of the lesson content fields (the source of truth: uploaded files
-	  are frequently private-but-unattached, and pre-existing/seeded files always are).
-	An empty/unknown attachment field is treated as instructor-only (fail-closed).
-	"""
-	refs: list[tuple[str, bool]] = []
+
+def _resolve_lesson_references(file_url: str, *, owner: str | None = None) -> list[tuple[str, bool]]:
+	"""Every (lesson, instructor_only) pair that references file_url, kept only if
+	`owner` could legitimately have authored the reference."""
+	# Two sources, unioned:
+	# - File attachments (fast path). Gives the exact attached_to_field.
+	# - A search of the lesson content fields (the source of truth: uploaded files
+	#   are frequently private-but-unattached, and pre-existing/seeded files always are).
+	# An empty/unknown attachment field is treated as instructor-only (fail-closed).
+	#
+	# `owner` gates BOTH sources below: a match is kept only if the relevant row's owner
+	# could legitimately have authored content into that lesson's course, AND -- when
+	# that owner is Administrator or a Moderator, whose global write access makes
+	# "could" trivially true for every course -- only if the matched lesson was itself
+	# authored by a privileged account too (see _uploader_authorized_on_course). For the
+	# attachment fast path this is each File row's own `owner` field (fetched alongside
+	# attached_to_name), not the caller's `owner` argument -- attached_to_name/
+	# attached_to_field are ordinary writable fields (no if_owner gate on File's
+	# DocPerm), so attached_to_name is NOT trustworthy on its own: a Course Creator can
+	# repoint any File they can write onto a lesson they own via frappe.client.set_value
+	# and must still clear this same authorization check. For the content-search
+	# matches, this is the caller-supplied `owner` argument. Without this, "some lesson
+	# I can read contains this url as a substring" (or "some File is attached to a
+	# lesson I own") was being treated as authorization, so a Course Creator could read
+	# a victim's file via either path (E05). `owner` defaults to None, which skips this
+	# filtering entirely and keeps every match -- this is not a security hole because
+	# the only production caller, serve_resource, always passes owner; None exists so
+	# this function's single-positional-arg, filtering-free behavior stays exactly as it
+	# was for every other caller (e.g. lms/tests/security/test_serve_resource.py).
+	#
+	# Matches are collected first as (lesson_name, instructor_only, file_owner) triples
+	# -- file_owner is set for the attachment path only; the content-search path leaves
+	# it None so the caller-supplied `owner` is used. The course/owner lookup and the
+	# authorization check are then batched below, across both sources together: this is
+	# a hot path (once per embedded asset, and again per video byte-range seek), and a
+	# file referenced by many lessons -- e.g. a shared banner image -- would otherwise
+	# cost one extra pair of DB round-trips per matching lesson.
+	matches: list[tuple[str, bool, str | None]] = []
 
 	for r in frappe.db.get_all(
 		"File",
 		filters={"file_url": file_url, "is_private": 1, "attached_to_doctype": "Course Lesson"},
-		fields=["attached_to_name", "attached_to_field"],
+		fields=["attached_to_name", "attached_to_field", "owner"],
 	):
-		if r.attached_to_name:
-			refs.append(
-				(r.attached_to_name, r.attached_to_field in INSTRUCTOR_FIELDS or not r.attached_to_field)
-			)
+		if not r.attached_to_name:
+			continue
+		matches.append(
+			(r.attached_to_name, r.attached_to_field in INSTRUCTOR_FIELDS or not r.attached_to_field, r.owner)
+		)
 
 	# Match the url as a literal substring via LOCATE (the query builder maps it to
 	# STRPOS/INSTR per dialect) instead of a LIKE pattern: LIKE needs %/_ escaped, and
@@ -202,6 +264,39 @@ def _resolve_lesson_references(file_url: str) -> list[tuple[str, bool]]:
 			.run(pluck=True)
 		)
 		for name in names:
+			matches.append((name, instructor_only, None))
+
+	if not matches or owner is None:
+		return [(name, instructor_only) for name, instructor_only, _ in matches]
+
+	# One query for every distinct matched lesson's course/owner, instead of one per
+	# match; and _uploader_authorized_on_course is memoized on its actual inputs, so two
+	# matches that resolve to the same (owner, course, lesson_owner) triple -- e.g. two
+	# lessons in the same course, both authored by the same Course Creator -- share one
+	# Course Instructor existence check instead of issuing it twice.
+	lesson_rows = {
+		row.name: row
+		for row in frappe.db.get_all(
+			"Course Lesson",
+			filters={"name": ["in", list({name for name, _, _ in matches})]},
+			fields=["name", "course", "owner"],
+		)
+	}
+
+	refs: list[tuple[str, bool]] = []
+	authorized_cache: dict[tuple[str | None, str | None, str | None], bool] = {}
+	for name, instructor_only, file_owner in matches:
+		lesson_row = lesson_rows.get(name)
+		course = lesson_row.course if lesson_row else None
+		lesson_owner = lesson_row.owner if lesson_row else None
+		effective_owner = file_owner if file_owner is not None else owner
+
+		cache_key = (effective_owner, course, lesson_owner)
+		if cache_key not in authorized_cache:
+			authorized_cache[cache_key] = _uploader_authorized_on_course(
+				effective_owner, course, lesson_owner=lesson_owner
+			)
+		if authorized_cache[cache_key]:
 			refs.append((name, instructor_only))
 
 	return refs
@@ -242,12 +337,14 @@ def serve_resource(file_url: str):
 	if ".." in file_url:
 		frappe.throw(_("Invalid file path"))
 
-	file_row = frappe.db.get_value("File", {"file_url": file_url, "is_private": 1}, "file_name", as_dict=True)
+	file_row = frappe.db.get_value(
+		"File", {"file_url": file_url, "is_private": 1}, ["file_name", "owner"], as_dict=True
+	)
 	if not file_row:
 		_deny(file_url, "no matching private file")
 		raise frappe.PermissionError
 
-	references = _resolve_lesson_references(file_url)
+	references = _resolve_lesson_references(file_url, owner=file_row.owner)
 	if not references:
 		_deny(file_url, "file not referenced by any lesson")
 		raise frappe.PermissionError
