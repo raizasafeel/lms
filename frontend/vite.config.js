@@ -1,11 +1,59 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import fs from 'node:fs'
 import path from 'path'
 import { VitePWA } from 'vite-plugin-pwa'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
+import { resolveFrameworkUi } from './resolveFrameworkUi.js'
+
+// `@framework/ui` is imported by name and resolved through node_modules, so the
+// link there is load-bearing rather than a convenience. package.json declares it
+// as `link:../../frappe/ui`, which is correct from apps/lms/frontend and wrong
+// from a git worktree of this app: that resolves to
+// `apps/lms/.lms-worktrees/frappe/ui`, which nothing creates. An install there
+// leaves a link into empty space and the only symptom is "Failed to resolve
+// import @framework/ui/ConditionBuilder", naming neither the link nor the fix.
+//
+// Nothing here can repair it, since yarn owns that path, so this says so
+// instead, with the command. It compares real paths, so a correct link of any depth
+// passes and a normal checkout never sees it.
+//
+// It says nothing when the source itself is missing. `resolveFrameworkUi` falls
+// back to the canonical `apps/frappe/ui/src` when it finds nothing, so a
+// checkout with no frappe app beside it reaches here with a path that does not
+// exist, and there the link is not the problem. That case belongs to vite's
+// own "does the file exist?", which is what it got before this.
+const realOrNull = (p) => {
+	try {
+		return fs.realpathSync(p)
+	} catch {
+		return null
+	}
+}
+
+function assertFrameworkUiLinked(frontend, root) {
+	const source = realOrNull(root)
+	if (!source) return
+	const link = path.join(frontend, 'node_modules', '@framework', 'ui')
+	const linked = realOrNull(link)
+	if (linked === source) return
+	throw new Error(
+		`@framework/ui resolves to ${
+			linked ?? '(nothing)'
+		}, but its source is ${root}.\n` +
+			`package.json's \`link:../../frappe/ui\` only resolves from apps/lms/frontend.\n` +
+			`Repair it with:\n  ln -sfn ${path.relative(
+				path.dirname(link),
+				root
+			)} ${link}`
+	)
+}
 
 export default defineConfig(async ({ mode }) => {
 	const isDev = mode === 'development'
+	// The package root of the linked @framework/ui, for fs.allow below.
+	const frameworkUiRoot = path.dirname(resolveFrameworkUi(__dirname))
+	assertFrameworkUiLinked(__dirname, frameworkUiRoot)
 	const frappeui = await importFrappeUIPlugin(isDev)
 
 	const config = {
@@ -63,6 +111,16 @@ export default defineConfig(async ({ mode }) => {
 			}),
 		],
 		server: {
+			// The linked @framework/ui (apps/frappe/ui) is imported by name and
+			// resolved through its `exports`, so in dev vite serves it from source,
+			// outside this root, hence the allowance helpdesk makes for it too.
+			// Named by resolved path rather than by counting `..` levels: `../..`
+			// is apps/ only from apps/lms/frontend, and a worktree of this app sits
+			// two levels deeper, where it lands on .lms-worktrees/ and the framework
+			// files 403 with "not allowed to be served".
+			fs: {
+				allow: ['..', '../..', frameworkUiRoot],
+			},
 			host: '0.0.0.0', // Accept connections from any network interface
 			allowedHosts: true,
 			// SCORM packages are served by Frappe's SCORMRenderer at /scorm/... .
@@ -86,6 +144,8 @@ export default defineConfig(async ({ mode }) => {
 			// Force one copy of prosemirror; duplicate copies break tiptap's
 			// instanceof checks and crash the list buttons.
 			dedupe: [
+				// @framework/ui imports from vue and frappe-ui; a second copy of
+				// either would give its Combobox a different frappe-ui than ours.
 				'prosemirror-model',
 				'prosemirror-state',
 				'prosemirror-view',
