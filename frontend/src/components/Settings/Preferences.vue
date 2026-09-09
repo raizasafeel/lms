@@ -197,12 +197,19 @@ const systemEditable = computed<boolean>(
 	() => canEditSystem.value && Boolean(preferences.data)
 )
 
+// Seeded once, then only adopted again when the user has not moved on. `write`
+// reloads this resource, and a pick made while that write was in flight would
+// otherwise be overwritten by the answer and read as saved.
+let systemSeeded = false
+
 watch(
 	() => preferences.data as SystemPreferences | undefined,
 	(data) => {
 		if (!data) return
+		if (systemSeeded && systemDirty.value) return
 		systemLanguage.value = data.language
 		systemTimezone.value = data.time_zone
+		systemSeeded = true
 	},
 	{ immediate: true }
 )
@@ -267,6 +274,29 @@ const accessSections = [
 				type: 'text',
 				description:
 					'Users can reach out to this URL for support or inquiries.',
+			},
+		],
+	},
+	// Both override the wording of the notification rule that sends that mail, so
+	// a site that set one before upgrading keeps sending the old template and an
+	// admin editing the rule sees no effect. Shown here so it can be cleared.
+	{
+		label: 'Email Templates',
+		fields: [
+			{
+				label: 'Batch Confirmation Template',
+				name: 'batch_confirmation_template',
+				type: 'link',
+				doctype: 'Email Template',
+				description:
+					'Replaces the wording of the batch enrollment notification.',
+			},
+			{
+				label: 'Certificate Email Template',
+				name: 'certification_template',
+				type: 'link',
+				doctype: 'Email Template',
+				description: 'Replaces the wording of the certification notification.',
 			},
 		],
 	},
