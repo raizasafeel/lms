@@ -756,6 +756,21 @@ def rule_names() -> list[str]:
 	return [rule["name"] for rule in LMS_NOTIFICATIONS]
 
 
+# The Selects these two rules replace. A site that had one set to "Email" was
+# sending that mail, so the rule it becomes is seeded on rather than off.
+LEGACY_PUBLISH_FIELDS = {
+	"LMS New Course Published": "send_notification_for_published_courses",
+	"LMS New Batch Published": "send_notification_for_published_batches",
+}
+
+
+def seeded_enabled(rule: dict) -> int:
+	field = LEGACY_PUBLISH_FIELDS.get(rule["name"])
+	if not field:
+		return rule.get("enabled", 1)
+	return 1 if frappe.db.get_single_value("LMS Settings", field) == "Email" else 0
+
+
 def seed_notifications():
 	"""Create any rule the site is missing. Never rewrite one it already has.
 	Not a fixture, because `sync_fixtures` imports with force and would reset an
@@ -773,7 +788,7 @@ def insert_rule(rule: dict):
 	doc.flags.name_set = True
 	doc.module = "LMS"
 	doc.is_standard = 0
-	doc.enabled = rule.get("enabled", 1)
+	doc.enabled = seeded_enabled(rule)
 	doc.channel = "Email"
 	doc.send_system_notification = 1
 	doc.document_type = rule["document_type"]
