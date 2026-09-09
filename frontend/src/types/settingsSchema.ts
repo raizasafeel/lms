@@ -153,6 +153,15 @@ export interface FieldsPage {
 	 * field accepts an edit that is silently dropped.
 	 */
 	renameField?: string
+	/**
+	 * Ran once a manual save lands, holding what a hand-drawn form put after its
+	 * own write: the success toast, the telemetry, and `back` to the list.
+	 */
+	onSaved?: (context: {
+		created: boolean
+		name: string | null
+		back: () => void
+	}) => void
 }
 
 export interface SettingsListSource {

@@ -128,8 +128,18 @@ const saving = ref(false)
 
 const save = () => {
 	saving.value = true
+	// Read before the write: a successful insert clears isNew, so asking after
+	// it reports every save as an update.
+	const created = source.isNew
 	source
 		.save()
+		.then(() =>
+			props.page.onSaved?.({
+				created,
+				name: source.name,
+				back: () => emit('back'),
+			})
+		)
 		.catch((error: { messages?: string[]; message?: string }) => {
 			toast.error(error?.messages?.[0] || error?.message || __('Save failed'))
 			console.error(error)

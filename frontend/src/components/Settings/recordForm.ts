@@ -3,8 +3,8 @@ import type {
 	DetailPage,
 	FieldsPage,
 	FieldsSection,
-	SettingsListRow,
 } from '@/types/settingsSchema'
+import type { SettingsListRow } from '@/types'
 
 /**
  * One record form, serving both the New page and the row a list opens. A list's
@@ -33,6 +33,8 @@ export interface RecordFormOptions {
 	renameField?: string
 	/** Supplies `reqd` at runtime where the server owns it. */
 	meta?: FieldsPage['meta']
+	/** The toast, the telemetry and the way back, once a save lands. */
+	onSaved?: FieldsPage['onSaved']
 	/** Header for the New page. */
 	newTitle: () => string
 	/**
@@ -50,6 +52,7 @@ export function recordForm(options: RecordFormOptions): RecordForm {
 		...(options.enabledField ? { enabledField: options.enabledField } : {}),
 		...(options.renameField ? { renameField: options.renameField } : {}),
 		...(options.meta ? { meta: options.meta } : {}),
+		...(options.onSaved ? { onSaved: options.onSaved } : {}),
 	}
 
 	return {

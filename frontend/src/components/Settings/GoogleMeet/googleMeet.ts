@@ -1,8 +1,13 @@
-import { defineAsyncComponent, markRaw } from 'vue'
-import { call, toast } from 'frappe-ui'
+import { toast } from 'frappe-ui'
+import { useTelemetry } from 'frappe-ui/frappe'
 import { usersStore } from '@/stores/user'
-import { reloadSettingsLists } from '@/composables/useSettingsListResource'
-import { cleanError } from '@/utils'
+import {
+	deleteRow,
+	setRowField,
+	toggleRowField,
+} from '@/components/Settings/rowActions'
+import { recordForm } from '@/components/Settings/recordForm'
+import { openSettings } from '@/utils'
 import type { ListPage } from '@/types/settingsSchema'
 import type { SettingsListColumn, SettingsListRow } from '@/types'
 
@@ -51,36 +56,16 @@ export const canManageGoogleMeet = (): boolean => {
  * follows it. Nothing reloads the list here, so without the rollback a rejected
  * write would leave the row showing a state the server refused.
  */
-const toggleEnabled = async (row: SettingsListRow, value: boolean) => {
-	const previous = row.enabled
-	row.enabled = value ? 1 : 0
-	try {
-		await call('frappe.client.set_value', {
-			doctype: DOCTYPE,
-			name: row.name,
-			fieldname: 'enabled',
-			value: row.enabled,
-		})
-	} catch (err: any) {
-		row.enabled = previous
-		toast.error(cleanError(err.messages?.[0] || err))
-	}
-}
+const toggleEnabled = toggleRowField(
+	setRowField(DOCTYPE),
+	'Error updating Google Meet account'
+)
 
-/**
- * The row menu's Delete. A config module is handed the row and nothing else, so
- * it asks every list on screen for that doctype to refetch, which also keeps the
- * list on its first page.
- */
-const removeAccount = async (row: SettingsListRow) => {
-	try {
-		await call('frappe.client.delete', { doctype: DOCTYPE, name: row.name })
-		toast.success(__('Google Meet account deleted successfully'))
-		await reloadSettingsLists(DOCTYPE)
-	} catch (err: any) {
-		toast.error(cleanError(err.messages?.[0] || err))
-	}
-}
+const removeAccount = deleteRow(
+	DOCTYPE,
+	'Google Meet account deleted successfully',
+	'Error deleting Google Meet account'
+)
 
 // Every header is a getter, because `__` is installed on window only after every
 // static import has been evaluated. The account and its member share one
@@ -129,17 +114,53 @@ const columns: SettingsListColumn[] = [
 	},
 ]
 
-/**
- * One component for New and for an existing account alike, handed the record the
- * panel opened. A `kind: 'custom'` detail rather than a fields page, because the
- * account name is the document's own name. Loaded on demand, the way Zoom is.
- */
-const accountForm = {
-	kind: 'custom' as const,
-	component: markRaw(
-		defineAsyncComponent(() => import('./GoogleMeetAccountForm.vue'))
-	),
-}
+const form = recordForm({
+	doctype: DOCTYPE,
+	// `autoname: field:account_name`, so the account's name is the document's and
+	// only a rename moves it.
+	renameField: 'account_name',
+	enabledField: 'enabled',
+	newTitle: () => __('New Google Meet Account'),
+	recordTitle: (row) => accountLabel(row) || __('Google Meet Account'),
+	sections: [
+		{
+			fields: [
+				{
+					name: 'account_name',
+					label: 'Account Name',
+					type: 'text',
+					reqd: true,
+				},
+				{
+					name: 'member',
+					label: 'Member',
+					description: 'The evaluator whose meetings this account books',
+					type: 'link',
+					doctype: 'Course Evaluator',
+					reqd: true,
+					onCreate: (_value, close) => openSettings('members', close),
+				},
+				{
+					name: 'google_calendar',
+					label: 'Google Calendar',
+					description: 'The calendar this account books its meetings on',
+					type: 'link',
+					doctype: 'Google Calendar',
+					reqd: true,
+				},
+			],
+		},
+	],
+	onSaved: ({ created, back }) => {
+		toast.success(
+			created
+				? __('Google Meet account created successfully')
+				: __('Google Meet account updated successfully')
+		)
+		if (created) useTelemetry().capture('google_meet_account_linked')
+		back()
+	},
+})
 
 export const googleMeetSettingsPage: ListPage = {
 	kind: 'list',
@@ -165,6 +186,6 @@ export const googleMeetSettingsPage: ListPage = {
 	columns,
 	searchable: true,
 	empty: { name: 'Google Meet Settings', icon: 'lucide-presentation' },
-	create: { detail: accountForm },
-	rowDetail: accountForm,
+	create: { detail: form.forNew() },
+	rowDetail: form.forRecord(),
 }
