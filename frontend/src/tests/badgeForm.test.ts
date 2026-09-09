@@ -308,13 +308,9 @@ describe('the top of the badge form is editable', () => {
 		expect(valueOf(wrapper, 'Description')).toBe('Finished every lesson')
 	})
 
-	// The bug was that neither said it was a field. Both are drawn by a control
-	// that renders its own <label for>, so the box is named on screen and by a
-	// screen reader alike.
-	// The schema renderer names the box with `aria-label` and draws the wording
-	// beside it, where the form this replaces passed FormControl its own `label`
-	// and got a `<label for>`. Either way the control has an accessible name and
-	// the wording is on screen.
+	// The bug was that neither box said it was a field. The schema renderer names
+	// it with `aria-label` and draws the wording beside it, where the old form
+	// got a `<label for>`. Either way it is named on screen and to a reader.
 	it('labels both of them on screen, and names the box', () => {
 		const wrapper = mountPage()
 		return openBadge(wrapper).then(() => {

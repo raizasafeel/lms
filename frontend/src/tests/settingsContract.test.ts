@@ -1,8 +1,7 @@
 /**
- * The settings tree is pure data, so its two load-bearing invariants can be
- * asserted without mounting anything: slugs are the URL, and a field offered on
- * two pages would be saved twice from two forms. A draft's baseline is here too,
- * because it is the same contract seen at runtime.
+ * The settings tree is pure data, so two invariants hold without mounting
+ * anything. Slugs are the URL, and a field offered on two pages would be saved
+ * twice from two forms. A draft's baseline is the same contract at runtime.
  */
 import { describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'

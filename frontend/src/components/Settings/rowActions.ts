@@ -4,9 +4,9 @@ import { cleanError } from '@/utils'
 import type { SettingsListRow } from '@/types'
 
 /**
- * The two things a settings list's rows do to themselves. Both were written out
- * per panel, and both take their wording untranslated: a config module is
- * evaluated before the translation plugin installs `__` on window.
+ * The two things a settings list's rows do to themselves. Both were written
+ * out per panel. Both take their wording untranslated, because a config module
+ * is evaluated before the translation plugin installs `__` on window.
  */
 
 const report = (err: any, fallback: string) =>

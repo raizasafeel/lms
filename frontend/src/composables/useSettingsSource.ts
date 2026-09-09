@@ -228,8 +228,8 @@ export function useSettingsSource(
 		name: target,
 		isDirty: computed(() => {
 			if (!isNew.value) return Boolean(resource.value?.isDirty)
-			// Only a seeded draft has a baseline to compare against; without one the
-			// honest answer is still "does it hold anything worth writing".
+			// Only a seeded draft has a baseline to compare against. Without one the
+			// answer stays "does it hold anything worth writing".
 			return options.defaults
 				? JSON.stringify(draft.value) !== pristine.value
 				: draftIsDirty(draft.value)

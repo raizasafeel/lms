@@ -71,8 +71,8 @@ const removeBadge = deleteRow(
 	'Error deleting badge'
 )
 
-// Every header is a getter: a config module is evaluated before the translation
-// plugin installs `__` on window.
+// Every header is a getter. A config module is evaluated before the
+// translation plugin installs `__` on window.
 const columns: SettingsListColumn[] = [
 	{
 		key: 'title',

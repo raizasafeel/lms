@@ -119,7 +119,7 @@ const form = recordForm({
 			],
 		},
 	],
-	// Back to the list on success: a rename leaves the URL naming a document the
+	// Back to the list on success. A rename leaves the URL naming a document the
 	// server has forgotten, and closing is what refetches the list.
 	onSaved: ({ created, back }) => {
 		toast.success(
