@@ -8,7 +8,6 @@
 		:has-next-page="list.hasNextPage"
 		v-model:search="list.search"
 		searchable
-		:search-label="__('Search badges')"
 		empty-name="Badges"
 		empty-icon="lucide-award"
 		@new="openForm(null)"
