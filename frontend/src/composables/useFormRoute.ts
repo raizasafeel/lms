@@ -20,9 +20,9 @@ const FORM_ENTRY = 'lmsFormEntry'
  */
 const FORM_BACKGROUND = 'lmsFormBackground'
 
-// Reads the state of the CURRENT history entry through the router rather than
-// window.history: createMemoryHistory (used in tests) never touches
-// window.history, and vue-router mirrors the web history's state here too.
+// Reads the state of the current history entry through the router rather than
+// window.history. createMemoryHistory never touches window.history, and
+// vue-router mirrors the web history's state here too.
 const historyState = (router: Router): Record<string, unknown> =>
 	(router.options.history.state as Record<string, unknown> | null) ?? {}
 
@@ -36,16 +36,9 @@ export function formBackgroundPath(router: Router): string | null {
 }
 
 /**
- * Merge the CURRENT entry's background stamp into the state of an entry that is
- * an overlay over the same page — settings, which is addressed by the hash and
- * so never changes the path under it.
- *
- * Without this a settings entry pushed from on top of a form route carries no
- * stamp at all, and two things break at once: App.vue paints the form route (a
- * Dialog, so nothing) behind settings, and the next openFormRoute finds no
- * stamp to carry forward and records the SETTINGS entry — a modal — as its own
- * background. Written unconditionally, null included, for the reason below:
- * createWebHistory's replace() merges, so an omitted key leaks the old value.
+ * Merge the current entry's background stamp into the state of an entry that
+ * overlays the same page. Without this a settings entry pushed from a form route
+ * carries no stamp, and the next openFormRoute records a modal as its background.
  */
 export function withFormBackground(
 	router: Router,
@@ -55,13 +48,11 @@ export function withFormBackground(
 }
 
 // Normalizes `to` and stamps FORM_ENTRY, preserving whatever state the caller
-// already set rather than clobbering it — both openFormRoute (true) and
-// saveAndReplace (false) go through this.
-//
+// already set rather than clobbering it.
+
 // FORM_BACKGROUND is always written, null included. createWebHistory's
-// replace() MERGES the new state over the entry it replaces, so leaving the key
-// out of saveAndReplace's state would let the form's background leak onto the
-// destination and paint a stale page under a route that is not a modal at all.
+// replace() merges over the entry it replaces, so an omitted key would let the
+// form's background leak onto a destination that is not a modal at all.
 const withFormEntry = (
 	to: RouteLocationRaw,
 	value: boolean,
@@ -87,10 +78,9 @@ export function openFormRoute(
 	to: RouteLocationRaw
 ): Promise<unknown> {
 	const current = router.currentRoute.value
-	// Carry an existing background forward instead of stacking a second one:
-	// opening form B from form A must still show the page A was opened over,
-	// not form A itself. `matched` is empty only at START_LOCATION, where there
-	// is no page behind us to keep.
+	// Carry an existing background forward instead of stacking a second one, so
+	// opening form B from form A still shows the page A was opened over. `matched`
+	// is empty only at START_LOCATION.
 	const background = current.matched.length
 		? formBackgroundPath(router) ?? current.fullPath
 		: null
@@ -104,20 +94,13 @@ export function useFormRoute(parent: RouteLocationRaw): {
 } {
 	const router = useRouter()
 	// Read once, at setup. By close time this is still the same history entry.
-	// Going through the router rather than window.history keeps it readable
-	// under createMemoryHistory, which never touches window.history.
+	// Going through the router keeps it readable under createMemoryHistory, which
+	// never touches window.history.
 	const openedByUs = historyState(router)[FORM_ENTRY] === true
 
-	// router.back()/replace() are async, and the component stays mounted until
-	// the navigation actually flushes — so a second close() call inside that
-	// window (double-tapping the mobile back chevron, or two Escape presses:
-	// the desktop Dialog's :open="true" is a literal, not the controlled
-	// isOpen the real Dialog tracks internally, so it stays visibly open
-	// after the first Escape until the route pop renders) would call
-	// router.back() again and pop a second entry. Guard with a flag cleared in
-	// afterEach — mirrors feat/settings-url-routing's useSettingsHash.ts
-	// `dropping`, cleared the same way because afterEach fires on aborted
-	// navigations too, so a cancelled pop can't leave `closing` stuck true.
+	// router.back() is async and the component stays mounted until the navigation
+	// flushes, so a second close() inside that window would pop a second entry.
+	// The flag is cleared in afterEach, which fires on aborted navigations too.
 	let closing = false
 	onScopeDispose(
 		router.afterEach(() => {
@@ -132,16 +115,12 @@ export function useFormRoute(parent: RouteLocationRaw): {
 		else router.replace(parent)
 	}
 
-	// saveAndReplace does NOT need the same guard. Unlike back(), replace() is
-	// idempotent under a repeated identical call — two replaces to the same
-	// destination land you there once, not twice as far, so there is no
-	// compounding effect to guard against. Its only call site today is a
-	// resource's onSuccess (fires once per submit) behind a Save button whose
-	// :loading state already disables a second click — there is no
-	// back-arrow/Escape-shaped path that can fire it twice the way close() has.
-	//
-	// Saving navigates onward by REPLACING, so the form entry is consumed and
-	// Back reaches the list rather than a stale, empty form.
+	// saveAndReplace needs no such guard. replace() is idempotent under a repeated
+	// identical call, and its only caller is a resource's onSuccess behind a Save
+	// button whose loading state already disables a second click.
+
+	// Saving navigates onward by replacing, so the form entry is consumed and Back
+	// reaches the list rather than a stale, empty form.
 	const saveAndReplace = (to: RouteLocationRaw): void => {
 		router.replace(withFormEntry(to, false))
 	}

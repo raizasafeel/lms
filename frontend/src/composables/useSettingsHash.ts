@@ -17,8 +17,8 @@ import { withFormBackground } from '@/composables/useFormRoute'
 const PREFIX = '#settings'
 const DEFAULT_SLUG = 'general'
 
-// The hash must always carry a slug — a bare '#settings' collides with batch/course
-// detail pages, whose own tabs are addressed as '#<tab label>' (one of them Settings).
+// The hash must always carry a slug. A bare '#settings' collides with the batch
+// and course detail pages, whose own tabs are addressed as '#<tab label>'.
 const isSettingsHash = (hash: string) => hash.startsWith(`${PREFIX}/`)
 
 // '#settings/<slug>' or '#settings/<slug>/<record>'. The record is a docname, or
@@ -35,8 +35,9 @@ const hashFor = (slug?: string | null, record?: string | null) => {
 	return record ? `${base}/${record}` : base
 }
 
-// Depth of settings entries we pushed, so close() pops exactly those. replace() merges
-// history.state, so a stale depth can ride onto a non-settings entry — trust it only there.
+// Depth of settings entries we pushed, so close() pops exactly those. replace()
+// merges history.state, so a stale depth can ride onto a non-settings entry.
+// Trust it only there.
 const depthOf = (router: Router) => {
 	if (!isSettingsHash(router.currentRoute.value.hash)) return 0
 	return Number(
@@ -45,7 +46,7 @@ const depthOf = (router: Router) => {
 	)
 }
 
-// Navigate into a settings tab — the one way in, used for both tab clicks and
+// Navigate into a settings tab. The one way in, used for both tab clicks and
 // openSettings(). Carries route.query, or a bare location object resets it.
 export function pushSettingsHash(
 	router: Router,
@@ -55,15 +56,12 @@ export function pushSettingsHash(
 	const route = router.currentRoute.value
 	const hash = hashFor(slug, record)
 	if (route.hash === hash) return
-	// No slug means "just open settings" — if already open, pushing would only
-	// add an entry rendering the identical panel.
+	// No slug means "just open settings". If it is already open, pushing would
+	// only add an entry rendering the identical panel.
 	if (!slug && isSettingsHash(route.hash)) return
-	// Settings never changes the path under it, so the entry it pushes has to
-	// keep painting whatever the entry it leaves was painting. Skipping this is
-	// what put a modal behind a modal: settings opened from on top of a form
-	// route lost the stamp, and the next form route opened from settings had
-	// nothing to carry forward and recorded the settings entry as its own
-	// background — a Dialog, which paints an empty page.
+	// Settings never changes the path under it, so the entry it pushes has to keep
+	// painting whatever the entry it leaves was painting. Skipping this is what
+	// put a modal behind a modal.
 	router.push({
 		query: route.query,
 		hash,
@@ -97,10 +95,9 @@ export function useSettingsHash(tabs: ComputedRef<SettingsRoutableGroup[]>) {
 	// go() is async; clear on afterEach (fires on aborts too) so an aborted pop
 	// can't leave it stuck.
 	let dropping = false
-	// Same for close()'s own pop. `closing` below cannot serve as this flag: it
-	// is nulled by the route.hash watcher, and a navigation the dirty guard
-	// refuses never changes the hash, so a refused dismiss would leave close()
-	// dead for the rest of the session.
+	// Same for close()'s own pop. `closing` below cannot serve as this flag: it is
+	// nulled by the route.hash watcher, and a navigation the dirty guard refuses
+	// never changes the hash.
 	let popping = false
 	onScopeDispose(
 		router.afterEach(() => {
@@ -136,8 +133,9 @@ export function useSettingsHash(tabs: ComputedRef<SettingsRoutableGroup[]>) {
 		return recordFromHash(route.hash)
 	})
 
-	// Open a record in the active tab, or return to its list with null (replace = bad-id
-	// fallback). INVARIANT: go(-1) assumes a record sits on its tab's list — list→record only.
+	// Open a record in the active tab, or return to its list with null, where a
+	// replace is the bad-id fallback. go(-1) assumes a record sits on its tab's
+	// list, so this is list-to-record only.
 	const selectRecord = (
 		record: string | null,
 		options: { replace?: boolean } = {}
@@ -165,11 +163,9 @@ export function useSettingsHash(tabs: ComputedRef<SettingsRoutableGroup[]>) {
 		pushSettingsHash(router, slug, record)
 	}
 
-	// Rehash the CURRENT record entry to a new docname in place (a rename keeps the
-	// record open but changes its name). It is a replace(), not a push, so history
-	// depth is unchanged and Back still lands on the list. A real browser's replace()
-	// merges history.state (settingsDepth survives on its own); memory history drops
-	// it, so pass the current depth explicitly to keep both behaving the same.
+	// Rehash the current record entry to a new docname in place, because a rename
+	// keeps the record open. A replace, not a push, so Back still lands on the
+	// list. The depth is passed explicitly, since memory history drops state.
 	const replaceRecord = (record: string) => {
 		const slug = activeTab.value?.slug
 		if (!slug || !activeTab.value?.records) return
@@ -183,9 +179,8 @@ export function useSettingsHash(tabs: ComputedRef<SettingsRoutableGroup[]>) {
 	}
 
 	// router.go() is async in a browser, so the dialog is still visibly open when
-	// a second dismiss arrives (Escape twice, or a backdrop click just after an
-	// Escape) and depthOf() still reads the same value -- popping again would
-	// land the user two pages behind where they started.
+	// a second dismiss arrives and depthOf() still reads the same value. Popping
+	// again would land the user two pages behind where they started.
 	const close = () => {
 		if (!isOpen.value || popping) return
 		const ours = depthOf(router)
@@ -203,8 +198,8 @@ export function useSettingsHash(tabs: ComputedRef<SettingsRoutableGroup[]>) {
 		() => route.hash,
 		(hash) => {
 			if (!isSettingsHash(hash)) {
-				// Landed back on the page; the entry popped to may predate a filter
-				// changed while settings was open — restore it.
+				// Landed back on the page. The entry popped to may predate a filter
+				// changed while settings was open, so restore it.
 				if (closing && !queryEqual(closing.query, route.query)) {
 					router.replace({
 						query: closing.query,
@@ -244,7 +239,7 @@ export function useSettingsHash(tabs: ComputedRef<SettingsRoutableGroup[]>) {
 				})
 				return
 			}
-			// Tab is real but takes no records — drop the phantom id rather than
+			// Tab is real but takes no records, so drop the phantom id rather than
 			// render the list with it still in the URL.
 			if (!item.records && recordFromHash(hash)) {
 				router.replace({

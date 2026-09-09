@@ -2,11 +2,9 @@ import { ref, type Ref } from 'vue'
 import { toast } from 'frappe-ui'
 
 /**
- * The two refs every settings form's Save owns: whether a write is in flight,
- * and the message from the last one that failed.
- *
- * `error` is optional because two forms report a failure only as a toast and
- * have no ErrorMessage to put it in.
+ * The two refs every settings form's Save owns: whether a write is in flight, and
+ * the message from the last one that failed. `error` is optional because two
+ * forms report a failure only as a toast.
  */
 export interface SaveState {
 	saving: Ref<boolean>
@@ -26,9 +24,9 @@ export interface RunSaveOptions<T = unknown> {
 	/** Toasted the moment the write lands, before {@link after} runs. */
 	success?: string
 	/**
-	 * What happens once the record is saved — going back, refetching the list.
-	 * Separate from `run` so the success toast is not held behind an awaited
-	 * refetch, which is the order every form already had.
+	 * What happens once the record is saved, such as going back or refetching the
+	 * list. Separate from `run` so the success toast is not held behind an awaited
+	 * refetch.
 	 */
 	after?: (result: T) => unknown
 	/** The message for a rejected write. */
@@ -39,20 +37,16 @@ export interface RunSaveOptions<T = unknown> {
 	 */
 	toastInvalid?: boolean
 	/**
-	 * Toast the failure message. On by default; a form that reports a rejected
-	 * write inline only — Email Accounts, whose message sits under the fields
-	 * that caused it — turns it off rather than saying it twice.
+	 * Toast the failure message. On by default. A form that reports a rejected
+	 * write inline only turns it off rather than saying it twice.
 	 */
 	toastError?: boolean
 }
 
 /**
- * The save skeleton every settings form repeats: refuse a second click while
- * one is in flight, validate, flip `saving`, and settle it whatever happens.
- *
- * Deliberately not in here: the dirty check (a form guards on its own notion of
- * dirty before calling this), and everything in {@link RunSaveOptions} that is
- * a message or a consequence. Those are the parts that actually differ.
+ * The save skeleton every settings form repeats: refuse a second click while one
+ * is in flight, validate, flip `saving`, and settle it whatever happens. The
+ * dirty check stays with the form, which guards on its own notion of dirty.
  */
 export async function runSave<T>(
 	state: SaveState,

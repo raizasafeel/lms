@@ -77,9 +77,7 @@ export function visibleFieldsOf(
 	const fields = fieldsOf(ruleTypes, rule.rule_type)
 	// What the control shows, not what the rule stores, so a row already reading
 	// "Instructor" shows its scope without the user re-picking the value. Matched
-	// to RuleConditionField exactly, `reqd` included: that control shows a `reqd`
-	// field empty rather than defaulted, and a cascade hanging off a value nobody
-	// can see selected is the one thing worse than an extra click.
+	// to RuleConditionField exactly, `reqd` included.
 	const shown = (fieldname: string): RuleFieldValue | undefined => {
 		if (rule[fieldname] !== undefined) return rule[fieldname]
 		const declared = fields.find((f) => f.fieldname === fieldname)
@@ -101,18 +99,16 @@ export function visibleFieldsOf(
 
 /**
  * The rule with every declared-but-hidden field dropped, so what is stored is
- * what the row showed: a key nobody can see is a key nobody can correct, and
- * switching a Select back would reinstate a scope the user never re-entered.
- * Only declared fields are candidates; another provider's keys are not ours.
+ * what the row showed. A key nobody can see is a key nobody can correct. Only
+ * declared fields are candidates; another provider's keys are not ours.
  */
 export function withoutHiddenFields(
 	ruleTypes: readonly ProviderRuleType[],
 	rule: RavenMemberRule
 ): RavenMemberRule {
 	// To a fixed point, because dropping a field can hide the one that depended on
-	// it. A single pass judged every field against the pre-edit rule, so setting
-	// staff_kind to All kept staff_scope_courses: assigned_scope still read
-	// "Courses" while it was being deleted in the same sweep.
+	// it. A single pass judged every field against the pre-edit rule, so a scope
+	// survived while the field it hung off was being deleted in the same sweep.
 	let out: RavenMemberRule = { ...rule }
 	for (;;) {
 		const visible = new Set(
@@ -130,9 +126,7 @@ export function withoutHiddenFields(
 /**
  * True when the rule carries a config key its type does not declare, which is
  * what a rule written against an older vocabulary looks like. Checked as well as
- * the type name, because `staff_role` rules still name the declared type
- * "Staff": on the name alone they read as merely unfinished, and the screen
- * invites the user to complete one into a rule naming different people.
+ * the type name, or `staff_role` rules read as merely unfinished.
  */
 export function hasUndeclaredFields(
 	ruleTypes: readonly ProviderRuleType[],
@@ -161,9 +155,9 @@ function isFilled(value: RuleFieldValue | undefined): boolean {
 }
 
 /**
- * True once every field the rule type declares `reqd` carries a value. An undeclared
- * rule type (including every type while the declaration is unloaded) is never
- * complete: `[].every()` would otherwise pass a rule nothing has validated.
+ * True once every field the rule type declares `reqd` carries a value. An
+ * undeclared type is never complete, or `[].every()` would pass a rule nothing
+ * has validated.
  */
 export function hasRequiredFields(
 	ruleTypes: readonly ProviderRuleType[],
@@ -194,33 +188,25 @@ export function isForeignRule(rule: RavenMemberRule): boolean {
 
 /**
  * Fieldtypes whose control gets a row to itself: the doctype-backed multiselect
- * only. Its candidates are the site's courses and batches, so its chips grow
- * without a bound and it has to be able to use the width.
- *
- * `MultiSelectStatic` is deliberately not here. It holds at most the three
- * declared platform roles, so it fits a cell, and the row lays its cells out on
- * a grid whose tracks are fixed fractions: a control growing inside one gets
- * taller rather than pushing its neighbours onto the next line, which is what
- * kept it out of this band while the row was a wrapping flex line.
+ * only, whose candidates are the site's courses and batches and so grow without
+ * a bound. `MultiSelectStatic` holds at most three roles and fits a cell.
  */
 const BLOCK_FIELDTYPES = ['MultiSelect']
 
 /**
  * A rule type's visible fields, split into the two bands a condition row draws.
- * Replaced a fixed `Field · Operator · Value` triple: a cascade declares as many
- * selects as it has levels, and the third onwards read as leftovers under the row.
+ * Replaced a fixed Field/Operator/Value triple: a cascade declares as many
+ * selects as it has levels, and the third onwards read as leftovers.
  */
 export interface ConditionSlots {
 	/**
 	 * The cells that share the row's grid with the type picker: every control
-	 * whose width does not depend on what is in it. In a cascade each narrows
-	 * the next.
+	 * whose width does not depend on what is in it.
 	 */
 	inline: RuleField[]
 	/**
 	 * Doctype-backed multiselects, one row each. Their chips grow with the
-	 * selection, so a control that reflows as you pick is unreadable in a cell
-	 * sized for a Select.
+	 * selection, so they are unreadable in a cell sized for a Select.
 	 */
 	blocks: RuleField[]
 }
@@ -242,9 +228,9 @@ export function conditionSlots(
 }
 
 /**
- * A name for a rule, derived from what the row says: the backend requires a label
- * and the row has no name box. Not unique, and does not need to be: the backend
- * dedupes on provider + rule_type + config.
+ * A name for a rule, derived from what the row says, because the backend requires
+ * a label and the row has no name box. Not unique, and does not need to be: the
+ * backend dedupes on provider + rule_type + config.
  */
 export function autoRuleLabel(
 	ruleTypes: readonly ProviderRuleType[],

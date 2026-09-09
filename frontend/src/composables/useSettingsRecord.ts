@@ -26,14 +26,9 @@ export interface UseSettingsRecordOptions {
 	 */
 	enabledField?: string
 	/**
-	 * Replaces the dirty computation, and is handed the source so it can read
-	 * what the document resource itself thinks.
-	 *
-	 * Most forms that need this only add to it — an editor holding a value it
-	 * has not handed over yet, roles written through their own endpoint — and
-	 * return `source.isDirty || mine`. A draft with defaults of its own has to
-	 * ignore it instead: the source's answer for a new record is "holds
-	 * anything at all", which a seeded draft satisfies before it is touched.
+	 * Replaces the dirty computation, and is handed the source so it can read what
+	 * the document resource thinks. A draft with defaults of its own has to ignore
+	 * that answer, which for a new record is "holds anything at all".
 	 */
 	dirty?: (source: SettingsSourceHandle) => boolean
 }
@@ -57,15 +52,12 @@ export interface SettingsRecordHandle {
 /**
  * The state every settings record form holds: the document, whether it is new,
  * whether it is dirty, the dirty guard's registration, and the header switch.
- *
- * Nine forms had this written out by hand and identically. What is NOT here is
- * the save — see {@link runSave} — nor validation, seeding, or what happens
- * after a write, because those are the parts that genuinely differ per form.
- *
- * The two endpoint-backed forms (Email Accounts, Payment Gateways) cannot use
- * this: one reads through a gated LMS API rather than a document resource, and
- * the other does not know its doctype until the server answers.
+ * Nine forms had this written out by hand and identically.
  */
+
+// Not here: the save, validation, seeding, or what happens after a write. The
+// two endpoint-backed forms cannot use this at all, because one reads through
+// a gated API and the other does not know its doctype until the server answers.
 export function useSettingsRecord(
 	options: UseSettingsRecordOptions
 ): SettingsRecordHandle {
@@ -81,9 +73,9 @@ export function useSettingsRecord(
 		options.dirty ? Boolean(options.dirty(source)) : source.isDirty
 	)
 
-	// Refetch rather than reset field by field: the resource is module-cached by
-	// [doctype, name], so without this the discarded edits stay in the document
-	// and the next Save writes them.
+	// Refetch rather than reset field by field. The resource is module-cached by
+	// [doctype, name], so without this the discarded edits stay in the document and
+	// the next Save writes them.
 	useDirtyGuard(
 		() => isDirty.value,
 		() => void source.reload()

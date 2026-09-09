@@ -1,12 +1,9 @@
 import { onScopeDispose, ref, watch, type Ref } from 'vue'
 import type { Router } from 'vue-router'
 
-// Confirm before a navigation discards an unsaved settings form.
-//
-// A set, not one slot. Settings.vue renders every panel in a `v-for` and a page
-// component now holds its own list and form, so several are registered at once;
-// with one slot the last to mount won, every earlier one went unguarded, and
-// its unmount cleared the slot for the others too.
+// Confirm before a navigation discards an unsaved settings form. A set, not one
+// slot: several panels register at once, and with one slot the last to mount won
+// and its unmount cleared the slot for the others too.
 type DirtyCheck = () => boolean
 
 interface DirtyEntry {
@@ -22,12 +19,12 @@ const registered = new Set<DirtyEntry>()
 const suppressed = new Set<DirtyEntry>()
 
 // Register a form from its setup; it deregisters itself when that component
-// goes away. Registering while showing a list is harmless — a list is clean.
-//
+// goes away. Registering while showing a list is harmless, because a list is
+// clean.
+
 // `discard` is what the form does when the user chooses Discard. Without it the
-// guard only stops asking: the resources behind these forms are module-cached
-// by [doctype, name], so the edits stay in the document and the next Save
-// writes exactly what the user asked to throw away.
+// edits stay in the module-cached document and the next Save writes exactly
+// what the user asked to throw away.
 export function useDirtyGuard(isDirty: DirtyCheck, discard?: () => void) {
 	const entry: DirtyEntry = { isDirty, discard }
 	registered.add(entry)
@@ -37,8 +34,9 @@ export function useDirtyGuard(isDirty: DirtyCheck, discard?: () => void) {
 	})
 }
 
-// Install the guard on the router (Settings.vue does this once). Must abort
-// (return false), never navigate — navigating from a guard cancels the pop and vue-router won't restore the URL.
+// Install the guard on the router, which Settings.vue does once. Must abort by
+// returning false, never navigate: navigating from a guard cancels the pop and
+// vue-router will not restore the URL.
 export function installDirtyGuard(
 	router: Router,
 	confirm: () => Promise<boolean>
@@ -57,8 +55,8 @@ export function installDirtyGuard(
 		if (!(await confirm())) return false
 
 		// Actually throw the edits away, then stop asking for the rest of this
-		// navigation. The checker is suppressed rather than deleted, so a form
-		// still mounted afterwards is guarded again the next time it goes dirty.
+		// navigation. The checker is suppressed rather than deleted, so a form still
+		// mounted afterwards is guarded again the next time it goes dirty.
 		for (const entry of dirty) {
 			entry.discard?.()
 			suppressed.add(entry)
@@ -71,8 +69,8 @@ export function installDirtyGuard(
 	}
 }
 
-// Keys that move on their own (new `modified`/`__last_sync_on` on every reload,
-// whether or not anything visible changed) — comparing them fires a false prompt.
+// Keys that move on their own, such as a new `modified` on every reload whether
+// or not anything visible changed. Comparing them fires a false prompt.
 const VOLATILE = new Set([
 	'creation',
 	'docstatus',
@@ -84,7 +82,7 @@ const VOLATILE = new Set([
 
 const isVolatile = (key: string) => key.startsWith('__') || VOLATILE.has(key)
 
-// Key order is not meaning — sort, and drop volatile keys, before comparing.
+// Key order is not meaning, so sort and drop volatile keys before comparing.
 const stable = (value: unknown): unknown => {
 	if (Array.isArray(value)) return value.map(stable)
 	if (value && typeof value === 'object') {
@@ -130,15 +128,16 @@ export function useDirtyDoc(doc: Ref<any>) {
 	}
 }
 
-// The confirm dialog's state, kept here (not a component) so the guard can
-// await an answer from inside a navigation. Alias `show` in <script setup> — Vue only unwraps top-level refs.
+// The confirm dialog's state, kept here rather than in a component so the guard
+// can await an answer from inside a navigation. Alias `show` in <script setup>,
+// because Vue only unwraps top-level refs.
 export const discardPrompt = { show: ref(false) }
 
 let resolver: ((ok: boolean) => void) | null = null
 
 export function confirmDiscard(): Promise<boolean> {
-	// A second prompt can open mid-flight (browser-Back twice) — settle the one
-	// being superseded as FALSE rather than leak its promise.
+	// A second prompt can open mid-flight, so settle the one being superseded as
+	// false rather than leak its promise.
 	answerDiscard(false)
 	discardPrompt.show.value = true
 	return new Promise<boolean>((resolve) => {

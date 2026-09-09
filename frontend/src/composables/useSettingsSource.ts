@@ -9,14 +9,9 @@ export const NEW_RECORD = 'new'
 const LMS_SETTINGS = 'LMS Settings'
 
 /**
- * The slice of a frappe-ui document resource these pages touch. frappe-ui
- * ships `DocumentResource` only as an internal .d.ts and re-exports neither it
- * nor the path, so — as useSettingsListResource does for lists — it is
- * declared here.
- *
- * `isDirty` is the resource's own doc-vs-originalDoc value comparison, and
- * `save.submit()` sends only the changed fields and skips the round trip
- * entirely when there are none.
+ * The slice of a frappe-ui document resource these pages touch. frappe-ui ships
+ * `DocumentResource` only as an internal .d.ts and re-exports neither it nor the
+ * path, so it is declared here the way useSettingsListResource declares lists.
  */
 export interface SettingsDocumentResource {
 	/**
@@ -62,9 +57,8 @@ export interface SettingsSourceHandle {
 	doc: SettingsListRow | null
 	/**
 	 * The name the record currently answers to, which after a rename is neither
-	 * the one the URL carries nor the one the source declared. Exposed so the
-	 * page above can rehash to it: without that the hash names a document the
-	 * server has forgotten, and a browser refresh deep-links to nothing.
+	 * the one the URL carries nor the one the source declared. Exposed so the page
+	 * above can rehash to it, or a refresh deep-links to nothing.
 	 */
 	name: string | null
 	isDirty: boolean
@@ -75,15 +69,9 @@ export interface SettingsSourceHandle {
 	loading: boolean
 }
 
-// createDocumentResource caches on [doctype, name] unconditionally: it ignores
-// `options.cache` altogether (documentResource.js reads getCacheKey([doctype,
-// name]) and never looks at the option), so two callers naming the same
-// document get the same instance and neither can opt out. That is what makes
-// LMS Settings safe to reach for from anywhere — it is one document, one dirty
-// flag, one save. `cache` and `fields` are passed on the LMS Settings call
-// only to keep it byte-identical to Settings.vue's and Preferences.vue's;
-// dropping them would change nothing but would make three call sites that must
-// resolve to one instance look like three different requests.
+// createDocumentResource caches on [doctype, name] unconditionally and ignores
+// `options.cache`, so two callers naming the same document get one instance.
+// That is what makes LMS Settings safe to reach for from anywhere.
 const documentResource = (
 	doctype: string,
 	name: string
@@ -97,20 +85,8 @@ const documentResource = (
 
 /**
  * Records a confirmed rename in the two copies the resource compares, because
- * nothing downstream will.
- *
- * getChangedFields() deletes `name` from every payload, so the rename IS the
- * write for the name and a save with nothing else to send resolves without a
- * request — leaving originalDoc naming a document the server has forgotten,
- * while isDirty compares the documents whole, name included. A page renaming
- * through `name` itself therefore read unsaved for good, with nothing left to
- * save. Only the name is touched: an edit still waiting to go out is none of
- * this function's business.
- *
- * isDirty is settled here rather than left to the resource, which recomputes it
- * only when `doc` mutates — and on such a page `doc` mutated before the save,
- * not after. A later edit re-runs the resource's own comparison over these
- * corrected copies and agrees.
+ * nothing downstream will. getChangedFields() deletes `name`, so a save carrying
+ * only the rename sends no request and refreshes no originalDoc.
  */
 const settleRenamedName = (
 	resource: SettingsDocumentResource,
@@ -147,10 +123,9 @@ export function useSettingsSource(
 		return options.record?.value ?? null
 	})
 
-	// The name a rename left the record answering to, which is neither the one
-	// the URL carries nor the one the source declares — both still name a
-	// document the server has forgotten. Held here so the open page stays on the
-	// record the user just renamed.
+	// The name a rename left the record answering to, which is neither the one the
+	// URL carries nor the one the source declares. Held here so the open page
+	// stays on the record the user just renamed.
 	const renamedTo = shallowRef<string | null>(null)
 
 	// Pointing the page at another record ends that hold.
@@ -163,16 +138,16 @@ export function useSettingsSource(
 	const isNew = computed(() => target.value === NEW_RECORD)
 
 	// A record that does not exist yet has no document to load, so it edits a
-	// plain object. A fresh one each time, or the draft abandoned on the last
-	// New would be waiting in the next one.
+	// plain object. A fresh one each time, or the draft abandoned on the last New
+	// would be waiting in the next one.
 	const draft = shallowRef<SettingsListRow>(reactive({}))
 	watch(isNew, (value) => {
 		if (value) draft.value = reactive({})
 	})
 
-	// In a watcher rather than a computed: createDocumentResource registers in a
-	// module-level cache and fires a request, which is not what a computed's
-	// getter is allowed to do.
+	// In a watcher rather than a computed, because createDocumentResource
+	// registers in a module-level cache and fires a request. A computed's getter
+	// may not do either.
 	const resource = shallowRef<SettingsDocumentResource | null>(null)
 	watch(
 		target,
@@ -181,10 +156,9 @@ export function useSettingsSource(
 				resource.value = options.resource
 				return
 			}
-			// A rename retargets the resource in place, so by the time this runs
-			// the one already open IS the record the new name refers to. Entering
-			// it again would fetch the document a second time and throw away the
-			// copy the save just settled.
+			// A rename retargets the resource in place, so by the time this runs the
+			// one already open is the record the new name refers to. Entering it again
+			// would refetch and throw away the copy the save just settled.
 			if (resource.value?.name === name) return
 			resource.value =
 				!name || name === NEW_RECORD ? null : documentResource(doctype, name)
@@ -214,19 +188,17 @@ export function useSettingsSource(
 
 		const renamed = renameTarget(current.doc)
 		if (renamed) {
-			// Awaited, and first: a doctype named from a field ignores a set_value
-			// on that field, so the rename is the only thing that moves the name —
-			// and a rejected one must not be followed by the field write, or the
-			// record ends up updated under a name the user did not mean to keep.
+			// Awaited, and first. A doctype named from a field ignores a set_value on
+			// that field, and a rejected rename must not be followed by the field
+			// write, or the record is updated under a name nobody meant to keep.
 			await call('frappe.client.rename_doc', {
 				doctype,
 				old_name: target.value,
 				new_name: renamed,
 			})
-			// The resource builds every request from its own `name` at send time,
-			// so it is pointed at the new one before the fields go out. Without
-			// this the write — and every later reload — addresses a document that
-			// no longer exists.
+			// The resource builds every request from its own `name` at send time, so
+			// it is pointed at the new one before the fields go out. Without this the
+			// write and every later reload address a document that no longer exists.
 			current.name = renamed
 			renamedTo.value = renamed
 			settleRenamedName(current, renamed)

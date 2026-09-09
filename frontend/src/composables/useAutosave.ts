@@ -21,13 +21,9 @@ export type AutosaveStatus =
 	| 'error'
 
 /**
- * How settled a change is when it is committed.
- *
- * `now` — a checkbox, radio, dropdown, switch, Link or file: a pick is whole
- * at the first interaction and there is nothing to wait for.
- *
- * `typing` — a text, number or code field: written after {@link TYPING_REST}
- * of rest, so a half-typed value is not sent a character at a time.
+ * How settled a change is when it is committed. `now` is a pick, whole at the
+ * first interaction. `typing` is a text, number or code field, written after
+ * {@link TYPING_REST} of rest so it is not sent a character at a time.
  */
 export type CommitMode = 'now' | 'typing'
 
@@ -42,12 +38,12 @@ export interface Autosave {
 	error: Ref<unknown>
 	lastSavedAt: Ref<Date | null>
 	/**
-	 * Report that a control's value has settled. A `now` commit is written once
-	 * the current tick's watchers have run rather than from inside the handler,
-	 * because the resource decides whether it is dirty in a watcher of its own.
+	 * Report that a control's value has settled. A `now` commit is written once the
+	 * current tick's watchers have run, because the resource decides whether it is
+	 * dirty in a watcher of its own.
 	 */
 	commit: (mode?: CommitMode) => void
-	/** Send a waiting edit now — on teardown, or leaving the route. */
+	/** Send a waiting edit now, on teardown or when leaving the route. */
 	flush: () => void
 	/** Drop a waiting edit without sending it. */
 	cancel: () => void
@@ -56,39 +52,22 @@ export interface Autosave {
 
 export interface AutosaveOptions {
 	/**
-	 * Is there anything to write?
-	 *
-	 * For a document this is frappe-ui's own `isDirty`, which compares the doc
-	 * against the `originalDoc` it cloned on load — a value comparison, so a
-	 * field changed and changed back is clean and never reaches the server.
-	 * The resource maintains it: a successful save re-clones, and a reload
-	 * replaces both sides at once.
+	 * Is there anything to write? For a document this is frappe-ui's own `isDirty`,
+	 * a value comparison against the `originalDoc` it cloned on load, so a field
+	 * changed and changed back is clean and never reaches the server.
 	 */
 	isDirty: () => boolean
 	/**
-	 * Performs one write. Resolve on success, reject to surface an error —
-	 * which is what a frappe-ui resource's `submit()` already does.
+	 * Performs one write. Resolve on success, reject to surface an error, which is
+	 * what a frappe-ui resource's `submit()` already does.
 	 */
 	write: () => Promise<unknown>
 }
 
 /**
- * Autosave, as a state machine over a resource's dirty flag.
- *
- * Shaped after TanStack's mutations — `status` plus the booleans derived from
- * it — so a page renders whatever it wants from the same source rather than
- * being handed a string to display.
- *
- * Two guarantees:
- *
- * A commit arriving mid-write is held and replayed after, never issued
- * alongside. `save.submit()` sends the changed fields as they are at call
- * time, so two in flight at once race to write the same row.
- *
- * A clean resource is never written. Because dirtiness is a comparison and
- * not a touched flag, typing a character and deleting it again queues nothing
- * — which is what keeps a rest-period autosave from writing a value the user
- * has already taken back, and from tripping a doctype that validates on save.
+ * Autosave, as a state machine over a resource's dirty flag. A commit arriving
+ * mid-write is held and replayed after, never issued alongside, and a clean
+ * resource is never written. Shaped after TanStack's mutations.
  */
 export function useAutosave(options: AutosaveOptions): Autosave {
 	const error = ref<unknown>(null)
@@ -103,17 +82,16 @@ export function useAutosave(options: AutosaveOptions): Autosave {
 	let savedTimer: ReturnType<typeof setTimeout> | undefined
 	let tickPending = false
 
-	// Neither frappe-ui's debounce nor vueuse's useDebounceFn can be cancelled,
-	// so the rest period is a plain timer this owns and can disarm. The
-	// immediate path has no timer to clear, so taking its flag back down is
-	// what cancels it.
+	// Neither frappe-ui's debounce nor vueuse's useDebounceFn can be cancelled, so
+	// the rest period is a plain timer this owns. The immediate path has no timer,
+	// so taking its flag back down is what cancels it.
 	const disarm = () => {
 		clearTimeout(restTimer)
 		restTimer = undefined
 		tickPending = false
-		// A write queued behind one already in flight is a waiting edit too: the
-		// in-flight write's `.finally` re-fires `send()` off this flag, so leaving
-		// it set writes the very value the cancel exists to withhold.
+		// A write queued behind one already in flight is a waiting edit too. The
+		// in-flight write's `.finally` re-fires `send()` off this flag, so leaving it
+		// set writes the very value the cancel exists to withhold.
 		queued = false
 		pending.value = false
 	}
@@ -151,16 +129,9 @@ export function useAutosave(options: AutosaveOptions): Autosave {
 			})
 	}
 
-	// A pick commits from the same handler that wrote the value, and the
-	// resource is not dirty yet at that moment: frappe-ui maintains its own
-	// isDirty from a deep watcher on the document (documentResource.js), and
-	// Vue runs that watcher at the end of the tick. Sending straight from the
-	// handler therefore compares a document against a snapshot it has not
-	// re-read, finds it clean, and writes nothing — leaving the marker on
-	// "Not saved" with no write ever issued and nothing to clear it.
-	//
-	// Waiting out the tick is also what coalesces the pair of handlers a
-	// control fires on one interaction into a single write.
+	// A pick commits from the same handler that wrote the value, and the resource
+	// is not dirty yet, because frappe-ui maintains isDirty from a deep watcher
+	// Vue runs at the end of the tick.
 	const sendAfterTick = () => {
 		if (tickPending) return
 		tickPending = true
@@ -210,9 +181,8 @@ export function useAutosave(options: AutosaveOptions): Autosave {
 	})
 
 	// Send, don't drop. frappe-ui's SettingsDialog defaults to unmountOnHide, so
-	// closing the dialog or switching tabs inside the rest period disposes this
-	// scope while an edit is still waiting — and removing the focused input from
-	// the DOM fires no focusout, so no `now` commit rescues it either.
+	// closing the dialog inside the rest period disposes this scope while an edit
+	// is waiting, and removing a focused input fires no focusout to rescue it.
 	onScopeDispose(() => {
 		flush()
 		clearTimeout(restTimer)

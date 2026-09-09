@@ -83,9 +83,8 @@ function toRow(record: MappingRecord): MappingRow {
 		ravenId,
 		label,
 		type,
-		// Read off the record rather than negated blindly: a workspace payload has
-		// no `enabled` at all, and `!undefined` would mute every workspace in the
-		// list as though the whole integration were switched off.
+		// A workspace payload has no `enabled` at all, and `!undefined` would mute
+		// every workspace as though the integration were switched off.
 		paused: 'enabled' in record ? !record.enabled : false,
 		stale: !!record.stale,
 		channelCount:
@@ -98,7 +97,7 @@ export function useMappingList(options: MappingListOptions): MappingList {
 	const entity = options.entity
 	const isWorkspace = entity === 'workspace'
 
-	// Kept as whole strings (not built with .format) so translators see the
+	// Whole strings rather than built with .format, so translators see the
 	// finished sentence.
 	const copy = isWorkspace
 		? {
@@ -135,8 +134,6 @@ export function useMappingList(options: MappingListOptions): MappingList {
 	const rows = computed<MappingRow[]>(() => (records.data ?? []).map(toRow))
 	const loading = computed<boolean>(() => records.loading)
 
-	// An unmapped row is a raw Raven record; its first edit adopts it: create the
-	// mapping, flip the row in place, return the docname for the caller's edit.
 	function isDuplicate(err: unknown): boolean {
 		const e = err as { exc_type?: string; messages?: string[] } | null
 		if (!e) return false
@@ -173,13 +170,9 @@ export function useMappingList(options: MappingListOptions): MappingList {
 		const params = isWorkspace
 			? { raven_workspace: row.ravenId }
 			: { workspace: options.workspace, raven_channel: row.ravenId }
-		// submit() resolves with the endpoint's data and never rejects, but on a
-		// failure that data is the LAST SUCCESSFUL call's: frappe-ui's handleError
-		// restores `previousData` onto the resource and `fetch` returns it
-		// (resources.js). So a link that fails after any link succeeded resolves
-		// with the earlier row's docname, and trusting it flips THIS row to
-		// someone else's mapping, which runMapped then writes the label, type and
-		// enabled edits to. `error` is the reliable signal; it is nulled per call.
+		// submit() never rejects, and on failure resolves with the last successful
+		// call's data, so trusting it would flip this row onto another row's
+		// mapping. `error` is the reliable signal, and is nulled per call.
 		const name = (await linkRecord.submit(params)) as string | null | undefined
 		if (!linkRecord.error && name) {
 			flipMapped(row, name)
@@ -197,8 +190,8 @@ export function useMappingList(options: MappingListOptions): MappingList {
 		throw linkRecord.error ?? new Error('link failed')
 	}
 
-	// Run a mutating action against a row's mapping name, adopting first if the
-	// row is still unmapped. Errors are already surfaced by linkRecord.onError.
+	// Adopts the row first if it is still unmapped. Errors are already surfaced by
+	// linkRecord.onError.
 	async function runMapped(
 		row: MappingRow,
 		apply: (name: string) => void
@@ -210,23 +203,23 @@ export function useMappingList(options: MappingListOptions): MappingList {
 		}
 	}
 
-	// Channel Link button: adopt the row, then reload it as a full managed row.
-	// The row key (Raven id) is unchanged, so the selection is preserved.
-	const linkingKey = ref<string | null>(null)
+	// Adopt the row, then reload it as a full managed row. The row key is the
+	// Raven id, which adoption does not move, so the selection is preserved.
+	let linking = false
 	async function linkRow(row: MappingRow): Promise<void> {
-		if (linkingKey.value) return
-		linkingKey.value = row.key
+		if (linking) return
+		linking = true
 		try {
 			await ensureMapped(row)
 			await records.reload()
 		} catch {
 			/* toast fired in linkRecord.onError */
 		} finally {
-			linkingKey.value = null
+			linking = false
 		}
 	}
 
-	// Every row edit posts to `set_<entity>_<field>` and reloads the list; only
+	// Every row edit posts to `set_<entity>_<field>` and reloads the list. Only
 	// the failure message differs.
 	const setField = (field: string, fallback: string = copy.update) =>
 		createResource({
@@ -237,10 +230,9 @@ export function useMappingList(options: MappingListOptions): MappingList {
 			onError: onError(fallback),
 		})
 
-	// Channels only. `set_workspace_enabled` does not exist, a workspace mapping
-	// has no `enabled`, so the resource is built for the channel list alone
-	// rather than left pointing at an endpoint the server would 404. Nothing
-	// renders a workspace switch to call it, and this is what keeps that true.
+	// Channels only. A workspace mapping has no `enabled` and
+	// `set_workspace_enabled` does not exist, so the resource is never built for
+	// a workspace rather than left pointing at an endpoint that would 404.
 	const setEnabled = isWorkspace ? null : setField('enabled')
 	function toggleEnabled(row: MappingRow, enabled: boolean): void {
 		if (!setEnabled) return
@@ -248,7 +240,7 @@ export function useMappingList(options: MappingListOptions): MappingList {
 	}
 
 	// Rebuilds the vanished Raven doc from the stored label and clears `stale`. It
-	// refuses when a parent is stale, so pass that message through untouched.
+	// refuses when a parent is stale, so its message passes through untouched.
 	const recreateRecord = createResource({
 		url: `raven_integration.api.recreate_${entity}`,
 		onSuccess() {
@@ -267,8 +259,8 @@ export function useMappingList(options: MappingListOptions): MappingList {
 		url: `raven_integration.api.delete_${entity}`,
 		onSuccess() {
 			deleteOpen.value = false
-			// Both tables confirm the delete out loud; the channel table used to
-			// succeed silently, which was the drift between the two copies.
+			// Both tables confirm out loud. The channel table used to succeed
+			// silently, which was the drift between the two copies.
 			toast.success(copy.removed)
 			records.reload()
 		},
@@ -280,13 +272,13 @@ export function useMappingList(options: MappingListOptions): MappingList {
 		deleteOpen.value = true
 	}
 	function confirmDelete(): void {
-		// A second confirm while the first is in flight (double-click) must no-op,
-		// not race the first for the same row's delete lock. Mirrors linkRow.
+		// A second confirm while the first is in flight must no-op rather than race
+		// it for the same row's delete lock.
 		if (deleteRecord.loading) return
 		if (toDelete.value?.name) deleteRecord.submit({ name: toDelete.value.name })
 	}
 
-	// Stale rows swap their inline controls for this menu: the only two ways out
+	// Stale rows swap their inline controls for this menu, the only two ways out
 	// of the state.
 	function takeActionMenu(row: MappingRow): DropdownOption[] {
 		return [
