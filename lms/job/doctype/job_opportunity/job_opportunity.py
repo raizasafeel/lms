@@ -38,14 +38,13 @@ REPORT_REASON_MAX_LENGTH = 1000
 
 
 @frappe.whitelist()
-# The write is privileged (see below), so the only thing bounding how often a
-# listing can be re-reported is this. Each report also overwrites the last, so
-# an unlimited endpoint lets one caller erase everyone else's reason.
+# The write is privileged, so this is the only thing bounding how often a
+# listing can be re-reported. Each report also overwrites the last, so an
+# unlimited endpoint lets one caller erase everyone else's reason.
 @rate_limit(key="job", limit=5, seconds=60 * 60)
 def report(job: str, reason: str):
-	# frappe's whitelist argument coercion is switched off in several run modes
-	# (see lms/tests/test_notification_rules.py), so an annotated signature is
-	# not an input check -- these stay explicit.
+	# frappe's whitelist argument coercion is switched off in several run modes, so
+	# an annotated signature is not an input check. These stay explicit.
 	if not isinstance(job, str) or not isinstance(reason, str):
 		frappe.throw(_("job and reason must be strings"))
 
@@ -57,18 +56,13 @@ def report(job: str, reason: str):
 
 	doc = frappe.get_doc("Job Opportunity", job)
 
-	# This write is deliberately privileged: report() exists so a NON-owner can
-	# flag someone else's listing -- Job Opportunity grants only System
-	# Manager full rights and LMS Student if_owner, so a reporter by
-	# definition has neither read nor write on the document being reported. A
-	# has_permission check on the target document would defeat the feature it
-	# guards. What bounds this instead: the endpoint is not allow_guest, so a
-	# caller is at least authenticated; report_reason and reported_by are both
-	# read_only on the doctype; reported_by is always frappe.session.user,
-	# never a caller-supplied value (report()'s signature takes no such
-	# argument); and reason is rejected above if empty or over
-	# REPORT_REASON_MAX_LENGTH characters, so an unbounded blob cannot be
-	# stored and mailed.
+	# Deliberately privileged. report() exists so a non-owner can flag someone
+	# else's listing, so a has_permission check on the target would defeat the
+	# feature it guards.
+
+	# What bounds it instead: the endpoint is not allow_guest, both report fields
+	# are read_only, reported_by is always frappe.session.user, and reason is
+	# rejected above if empty or too long.
 	doc.db_set("reported_by", frappe.session.user, update_modified=False)
 	doc.db_set("report_reason", reason, update_modified=False)
 	doc.reload()

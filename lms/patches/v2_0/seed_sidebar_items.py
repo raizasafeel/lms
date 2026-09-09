@@ -6,8 +6,8 @@ def execute():
 
 	Bounded by the catalogue: thirteen appends and one save on a Single, plus a
 	stamp on each web-page row the site already had. LMS Settings is a Single,
-	so that is one parent and a few dozen rows — a date cutoff and a row cap
-	would bound nothing the work does not already bound.
+	so that is one parent and a few dozen rows. A date cutoff and a row cap would
+	bound nothing the work does not already bound.
 
 	Idempotent: a name1 already present is skipped, so `migrate` twice changes
 	nothing. Each built-in seeds `hidden` from the Check field it replaces, so a

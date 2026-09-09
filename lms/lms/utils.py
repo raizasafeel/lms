@@ -79,11 +79,8 @@ def resolve_text_direction(lang: str) -> str:
 		return "rtl"
 
 	# Frappe's own answer, over the language asked about rather than the session
-	# one. A hardcoded set here went stale immediately: frappe ships `ku` and
-	# `ur` as RTL too, and resolves a regional code through get_parent_language,
-	# so Urdu and Kurdish sites were served `<html dir="ltr">`. Its comment asks
-	# for the set to be kept in sync with a JavaScript twin; a third copy in LMS
-	# is the one that would drift unnoticed.
+	# one. A hardcoded set here went stale immediately, because frappe ships `ku`
+	# and `ur` as RTL too and resolves a regional code through get_parent_language.
 	previous = frappe.local.lang
 	try:
 		frappe.local.lang = lang

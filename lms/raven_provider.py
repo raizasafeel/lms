@@ -7,21 +7,16 @@ import frappe
 try:
 	from raven_integration.exceptions import ProviderDataError
 except ImportError:
-	# raven_integration is an optional out-of-tree app (the UI ships a
-	# RavenNotInstalledBanner for exactly this case). Importing lms must not depend
-	# on it. When it *is* installed the real class wins, so `except ProviderDataError`
-	# on the raven_integration side still catches what this module raises.
+	# raven_integration is an optional out-of-tree app, so importing lms must not
+	# depend on it. When it is installed the real class wins, so the other side's
+	# `except ProviderDataError` still catches what this module raises.
 	class ProviderDataError(Exception):
 		"""Raised when provider-side data needed for sync is missing or malformed."""
 
 
 # The staff choices that are a Frappe role, mapped to the role that backs them.
-# "Evaluator" is the wording the LMS uses on screen; the role behind it is
-# `Batch Evaluator`, which is what LMS itself checks (see lms/command_palette.py).
-#
-# Not the same population as an *assigned* evaluator, which is whoever a course
-# or a batch names in its own evaluator field. Measured on one bench: 15 role
-# holders, 23 Course Evaluator records, 10 in both. Same word, two branches.
+# "Evaluator" on screen is the `Batch Evaluator` role, which is not the same
+# population as an assigned evaluator: same word, two branches.
 PLATFORM_ROLES = {
 	"Course Creator": "Course Creator",
 	"Evaluator": "Batch Evaluator",
@@ -32,11 +27,9 @@ PLATFORM_ROLES = {
 # close to every user on the site rather than every user who did something.
 STUDENT_ROLE = "LMS Student"
 
-# `label` is the rule builder's on-screen wording: the UI renders these
-# declarations, so anything a fieldname cannot spell has to live here. A field may
-# also carry a `description`, which the row renders under the control; no field
-# here does, so the two branches of Evaluator, the platform role and the one
-# assigned on a course, are told apart by their labels alone.
+# `label` is the rule builder's on-screen wording, so anything a fieldname cannot
+# spell lives here. No field declares a `description`, so the two branches of
+# Evaluator are told apart by their labels alone.
 RULE_TYPES = [
 	{
 		"type": "Student",
@@ -49,9 +42,8 @@ RULE_TYPES = [
 				"options": ["All", "Enrolled"],
 				"reqd": 1,
 				# Enrolled, not All. All is every holder of the LMS Student role,
-				# which lms/lms/user.py appends on signup. That is close to every
-				# user on the site, and not a population to arrive at by leaving a
-				# row alone.
+				# appended on signup, which is close to every user on the site and
+				# not a population to arrive at by leaving a row alone.
 				"default": "Enrolled",
 			},
 			{
@@ -66,12 +58,9 @@ RULE_TYPES = [
 				"fieldname": "enrolled_in",
 				"fieldtype": "Select",
 				"label": "Enrolled in",
-				# "Any" is what used to be the "All Enrolled Students" rule type. It
-				# is not the same set as student_scope=All: enrolled in something,
-				# versus holding the role. The alternative was to let an empty
-				# multiselect mean "all", which is how the scope fields used to read.
-				# Rejected because membership sync is authoritative, so a multiselect
-				# left empty by accident would silently add every enrolled student.
+				# "Any" means enrolled in something, not the same set as
+				# student_scope=All. An empty multiselect was rejected as the way to
+				# say it, because one emptied by accident would add everyone.
 				"options": ["Any", "Batches", "Courses", "Both"],
 				"default": "Any",
 				"depends_on": {"field": "student_scope", "value_in": ["Enrolled"]},
@@ -162,12 +151,9 @@ TRIGGERS = [
 	"LMS Enrollment",
 	"LMS Batch Enrollment",
 	"LMS Payment",
-	# The parents, not the child tables the Staff choices actually read. A child row
-	# is written by the parent's update_child_table(), which calls d.db_update()
-	# directly and never run_method, so doc_events, and with it raven_integration's
-	# wildcard handler, does not fire for `Course Instructor` or `Has Role` at all.
-	# The document that is saved is the course or batch being tagged, and the User
-	# whose Has Role rows the three role choices read.
+	# The parents, not the child tables the Staff choices read. A child row is
+	# written by the parent's update_child_table(), which never runs doc_events, so
+	# the document that is saved is the course, batch or User being tagged.
 	"LMS Course",
 	"LMS Batch",
 	"User",
@@ -187,14 +173,9 @@ def get_provider() -> dict:
 @frappe.whitelist()
 def get_raven_setup() -> dict:
 	"""Whether both apps are installed and the integration is on.
-
-	LMS answers the install half itself: frappe raises AppNotInstalledError for a
-	method of an app that is not installed, and frappe-ui rethrows that before any
-	`onError` runs, so the screen whose job is to say "install it" cannot render.
-
-	Gated on the same `raven_integration_manager_roles` hook that widens
-	raven_integration's own gate, read from the hook rather than imported, so the
-	two cannot drift and this still works with that app absent.
+	LMS answers the install half itself, because frappe-ui rethrows
+	AppNotInstalledError before any `onError` runs and the screen whose job is to
+	say "install it" could never render. Gated on the shared hook, not an import.
 	"""
 	frappe.only_for(["System Manager", *(frappe.get_hooks("raven_integration_manager_roles") or [])])
 	apps = frappe.get_installed_apps()
@@ -252,6 +233,11 @@ def _students(rule: dict) -> set[str]:
 			f"Enrolled. Edit the condition in Settings > Raven to pick one of them."
 		)
 
+	return _enrolled_students(rule)
+
+
+def _enrolled_students(rule: dict) -> set[str]:
+	"""The Enrolled half of a Student condition, narrowed by what it enrolls in."""
 	where = rule.get("enrolled_in") or "Any"
 	if where == "Any":
 		return _all_enrolled(rule)
@@ -332,25 +318,18 @@ def _enrolled_members(
 
 def _all_enrolled(rule: dict) -> set[str]:
 	"""Every enrolled student, from course enrollments and batch enrollments."""
-	# Both, not LMS Enrollment alone. Batch enrollment mirrors itself into one
-	# LMS Enrollment per Batch Course row, which misses a batch with no courses,
-	# courses added after the student enrolled, and the payment link (so a paid-batch
-	# student reads as Free). Sync is authoritative, so each omission removes someone.
+	# Both, not LMS Enrollment alone. The mirror into LMS Enrollment misses a batch
+	# with no courses, courses added after enrolment, and the payment link. Sync is
+	# authoritative, so each omission removes someone.
 	mode = _payment_mode(rule)
 	return _enrolled_members("LMS Enrollment", mode=mode) | _enrolled_members(
 		"LMS Batch Enrollment", mode=mode
 	)
 
 
-# --- Staff schema notes ---
-# Course Instructor  : child table used by both LMS Course and LMS Batch.
-#                      parent=course/batch name, parenttype='LMS Course'|'LMS Batch'.
-#                      user field: `instructor`.
-# LMS Course.evaluator / Batch Course.evaluator : the other per-record tagging.
-#                      Both link Course Evaluator. A batch has no evaluator of its
-#                      own; its evaluators are the ones on its Batch Course rows.
-# Has Role           : child table of User, one row per granted role. The other three
-#                      choices read it; a role is site-wide, so they take no scope.
+# Course Instructor is one child table shared by LMS Course and LMS Batch, told
+# apart by `parenttype`. A batch has no evaluator of its own; its evaluators are
+# the ones on its Batch Course rows. A role is site-wide, so it takes no scope.
 
 
 def _staff(rule: dict) -> set[str]:
@@ -361,15 +340,7 @@ def _staff(rule: dict) -> set[str]:
 		return _role_users(*PLATFORM_ROLES.values())
 
 	if kind == "Platform role":
-		chosen = _as_list(rule.get("platform_roles"))
-		unknown = [c for c in chosen if c not in PLATFORM_ROLES]
-		if unknown:
-			raise ProviderDataError(
-				f"Unknown platform role(s): {', '.join(repr(u) for u in unknown)}. The "
-				f"Staff condition names one or more of {', '.join(PLATFORM_ROLES)}. Edit "
-				f"the condition in Settings > Raven."
-			)
-		return _role_users(*(PLATFORM_ROLES[c] for c in chosen))
+		return _platform_role_users(rule)
 
 	if kind == "Assigned on":
 		return _assigned_staff(rule)
@@ -382,6 +353,19 @@ def _staff(rule: dict) -> set[str]:
 		f"Assigned on. A rule stored against the older `staff_role` vocabulary cannot be "
 		f"evaluated. Re-create it in Settings > Raven."
 	)
+
+
+def _platform_role_users(rule: dict) -> set[str]:
+	"""The users holding whichever of the declared platform roles the rule names."""
+	chosen = _as_list(rule.get("platform_roles"))
+	unknown = [c for c in chosen if c not in PLATFORM_ROLES]
+	if unknown:
+		raise ProviderDataError(
+			f"Unknown platform role(s): {', '.join(repr(u) for u in unknown)}. The "
+			f"Staff condition names one or more of {', '.join(PLATFORM_ROLES)}. Edit "
+			f"the condition in Settings > Raven."
+		)
+	return _role_users(*(PLATFORM_ROLES[c] for c in chosen))
 
 
 def _assigned_staff(rule: dict) -> set[str]:
@@ -405,6 +389,11 @@ def _assigned_staff(rule: dict) -> set[str]:
 	if not unscoped and not courses and not batches:
 		return set()
 
+	return _assigned_by_role(rule, courses, batches, unscoped=unscoped)
+
+
+def _assigned_by_role(rule: dict, courses: list[str], batches: list[str], *, unscoped: bool) -> set[str]:
+	"""Whichever tagging the rule reads: instructor on a record, or evaluator."""
 	as_what = rule.get("assigned_as")
 	if as_what == "Instructor":
 		return _instructor_users(courses, batches)
@@ -493,19 +482,18 @@ def _instructor_users(scope_courses: list[str], scope_batches: list[str]) -> set
 
 	result: set[str] = set()
 	if scope_courses:
-		rows = frappe.get_all(
-			"Course Instructor",
-			filters={"parenttype": "LMS Course", "parent": ["in", scope_courses]},
-			pluck="instructor",
-			distinct=True,
-		)
-		result |= set(rows)
+		result |= _instructors_on("LMS Course", scope_courses)
 	if scope_batches:
-		rows = frappe.get_all(
+		result |= _instructors_on("LMS Batch", scope_batches)
+	return _enabled_users(result)
+
+
+def _instructors_on(parenttype: str, parents: list[str]) -> set[str]:
+	return set(
+		frappe.get_all(
 			"Course Instructor",
-			filters={"parenttype": "LMS Batch", "parent": ["in", scope_batches]},
+			filters={"parenttype": parenttype, "parent": ["in", parents]},
 			pluck="instructor",
 			distinct=True,
 		)
-		result |= set(rows)
-	return _enabled_users(result)
+	)

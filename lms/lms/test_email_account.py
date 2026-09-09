@@ -182,7 +182,7 @@ class TestCreateEmailAccount(UnitTestCase):
 
 	@patch("frappe.model.document.Document.save")
 	def test_custom_service_is_stored_as_no_service(self, mock_save):
-		"""Email Account's `service` Select has no Custom option — a
+		"""Email Account's `service` Select has no Custom option, so a
 		hand-entered server is stored with no service at all."""
 		with patch("lms.lms.email_account.frappe.get_doc") as mock_get_doc:
 			mock_get_doc.return_value.name = "Relay"
@@ -324,7 +324,7 @@ class TestSetDefaultEmailAccount(UnitTestCase):
 		):
 			set_default_email_account("Support", "incoming")
 
-		# One write, the set — not a clear followed by a re-set.
+		# One write, the set, not a clear followed by a re-set.
 		self.assertEqual(len(mock_set_value.call_args_list), 1)
 		self.assertEqual(
 			mock_set_value.call_args_list[0][0],

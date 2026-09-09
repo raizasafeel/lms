@@ -46,9 +46,8 @@ EMAIL_SERVICE_CONFIG: dict[str, dict] = {
 }
 
 # A server with no preset: the account carries the host, port and encryption the
-# user typed. Not a key in EMAIL_SERVICE_CONFIG, because there is nothing to
-# preset — it is the absence of one, and Email Account stores it as a blank
-# `service`.
+# user typed. Not a key in EMAIL_SERVICE_CONFIG, because Email Account stores it
+# as a blank `service`.
 CUSTOM_SERVICE = "Custom"
 
 _STRING_FIELDS = (
@@ -68,29 +67,18 @@ _PORT_FIELDS = ("incoming_port", "smtp_port")
 _DEFAULT_FIELDS = {"incoming": "default_incoming", "outgoing": "default_outgoing"}
 
 # The role that owns Settings > Communication > Email Accounts. Core Email
-# Account grants read to System Manager and Inbox User and to nobody else, so a
-# Moderator who is not a System Manager saw an empty page. Widening that DocPerm
-# would hand every Moderator the site's whole mail configuration, including the
-# accounts other apps own, so the page is fronted by the endpoints below and the
-# role is checked here instead. Same shape as Settings > Users
-# (lms.lms.api.get_members).
+# Account grants read to System Manager and Inbox User only, and widening that
+# DocPerm would hand every Moderator the site's whole mail configuration.
 SETTINGS_ROLE = "Moderator"
 
-# One page of accounts. The settings panel steps `start` by the length of what
-# came back, and offers Load More while a page arrives full, so this is the
-# number the page reads a full answer as — keep it equal to
-# EMAIL_ACCOUNTS_PAGE_LENGTH in the frontend's emailAccounts.ts.
+# One page of accounts. The settings panel offers Load More while a page arrives
+# full, so keep this equal to EMAIL_ACCOUNTS_PAGE_LENGTH in the frontend's
+# emailAccounts.ts.
 EMAIL_ACCOUNTS_PAGE_LENGTH = 13
 
 # What the settings page is given back, and nothing else. The caller holds no
-# permission on Email Account, so a field absent here is a field they cannot
-# read at all.
-#
-# The three credentials are absent on purpose. `password` and `api_secret` are
-# Password fields, whose column holds `'*' * len(secret)` — a mask that still
-# reports the secret's length — and `api_key` is a credential stored in the
-# clear. None of the three is needed to render the page: an existing account's
-# credential is only ever replaced, never shown.
+# permission on Email Account, so a field absent here is one they cannot read.
+# The three credentials are absent because a stored one is replaced, never shown.
 ACCOUNT_READ_FIELDS = (
 	"name",
 	"email_account_name",
@@ -114,16 +102,14 @@ ACCOUNT_READ_FIELDS = (
 
 _SEARCH_FIELDS = ("email_account_name", "email_id")
 
-# The accounts frappe ships as examples are not accounts anyone here set up, and
-# they cannot be edited into working ones. The page has always hidden them; the
-# filter lives here now because a method-backed list has no get_list filters of
-# its own to carry it.
+# The accounts frappe ships as examples cannot be edited into working ones, and
+# the page has always hidden them. The filter lives here because a method-backed
+# list has no get_list filters of its own to carry it.
 _EXAMPLE_ACCOUNTS = ("email_id", "not like", "%example%")
 
 # The fields update_email_account will write, by how each one is checked. A
-# fieldname absent from all four is refused: the caller reaches a doctype they
-# hold no permission on, so the write set is an allowlist rather than whatever
-# they send.
+# fieldname absent from all four is refused, because the caller reaches a doctype
+# they hold no permission on.
 _WRITABLE_STRING_FIELDS = (
 	"email_id",
 	"email_server",
@@ -146,10 +132,9 @@ _WRITABLE_CHECK_FIELDS = (
 
 _WRITABLE_PORT_FIELDS = _PORT_FIELDS
 
-# Written only when one arrives non-blank. The page no longer reads any of the
-# three back, so every save of an untouched form carries them empty — and an
-# empty Password field is not "leave it alone" to frappe: `_save_passwords`
-# reads it as a clear and deletes the stored secret.
+# Written only when one arrives non-blank. The page reads none of the three
+# back, so every save of an untouched form carries them empty, and an empty
+# Password field reads as a clear that deletes the stored secret.
 _WRITABLE_CREDENTIAL_FIELDS = ("password", "api_key", "api_secret")
 
 
@@ -192,7 +177,7 @@ def _apply_custom_server(email_doc, data: dict) -> None:
 	email_doc.use_ssl = 1 if data.get("use_ssl") else 0
 	email_doc.use_ssl_for_outgoing = 1 if data.get("use_ssl_for_outgoing") else 0
 	# Implicit SSL (465) and STARTTLS (587) are the two ways out, and they are
-	# exclusive — a server asked for both refuses the handshake.
+	# exclusive, and a server asked for both refuses the handshake.
 	email_doc.use_tls = 0 if email_doc.use_ssl_for_outgoing else 1
 
 	# A login that is not the address itself is what login_id is for.
@@ -246,7 +231,7 @@ def create_email_account(data: dict) -> str:
 			email_doc.password = data.get("password")
 
 		# ignore_permissions because the role check above is the authorization
-		# boundary: the caller holds no DocPerm on Email Account. Frappe still
+		# boundary and the caller holds no DocPerm on Email Account. Frappe still
 		# validates the credentials against the live server on save.
 		# nosemgrep: lms-unjustified-ignore-permissions - the role check above is the authorization
 		email_doc.save(ignore_permissions=True)
@@ -258,7 +243,6 @@ def create_email_account(data: dict) -> str:
 @frappe.whitelist()
 def set_default_email_account(email_account: str = "", kind: str = "") -> dict:
 	"""Move the site-wide default inbox or default sender onto one account.
-
 	An empty `email_account` clears that default instead of moving it.
 	"""
 	frappe.only_for(SETTINGS_ROLE)
@@ -273,9 +257,9 @@ def set_default_email_account(email_account: str = "", kind: str = "") -> dict:
 	if email_account:
 		_require_account(email_account)
 
-	# set_value rather than a doc save: Email Account revalidates its credentials
-	# against the live server on save, so writing a flag would demand a working
-	# mailbox for every account that already holds the default.
+	# set_value rather than a doc save, because Email Account revalidates its
+	# credentials against the live server on save. Writing a flag would demand a
+	# working mailbox for every account that already holds the default.
 	for name in frappe.get_all("Email Account", filters={field: 1}, pluck="name"):
 		if name != email_account:
 			frappe.db.set_value("Email Account", name, field, 0)
@@ -297,10 +281,8 @@ def _validate_name(value, label: str = "name") -> str:
 
 def _require_account(name: str) -> str:
 	"""The account this call names, or the error the caller can act on.
-
-	frappe.db.set_value and frappe.db.get_value both answer a name that does not
-	exist by doing nothing at all, so without this a typo — or a row someone
-	else deleted between the list and the save — reports success.
+	`set_value` and `get_value` both answer a name that does not exist by doing
+	nothing at all, so without this a typo reports success.
 	"""
 	name = _validate_name(name, "email_account")
 	if not frappe.db.exists("Email Account", name):
@@ -324,10 +306,8 @@ def _validate_check(field: str, value) -> int:
 
 def _validate_service(value) -> str:
 	"""The service a write may name, as the document stores it.
-
-	A hand-entered server has no preset and Email Account's own Select has no
-	option for one, so it is stored as no service at all — which is what both
-	the blank and the client's `Custom` mean here.
+	A hand-entered server has no preset and Email Account's Select has no option
+	for one, so it is stored as no service at all.
 	"""
 	if not isinstance(value, str):
 		frappe.throw(_("service must be a string"))
@@ -340,10 +320,8 @@ def _validate_service(value) -> str:
 
 def _validated_update(data: dict) -> tuple[dict, dict]:
 	"""Split the page's payload into the fields to write and the credentials.
-
-	The two are kept apart because a blank means opposite things: a blank
-	`email_server` is the user clearing the host, while a blank `password` is a
-	form that was never given one to show.
+	The two are kept apart because a blank means opposite things. A blank
+	`email_server` clears the host; a blank `password` was never given one.
 	"""
 	if not isinstance(data, dict):
 		frappe.throw(_("data must be an object"))
@@ -401,9 +379,8 @@ def _account_row(name: str) -> dict:
 @frappe.whitelist()
 def get_email_accounts(search: str = "", start: int = 0) -> list[dict]:
 	"""One page of the accounts Settings > Communication > Email Accounts shows.
-
-	frappe.get_all rather than get_list: the role check above is the
-	authorization boundary, and the caller holds no DocPerm on Email Account.
+	frappe.get_all rather than get_list, because the role check above is the
+	authorization boundary and the caller holds no DocPerm on Email Account.
 	"""
 	frappe.only_for(SETTINGS_ROLE)
 
@@ -434,10 +411,8 @@ def get_email_accounts(search: str = "", start: int = 0) -> list[dict]:
 @frappe.whitelist()
 def get_email_account(name: str) -> dict:
 	"""One account, for the record form behind a list row.
-
-	The example accounts the list hides are readable here: the filter is what
-	the page shows, not what it may open, and a deep link to one would
-	otherwise answer as though the account did not exist.
+	The example accounts the list hides are readable here. The filter is what the
+	page shows, not what it may open.
 	"""
 	frappe.only_for(SETTINGS_ROLE)
 
@@ -447,10 +422,8 @@ def get_email_account(name: str) -> dict:
 @frappe.whitelist(methods=["POST"])
 def update_email_account(name: str, data: dict) -> dict:
 	"""Write the record form's fields onto one account.
-
-	A credential that arrives blank is left as it is rather than cleared: the
-	form is never given the stored one to show, so every save of an untouched
-	account carries an empty password.
+	A credential that arrives blank is left as it is rather than cleared, because
+	the form is never given the stored one to show.
 	"""
 	frappe.only_for(SETTINGS_ROLE)
 
@@ -473,9 +446,8 @@ def update_email_account(name: str, data: dict) -> dict:
 @frappe.whitelist(methods=["POST"])
 def rename_email_account(name: str, new_name: str) -> str:
 	"""Move an account to a new account name.
-
-	Email Account autonames from `email_account_name`, so the name IS the
-	document id and changing it is a rename rather than a field write.
+	Email Account autonames from `email_account_name`, so the name is the document
+	id and changing it is a rename rather than a field write.
 	"""
 	frappe.only_for(SETTINGS_ROLE)
 
@@ -484,9 +456,9 @@ def rename_email_account(name: str, new_name: str) -> str:
 	if target == account:
 		return account
 
-	# frappe.rename_doc is the whitelisted wrapper and takes no
-	# ignore_permissions, so the underlying one is what this calls: the caller
-	# holds no DocPerm on Email Account, and the role check above is the gate.
+	# frappe.rename_doc is the whitelisted wrapper and takes no ignore_permissions,
+	# so the underlying one is what this calls. The caller holds no DocPerm on
+	# Email Account, and the role check above is the gate.
 	from frappe.model.rename_doc import rename_doc
 
 	# nosemgrep: lms-unjustified-ignore-permissions - the rename is gated on the role check above; the inner rename_doc is the one that takes the flag

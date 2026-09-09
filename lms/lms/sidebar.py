@@ -8,8 +8,7 @@ LOCKED_VISIBLE = frozenset({"home"})
 
 # The seven Check fields on LMS Settings that gated a link before rows existed,
 # in the order get_sidebar_settings has always emitted them. Each fieldname is
-# also the name1 of the row that replaced it, which is what lets the patch line
-# up without a lookup table.
+# also the name1 of the row that replaced it.
 LEGACY_VISIBILITY_FIELDS = (
 	"courses",
 	"batches",
@@ -21,7 +20,7 @@ LEGACY_VISIBILITY_FIELDS = (
 )
 
 # Everything a row owns, and the only fields copied when the table is rebuilt.
-# Child row names are hashes nothing references, so rebuilding is safe; copying
+# Child row names are hashes nothing references, so rebuilding is safe. Copying
 # `name` would not be, since frappe reads it as a rename.
 ROW_FIELDS = (
 	"name1",
@@ -56,15 +55,9 @@ def unique_name(base: str, taken: set[str]) -> str:
 
 
 def seed_sidebar_items() -> None:
-	"""Give every site the thirteen built-in rows, in hook order, ahead of
-	whatever web pages it already has.
-
-	Bounded by the catalogue: thirteen appends and one save on a Single. It
-	never scans a table, so a date cutoff would bound nothing.
-
-	Idempotent by name1 — a row already present is left exactly as the site
-	left it, because a row carries admin state and this is not the only thing
-	that will ever have written to it.
+	"""Give every site the thirteen built-in rows, in hook order, ahead of whatever
+	web pages it already has. Bounded by the catalogue, so it never scans a table.
+	Idempotent by name1, because a row carries admin state.
 	"""
 	settings = frappe.get_single("LMS Settings")
 	existing = [{field: row.get(field) for field in ROW_FIELDS} for row in settings.sidebar_items]
@@ -93,17 +86,16 @@ def seed_sidebar_items() -> None:
 		seeded.append(row)
 
 	# New built-ins join the existing ones rather than jumping the queue, and
-	# nothing else moves: a moderator's arrangement is theirs. The insertion
-	# point is after the last Built-in row, so a fourteenth item added to the
-	# hook later lands beside the thirteen instead of in front of them.
+	# nothing else moves. The insertion point is after the last Built-in row, so a
+	# fourteenth item added to the hook later lands beside the thirteen.
 	cut = 0
 	for index, row in enumerate(existing):
 		if row["item_type"] == "Built-in":
 			cut = index + 1
 
-	# The built-ins alone. The web pages a site already had keep their place
-	# after them; the sidebar folds them into "More" at render time, the way it
-	# always has, so the seeder adds no row for that.
+	# The built-ins alone. The web pages a site already had keep their place after
+	# them, and the sidebar folds them into "More" at render time, so the seeder
+	# adds no row for that.
 	settings.set("sidebar_items", [])
 	for row in existing[:cut] + seeded + existing[cut:]:
 		settings.append("sidebar_items", row)
@@ -111,11 +103,8 @@ def seed_sidebar_items() -> None:
 	# nosemgrep: lms-unjustified-ignore-permissions - install/migrate seeding, which runs as Administrator with no user to authorise
 	settings.flags.ignore_permissions = True
 	# The seeder writes only rows it constructed and needs none of the other
-	# validators LMSSettings.validate() runs — validate_google_settings and
-	# validate_lesson_dwell_time can throw on state this patch never touches,
-	# which would abort bench migrate for that site. validate_sidebar_items
-	# itself is also unneeded: the seeder never deletes a row and already
-	# assigns name1 and idx itself.
+	# validators LMSSettings.validate() runs, which can throw on state this patch
+	# never touches and abort bench migrate for that site.
 	settings.flags.ignore_validate = True
 	settings.save()
 
@@ -129,17 +118,17 @@ def validate_sidebar_items(settings) -> None:
 
 
 def renumber_sidebar_items(settings) -> None:
-	"""Reordering assigns a new position in the python list, not a new idx on
-	the row; without this, db_update() below writes each row back at the idx
-	it already had and the reorder is silently lost on reload."""
+	"""Reordering assigns a new position in the python list, not a new idx on the
+	row. Without this, db_update() writes each row back at the idx it already had
+	and the reorder is silently lost on reload."""
 	for position, row in enumerate(settings.sidebar_items, 1):
 		row.idx = position
 
 
 def fill_in_missing_ids(settings) -> None:
-	"""A row added from the desk carries no id. Give it one from what it points
-	at, so every row is addressable and the uniqueness check below has something
-	to compare."""
+	"""A row added from the desk carries no id. Give it one from what it points at,
+	so every row is addressable and the uniqueness check below has something to
+	compare."""
 	taken = {row.name1 for row in settings.sidebar_items if row.name1}
 	for row in settings.sidebar_items:
 		if row.name1:
@@ -149,9 +138,9 @@ def fill_in_missing_ids(settings) -> None:
 
 
 def do_not_allow_to_delete_standard_sidebar_items(settings) -> None:
-	"""CRM's algorithm, from fcrm_settings.do_not_allow_to_delete_if_standard:
-	diff the name1s of standard rows across the save and refuse if any went.
-	Reorder, hide and edit do not trip it; deletion does."""
+	"""CRM's algorithm, from do_not_allow_to_delete_if_standard: diff the name1s of
+	standard rows across the save and refuse if any went. Reorder, hide and edit do
+	not trip it; deletion does."""
 	if settings.is_new() or not settings.has_value_changed("sidebar_items"):
 		return
 
@@ -190,11 +179,9 @@ def validate_sidebar_item_targets(settings) -> None:
 				)
 			)
 
-		# `icon.mandatory_depends_on` is enforced by frappe's form layout
-		# (public/js/frappe/form/layout.js) and by nothing in Python, so any
-		# write that does not go through the desk form -- `update_sidebar_item`
-		# among them -- stored a row with no icon at all. Develop's `reqd` flag
-		# rejected that at insert.
+		# `icon.mandatory_depends_on` is enforced by frappe's form layout and by
+		# nothing in Python, so any write that does not go through the desk form
+		# stored a row with no icon at all.
 		if row.item_type and row.item_type != "Built-in" and not row.icon:
 			frappe.throw(_("Sidebar row {0}: choose an icon for this link.").format(row.idx))
 
@@ -238,9 +225,8 @@ def validate_sidebar_url(row) -> None:
 
 def get_sidebar_rows(settings) -> list[dict]:
 	"""Every row, in idx order, with its target already resolved.
-
-	A Built-in row carries no label or icon: getSidebarItems() owns those, and
-	sending a second copy would let the two disagree.
+	A Built-in row carries no label or icon, because getSidebarItems() owns those
+	and sending a second copy would let the two disagree.
 	"""
 	rows = []
 	for row in settings.sidebar_items:
@@ -250,11 +236,9 @@ def get_sidebar_rows(settings) -> list[dict]:
 				"name": row.name,
 				"name1": row.name1,
 				"item_type": row.item_type,
-				# The real Link value, not name1: name1 is a scrubbed slug, and the
-				# legacy web_pages payload is read back as a Web Page document name.
-				# Nulled when hidden: a switched-off row must not still ship its
-				# destination to every viewer. The row itself stays, so a client
-				# can still tell "hidden" from "unknown".
+				# The real Link value, not name1, which is a scrubbed slug. Nulled when
+				# hidden, so a switched-off row does not ship its destination to every
+				# viewer. The row itself stays, so a client can tell hidden from unknown.
 				"web_page": row.web_page if not hidden else None,
 				"hidden": hidden,
 				"is_standard": cint(row.is_standard),

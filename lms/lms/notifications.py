@@ -1,18 +1,8 @@
 import frappe
 
-# The per-site (and, for one of them, per-batch) Email Template overrides
-# upstream/develop honoured. Develop reached them through
-# `frappe.email.doctype.email_template.email_template.get_email_template`, which
-# returns a subject as well as a message, so a custom template replaced BOTH --
-# hence a pair of helpers, one per half, sharing one resolver.
-#
-# Resolved in Python rather than as inline Jinja because a rule's Subject is a
-# Data field, capped at 140 characters: the `{% if override %}` shape the message
-# bodies use does not fit in one. Both are registered under `jinja.methods` in
-# `lms/hooks.py`, which `get_jinja_hooks()` merges into `jenv.globals`
-# unconditionally -- after the `restrict_globals` branch -- so they are reachable
-# by their bare names inside a rule's sandboxed render, the same way
-# `get_lms_route` and `format_timezone` already are.
+# Per-site Email Template overrides, one helper per half because a custom
+# template replaces the subject as well as the body. Both are registered under
+# `jinja.methods` in `lms/hooks.py`, so a sandboxed rule render can call them.
 _SITE_TEMPLATE_FIELDS = {
 	"LMS Batch Enrollment": "batch_confirmation_template",
 	"LMS Certificate": "certification_template",
@@ -22,11 +12,8 @@ _SITE_TEMPLATE_FIELDS = {
 
 def _override_template(doc) -> str | None:
 	"""The Email Template overriding this document's mail, if an admin picked one.
-
-	Develop's precedence, exactly: LMS Batch Enrollment reads the batch's own
-	`confirmation_email_template` first and falls back to the site-wide
-	`LMS Settings.batch_confirmation_template` (`lms_batch_enrollment.py`'s
-	`send_mail`). The other two have only a site-wide setting.
+	LMS Batch Enrollment reads the batch's own template first, then the site-wide
+	one. The other two doctypes have only a site-wide setting.
 	"""
 	if doc.doctype == "LMS Batch Enrollment":
 		per_batch = frappe.db.get_value("LMS Batch", doc.batch, "confirmation_email_template")
@@ -39,14 +26,8 @@ def _override_template(doc) -> str | None:
 
 def _legacy_override_args(doc) -> dict:
 	"""The flat context develop rendered an override template with.
-
-	Develop reached the override through `get_email_template(name, args)`, which
-	renders the template against the sender's own `args` dict. Every override
-	written before this branch therefore names `student_name` or `billing_name`,
-	never `doc`. frappe's jenv uses DebugUndefined, which emits an unknown name
-	verbatim rather than blank, so a context of `doc` alone mails the literal
-	text `{{ student_name }}`. Each dict below is the `args` its sender built on
-	upstream/develop, key for key.
+	Overrides written before this branch name `student_name` or `billing_name`,
+	never `doc`, and jenv's DebugUndefined prints an unknown name verbatim.
 	"""
 	from frappe.utils import get_url
 
@@ -107,22 +88,17 @@ def _render_override(doc, fieldname: str) -> str:
 	if not row:
 		return ""
 
-	# Core reads the body through `EmailTemplate.response_`, which returns
-	# `response_html` when Use HTML is ticked and leaves `response` empty in that
-	# case. Reading the raw `response` column returns "" for such a template, the
-	# `{% if override %}` guard falls through, and the site's own wording is
-	# replaced by the built-in copy with no error anywhere.
+	# A Use HTML template keeps its body in `response_html` and leaves `response`
+	# empty, so reading `response` alone returns "" and the override falls back to
+	# the built-in copy with no error anywhere.
 	if fieldname == "subject":
 		content = row.subject
 	else:
 		content = row.response_html if row.use_html else row.response
 
-	# The rendered string is an Email Template's own subject/response. Email
-	# Template grants write to System Manager only, and `restrict_globals=True`
-	# puts it in the same sandbox the rule's own subject and message render under
-	# (`notification.py:504`/`:512`) -- this is not a wider trust boundary than the
-	# inline `{{ frappe.render_template(...) }}` it replaces, which reached the
-	# same field through `safe_exec.safe_render_template`.
+	# Only System Manager can write an Email Template, and `restrict_globals=True`
+	# is the same sandbox a rule's own subject and message render under. No wider
+	# trust boundary than the inline render this replaces.
 	return frappe.render_template(  # nosemgrep: frappe-semgrep-rules.rules.security.frappe-ssti
 		content or "",
 		{**_legacy_override_args(doc), "doc": doc},
@@ -140,15 +116,9 @@ def email_override_body(doc) -> str:
 	return _render_override(doc, "response")
 
 
-# The body an admin sees first. Copied from the Jinja template this rule replaces
-# (`lms/templates/emails/batch_confirmation.html` on upstream/develop) with its
-# `args` names resolved against the enrollment document, and wrapped in the two
-# overrides develop honoured, in develop's own precedence order: the per-batch
-# template the LMS Batch form offers first, the per-site
-# `LMS Settings.batch_confirmation_template` behind it. That is literally
-# `batch.confirmation_email_template or frappe.db.get_single_value("LMS Settings",
-# "batch_confirmation_template")` from `lms_batch_enrollment.py`'s `send_mail` on
-# upstream/develop.
+# The body an admin sees first, copied from develop's
+# `templates/emails/batch_confirmation.html` and wrapped in develop's two
+# overrides: the per-batch template first, the per-site setting behind it.
 BATCH_CONFIRMATION_MESSAGE = """
 {% set override = email_override_body(doc) %}
 {% if override %}
@@ -172,18 +142,14 @@ BATCH_CONFIRMATION_MESSAGE = """
 {% endif %}
 """
 
-# A rule's Subject is rendered through the same restricted Jinja as its body
-# (`frappe/email/doctype/notification/notification.py:504`), so the override is an
-# inline expression here rather than a block -- and one line, because a `{% set %}`
-# tag of its own would render a newline into the subject header.
+# A rule's Subject renders through the same restricted Jinja as its body, so the
+# override is an inline expression on one line. A `{% set %}` tag of its own
+# would render a newline into the subject header.
 BATCH_CONFIRMATION_SUBJECT = '{{ email_override_subject(doc) or "Enrollment Confirmation for " ~ frappe.db.get_value("LMS Batch", doc.batch, "title") }}'
 
-# Copied from `lms/templates/emails/certification.html` on upstream/develop, with
-# its `args` names resolved against the certificate document: `member_name` ->
-# `doc.member_name`, `course_title` -> the course-title lookup, `name` -> `doc.name`,
-# `template` -> `doc.template` (the Print Format the certificate was issued with),
-# and wrapped in the per-site `LMS Settings.certification_template` override
-# `lms_certificate.py`'s `send_mail` reads on upstream/develop.
+# Copied from develop's `templates/emails/certification.html`, with its `args`
+# names resolved against the certificate, and wrapped in the per-site
+# `LMS Settings.certification_template` override.
 CERTIFICATION_MESSAGE = """
 {% set override = email_override_body(doc) %}
 {% if override %}
@@ -214,32 +180,13 @@ CERTIFICATION_MESSAGE = """
 {% endif %}
 """
 
-# Same subject override `BATCH_CONFIRMATION_SUBJECT` documents, for the
-# certification mail's single per-site template.
+# Same subject override as BATCH_CONFIRMATION_SUBJECT, for this mail's single
+# per-site template.
 CERTIFICATION_SUBJECT = '{{ email_override_subject(doc) or "Congratulations on getting certified!" }}'
 
-# Copied from `lms/templates/emails/certificate_request_notification.html` on
-# upstream/develop, with its `args` names resolved against the certificate
-# request document: `member_name` -> `doc.member_name`, `course` ->
-# `course_title` (the course-title lookup), `evaluator` -> `evaluator_name`
-# (looked up from the User, not the fetch_from-populated `doc.evaluator_name`,
-# to match the certification message's lookup-over-cached-field style).
-#
-# `date` / `start_time` / `timezone` restore the original's *display*-zone
-# conversion instead of rendering the system-time wall clock the document
-# stores: `lms.lms_certificate_request.send_notification` used to compute a
-# display timezone (`get_evaluation_display_timezone`), roll the stored
-# system-time date/time into it (`convert_from_system_timezone` -- the date
-# can change too, this is the part a naive substitution would get wrong), and
-# label that zone (`format_timezone`). Those three live in `lms.lms.utils`,
-# outside the restricted sandbox's default globals -- but LMS declares its own
-# `jinja.methods` hook (`lms/hooks.py`), and `get_jinja_hooks()` merges into
-# `jenv.globals` unconditionally, after the `restrict_globals` branch
-# (`frappe/utils/jinja.py`), so a method listed there is reachable by its bare
-# name even inside a restricted render. All three are added to that hook list
-# for this. `date`/`start_time` here are the *converted* pair, shadowing
-# `doc.date`/`doc.start_time` deliberately -- the email must show the instant
-# in the zone the learner picked it in, not the zone it is stored in.
+# Copied from develop's `certificate_request_notification.html`. `date` and
+# `start_time` shadow `doc.date` and `doc.start_time` on purpose: the mail shows
+# the instant in the zone the learner booked it in, and the date can shift too.
 EVALUATION_BOOKING_MESSAGE = """
 {% set course_title = frappe.db.get_value("LMS Course", doc.course, "title") %}
 {% set evaluator_name = frappe.db.get_value("User", doc.evaluator, "full_name") %}
@@ -255,19 +202,9 @@ EVALUATION_BOOKING_MESSAGE = """
 <p> {{ _("Please prepare well and be on time for the evaluations.") }} </p>
 """
 
-# Copied from `lms/templates/emails/published_course_notification.html` on
-# upstream/develop, with its `args` names resolved against the course document:
-# `brand_name` / `brand_logo` -> the Website Settings lookups, `title` ->
-# `doc.title`, `short_introduction` -> `doc.short_introduction`, and the
-# `instructors` loop (a list of dicts from `get_instructors`, including
-# `user_image`) -> a loop over the child table itself, printing only the name
-# -- one rendered body cannot show a different avatar-or-initial per recipient
-# the way the old per-recipient dict did, so that half of the row is dropped.
-# `course_url` was hardcoded as `/lms/courses/<name>` in the plan this replaced;
-# the SPA's mount path is site-configurable (`frappe.conf.lms_path`, see
-# `lms/lms/utils.py:49-58`), so the link goes through `get_lms_route`, already
-# reachable bare inside a rule's sandboxed render (`lms/hooks.py`'s `jinja`
-# hook).
+# Copied from develop's `published_course_notification.html`. One body serves
+# every recipient, so the per-instructor avatar is dropped, and the link goes
+# through `get_lms_route` because the SPA mount path is site-configurable.
 PUBLISHED_COURSE_MESSAGE = """
 <div style="width: 70%; margin: 0 auto;">
     <img src="{{ frappe.db.get_single_value("Website Settings", "banner_image") }}" style="width: 30px; height: 30px;" />
@@ -298,14 +235,9 @@ PUBLISHED_COURSE_MESSAGE = """
 </div>
 """
 
-# Copied from `lms/templates/emails/published_batch_notification.html` on
-# upstream/develop, same substitutions as PUBLISHED_COURSE_MESSAGE, plus:
-# `short_introduction` -> `doc.description` (the old sender's own `args` mapped
-# it that way, not to a `short_introduction` field -- LMS Batch has none),
-# `start_date` / `end_date` / `start_time` -> the matching `doc.*` fields, and
-# `timezone` -> `format_timezone(doc.timezone, doc.start_date)`, also reachable
-# through the `jinja` hook. `batch_url` gets the same `get_lms_route`
-# correction as the course link.
+# Copied from develop's `published_batch_notification.html`, same substitutions
+# as PUBLISHED_COURSE_MESSAGE. LMS Batch has no `short_introduction`, so the
+# blurb comes from `doc.description`.
 PUBLISHED_BATCH_MESSAGE = """
 <div style="width: 70%; margin: 0 auto;">
     <img src="{{ frappe.db.get_single_value("Website Settings", "banner_image") }}" style="width: 30px; height: 30px;" />
@@ -352,14 +284,8 @@ PUBLISHED_BATCH_MESSAGE = """
 </div>
 """
 
-# Copied from `lms/templates/emails/lms_course_interest.html` on upstream/develop,
-# with `title` -> `doc.title`, `app_name` -> the Website Settings lookup (matching
-# the other two publish mails, not the `System Settings` value the old sender
-# actually read), and `course_link` / `site_url` collapsed into one absolute
-# `course_url`, built the same `get_lms_route`-based way as the other two
-# messages. `first_name` is dropped: this body is rendered once and bcc'd to
-# every interested user, so it cannot greet each one by name the way the old
-# per-recipient send did.
+# Copied from develop's `lms_course_interest.html`. One body is rendered for
+# every bcc'd recipient, so the `first_name` greeting is dropped.
 COURSE_AVAILABILITY_MESSAGE = """
 {% set course_url = frappe.utils.get_url() ~ get_lms_route("courses/" ~ doc.name) %}
 {% set brand_name = frappe.db.get_single_value("Website Settings", "app_name") %}
@@ -383,66 +309,18 @@ COURSE_AVAILABILITY_MESSAGE = """
 </div>
 """
 
-# An audience that is a query rather than a field or a role. A recipient row's
-# cc/bcc is rendered as Jinja with safe globals before it is split into addresses
-# (`frappe/email/doctype/notification/notification.py:905-910`), which is the only
-# way core Notification can express "everyone". `get_emails_from_template` splits
-# on both "," and "\n", so one name per line renders cleanly either way.
-#
-# Every audience query in this file uses `frappe.db.get_all`, never
-# `frappe.db.get_list`. Inside a restricted render `get_all` is
-# `frappe.utils.safe_exec.safe_get_all`, which forces `ignore_permissions=True`;
-# `get_list` is `safe_get_list`, checked against whoever triggered the save. The
-# render runs in that user's session, and every audience here is data they have
-# no business reading, so `get_list` broke each one differently (all three
-# reproduced on lms-audit.localhost as a Course Creator):
-#
-#   - `LMS Course Interest` grants read to System Manager only, so it raised
-#     PermissionError. `send_notification_by_channel` catches every exception into
-#     an Error Log, so a Course Creator publishing a course sent no availability
-#     mail and saw no error.
-#   - `LMS Batch Enrollment` grants read to LMS Student only with if_owner, so it
-#     failed the other way: an empty list -- no bcc at all -- rather than raising.
-#     Observed as [] both for a Course Creator and for the enrolled student.
-#   - `User` silently lost Administrator and Guest to `get_permission_query_conditions`.
-#
-# Every audience develop computed used `frappe.get_all`, i.e. unpermissioned.
+# An audience that is a query rather than a field or a role, rendered as Jinja
+# before it is split into addresses. Every such query uses `frappe.db.get_all`,
+# because `get_list` is checked against whoever saved and returns nobody.
 ENABLED_USERS_BCC = """{% for user in frappe.db.get_all("User", filters={"enabled": 1}, fields=["name"], limit_page_length=0) %}{{ user.name }}
 {% endfor %}"""
 
 INTERESTED_USERS_BCC = """{% for interest in frappe.db.get_all("LMS Course Interest", filters={"course": doc.name}, fields=["user"], limit_page_length=0) %}{{ interest.user }}
 {% endfor %}"""
 
-# All three reminders below are "Days Before" rules: `date_changed` names the date
-# field their audience is computed from, and `Notification.get_documents_for_today`
-# (frappe/email/doctype/notification/notification.py:255-275) selects rows whose
-# that field falls in [nowdate() + days_in_advance, same day 23:59:59]. Both batch
-# rules use days_in_advance=1 (fires the day before start_date); the live class
-# rule uses days_in_advance=0 (fires the day of `date`, matching the daily job it
-# replaces, which filtered on `date: nowdate()`).
-#
-# Their audience is a query, not a field or a role -- same reasoning as
-# ENABLED_USERS_BCC / INTERESTED_USERS_BCC above -- so they bcc every current
-# enrollment instead of addressing recipients individually.
-#
-# Copied from `batch_start_reminder.html` / `batch_start_reminder_recorded.html` /
-# `live_class_reminder.html` on upstream/develop, with their `args` names resolved
-# against the document each rule fires on: `title` -> `doc.title`, `start_date` ->
-# `doc.start_date`, `start_time` -> `doc.start_time`, `medium` -> `doc.medium`,
-# `date` -> `doc.date`, `time` -> `doc.time`, `name` -> `doc.name`, `batch_name` ->
-# `doc.batch_name`, `evaluation` -> `doc.evaluation`, `evaluation_end_date` ->
-# `doc.evaluation_end_date` (both real fields on LMS Batch, not passed by the old
-# sender's `args` dict under a different name -- see lms_batch.py's deleted
-# `send_mail`). `get_url()` + `get_lms_route(...)` replaces the templates' bare
-# `get_lms_route(...)`, matching every other link in this file: the SPA's mount
-# path is site-configurable and the old sender never needed an absolute link
-# because `frappe.sendmail` doesn't require one, but the other five rules already
-# establish the absolute-link convention.
-#
-# Each template opened with `Dear {{ student_name }}`. One rule renders one body
-# for every bcc'd recipient, so nothing can name each of them -- the same
-# constraint COURSE_AVAILABILITY_MESSAGE hit above. Reworded to the same plain
-# "Hi," opener that message already uses, instead of leaving a dangling "Dear ,".
+# The three reminders below are Days Before rules, so `date_changed` names the
+# date their audience is computed from. Each opened with `Dear {{ student_name }}`
+# on develop; one body serves every bcc'd recipient, so they say "Hi," instead.
 BATCH_START_REMINDER_MESSAGE = """
 <p>{{ _("Hi,") }}</p>
 <br>
@@ -548,31 +426,9 @@ BATCH_MEMBERS_BCC = """{% for row in frappe.db.get_all("LMS Batch Enrollment", f
 LIVE_CLASS_MEMBERS_BCC = """{% for row in frappe.db.get_all("LMS Batch Enrollment", filters={"batch": doc.batch_name}, fields=["member"], limit_page_length=0) %}{{ row.member }}
 {% endfor %}"""
 
-# The daily job (`send_payment_reminder`, `lms/lms/doctype/lms_payment/lms_payment.py`)
-# keeps its own selection -- it skips a payment already paid under a different
-# payment id (`has_paid_later`) and a payment for a now-sold-out batch
-# (`is_batch_sold_out`), neither expressible as a rule condition -- and triggers
-# this rule per surviving LMS Payment via `doc.run_method("lms_notify")`, a
-# method no controller defines. `Document.run_method` still calls
-# `run_notifications(method="lms_notify")` for any method name
-# (`frappe/model/document.py:1690-1703`), which is what a `Method`-event rule
-# matches against.
-#
-# `LMS Settings.payment_reminder_template` is a live per-site override, the same
-# shape `BATCH_CONFIRMATION_MESSAGE` and `CERTIFICATION_MESSAGE` above keep for
-# `batch_confirmation_template` and `certification_template`: if an admin has
-# picked one, its Email Template subject and response replace the pair below.
-# All three are read on upstream/develop -- `lms_payment.py`'s `send_mail`,
-# `lms_batch_enrollment.py`'s `send_mail` and `lms_certificate.py`'s `send_mail`
-# -- so all three survive the move.
-#
-# Body copied from `payment_reminder.html` on upstream/develop, with its
-# `args` names resolved against the LMS Payment document: `billing_name` ->
-# `doc.billing_name`, `type` -> the doctype-name lookup already used
-# elsewhere in this file (`doc.payment_for_document_type.split(" ")[-1]`,
-# lowercased), `title` -> a `frappe.db.get_value` lookup on the paid-for
-# document, `link` -> the same `billing/<type>/<name>` route `send_mail`
-# built, through `get_lms_route` instead of a hardcoded `/lms/` prefix.
+# `send_payment_reminder` keeps its own selection, which no rule condition can
+# express, and triggers this rule per surviving payment with
+# `run_method("lms_notify")`. Core fires Method rules for any method name.
 PAYMENT_REMINDER_MESSAGE = """
 {% set override = email_override_body(doc) %}
 {% if override %}
@@ -609,36 +465,19 @@ PAYMENT_REMINDER_MESSAGE = """
 {% endif %}
 """
 
-# Same subject override `BATCH_CONFIRMATION_SUBJECT` documents, for the payment
-# reminder's single per-site template.
+# Same subject override, for the payment reminder's per-site template.
 PAYMENT_REMINDER_SUBJECT = (
 	"""{{ email_override_subject(doc) or "Complete Your Enrollment - Don't miss out!" }}"""
 )
 
-# Same per-document instructor lookup `LMS New Course Published` /
-# `LMS New Batch Published` use for a comma-separated `receiver_by_document_field`,
-# but LMS Payment carries no `instructor`/`instructors` field pair to walk that
-# way -- the paid-for document does. Rendered as a cc, the same shape
-# `ENABLED_USERS_BCC` / `INTERESTED_USERS_BCC` use for a query-shaped audience.
-#
-# "Course Instructor" is a pure child table (only ever reached through LMS
-# Course/LMS Batch's own Table MultiSelect), and a permission-checked query on a
-# child doctype with no parent context silently drops the requested field from
-# the returned rows -- `row.instructor` then renders as the literal string "None"
-# for every row. `frappe.db.get_all` skips permissions outright and that field
-# filtering with it, so no `parent_doctype` is needed alongside it (verified on
-# lms-audit.localhost: get_all with no parent context returns `instructor`
-# populated, both as Administrator and as a user who is not a System Manager).
+# LMS Payment has no instructor field, so the instructors come from the paid-for
+# document's child table. A permission-checked query on a child doctype with no
+# parent context renders `instructor` as the string "None", hence `get_all`.
 PAYMENT_INSTRUCTORS_CC = """{% for row in frappe.db.get_all("Course Instructor", filters={"parenttype": doc.payment_for_document_type, "parent": doc.payment_for_document}, fields=["instructor"], limit_page_length=0) %}{{ row.instructor }}
 {% endfor %}"""
 
-# Copied from `lms/templates/emails/job_application.html` on upstream/develop,
-# with its `args` names resolved against the LMS Job Application document:
-# `full_name` -> a lookup on `doc.user`, `job_title` -> `doc.job_title` (already
-# fetch_from-populated from the job). The attachment itself is not part of the
-# body -- `attach_files`/`from_attach_field` on the rule below carry the resume,
-# the same way `lms_job_application.py`'s deleted `send_email_to_employer` did
-# with its own `attachments` kwarg.
+# Copied from develop's `job_application.html`. The resume is not in the body.
+# `attach_files` and `from_attach_field` on the rule below carry it.
 JOB_APPLICATION_MESSAGE = """
 {% set full_name = frappe.db.get_value("User", doc.user, "full_name") %}
 <p>
@@ -650,17 +489,9 @@ JOB_APPLICATION_MESSAGE = """
 </p>
 """
 
-# Copied from `lms/templates/emails/job_report.html` on upstream/develop, with
-# its `args` names resolved against the Job Opportunity document: `job` ->
-# `doc.name`, `user` -> a lookup on `doc.reported_by` (the reporting user,
-# recorded by `report()` before this rule fires), `reason` -> `doc.report_reason`.
-# The original template also built an unused `job_link` local (`"<a href='" +
-# job_url + "'>" + job + "</a>"`) that the body never referenced -- dropped
-# here rather than carried forward dead. `job_url` was a desk link
-# (`get_link_to_form("Job Opportunity", job)`) in the deleted sender; this
-# audience is the site's own System Managers, who use the portal like anyone
-# else, so it goes through `get_lms_route` instead, matching every other link
-# in this file.
+# Copied from develop's `job_report.html`. Its unused `job_link` local is
+# dropped, and the desk link becomes a portal link through `get_lms_route`
+# because this audience uses the portal like anyone else.
 JOB_REPORT_MESSAGE = """
 {% set job_url = frappe.utils.get_url() ~ get_lms_route("job-openings/" ~ doc.name) %}
 {% set reporter = frappe.db.get_value("User", doc.reported_by, "full_name") %}
@@ -670,44 +501,9 @@ JOB_REPORT_MESSAGE = """
 <p>{{ _("Please take appropriate action at {0}").format(job_url) }}</p>
 """
 
-# One entry per mail Frappe Learning sends. Each becomes a `Notification` row the
-# site owns from then on: the seeder creates it once and never writes to it again,
-# so an admin's wording, channel and on/off switch survive every migrate.
-#
-# Ordering hazard: "LMS Course Availability" and "LMS New Course Published" watch
-# different fields (`upcoming` and `published`), but one save can change both --
-# an admin clearing Upcoming and ticking Published together. In that save the
-# availability mail survives only because it is evaluated BEFORE the publish rule.
-# Reverse the two and it is SILENCED, not duplicated: the publish rule's
-# `set_property_after_alert` re-enters `doc.save()` on the same document object,
-# `Document.run_notifications` runs again with the availability rule still absent
-# from `flags.notifications_executed`, and it is evaluated inside that reentrant
-# save -- where `get_doc_before_save()` already carries the new `upcoming`, so
-# core's Value Change check
-# (`frappe/email/doctype/notification/notification.py:852-864`) sees no change and
-# returns without sending. The name is appended to `notifications_executed` all
-# the same, so the outer loop then skips it and the mail is never sent at all.
-# That evaluation order falls out of `Notification`'s `sort_field: creation DESC`,
-# which in turn falls out of this list's order (the availability entry is seeded
-# after, so it is newer). Reordering this list, or reseeding the two rules in a
-# different order, can flip that.
-# One caveat this mechanism carries, deliberately left as it is. Core wraps
-# `send_notification_by_channel` in a bare try/except that logs and continues,
-# then applies `set_property_after_alert` unconditionally
-# (`frappe/email/doctype/notification/notification.py:399-440`). On a site with
-# no outgoing Email Account and no `mail_login` in site_config, `frappe.sendmail`
-# raises while building the queue, so for the two publish rules below
-# `notification_sent` is set to 1 although nothing was sent -- and their own
-# condition then suppresses that announcement for good. The in-app copy goes with
-# it, because the `send_system_notification` branch sits inside the same try.
-#
-# Both publish rules seed disabled, so this needs an admin to switch broadcasts
-# on for a site with no outgoing mail at all. The two fixes available inside LMS
-# are each worse than the defect: gating the conditions on an Email Account row
-# would stop mail on sites configured only through site_config (safe_eval exposes
-# no `frappe.conf`), and overriding core's Notification class would change
-# behaviour for every Notification on the site, LMS or not. The real fix belongs
-# in frappe.
+# One entry per mail Frappe Learning sends. The seeder creates each as a
+# Notification row once and never writes to it again, so an admin's wording,
+# channel and on/off switch survive every migrate.
 LMS_NOTIFICATIONS = [
 	{
 		"name": "LMS Batch Enrollment Confirmation",
@@ -764,15 +560,13 @@ LMS_NOTIFICATIONS = [
 		"from_attach_field": None,
 	},
 	{
+		# Known defect, left as it is. On a site with no outgoing mail this rule
+		# and the batch one below still get `notification_sent` set to 1 although
+		# nothing was sent, and their own condition then suppresses it for good.
 		"name": "LMS New Course Published",
-		# Seeded off. Each publish mail was gated on develop by an LMS Settings
-		# Select -- `send_notification_for_published_courses` /
-		# `send_notification_for_published_batches`, both with a blank first option
-		# and no default -- so a stock site sent neither. Seeding these enabled
-		# would mass-mail every enabled User, and file a Notification Log per
-		# recipient, the first time anyone published a course or batch after
-		# upgrading. An admin turns them on from the notification settings page,
-		# which is what that page is for.
+		# Seeded off. Develop gated both publish mails behind an LMS Settings Select
+		# that defaulted to blank, so a stock site sent neither. An admin turns
+		# them on from the notification settings page.
 		"enabled": 0,
 		"document_type": "LMS Course",
 		"event": "Value Change",
@@ -784,14 +578,9 @@ LMS_NOTIFICATIONS = [
 		"subject": 'A new course has been published on {{ frappe.db.get_single_value("Website Settings", "app_name") }}',
 		"message": PUBLISHED_COURSE_MESSAGE,
 		"recipients": [
-			# "instructor,instructors": data field first, child-table fieldname
-			# second (`_parse_receiver_by_document_field`,
-			# `frappe/email/doctype/notification/notification.py:921-928` --
-			# proven against core's own fixture, `email_id,email_ids` in
-			# `test_notification.py:98`). Dotted "instructors.instructor" has no
-			# comma, so `_parse_receiver_by_document_field` treats the whole
-			# string as a single top-level fieldname, `doc.get()` returns None,
-			# and no instructor is ever addressed.
+			# Data field first, child-table fieldname second. Dotted
+			# "instructors.instructor" has no comma, so the whole string is read
+			# as one top-level fieldname and no instructor is ever addressed.
 			{"receiver_by_document_field": "instructor,instructors"},
 			{"bcc": ENABLED_USERS_BCC},
 		],
@@ -802,14 +591,9 @@ LMS_NOTIFICATIONS = [
 	},
 	{
 		"name": "LMS New Batch Published",
-		# Seeded off. Each publish mail was gated on develop by an LMS Settings
-		# Select -- `send_notification_for_published_courses` /
-		# `send_notification_for_published_batches`, both with a blank first option
-		# and no default -- so a stock site sent neither. Seeding these enabled
-		# would mass-mail every enabled User, and file a Notification Log per
-		# recipient, the first time anyone published a course or batch after
-		# upgrading. An admin turns them on from the notification settings page,
-		# which is what that page is for.
+		# Seeded off. Develop gated both publish mails behind an LMS Settings Select
+		# that defaulted to blank, so a stock site sent neither. An admin turns
+		# them on from the notification settings page.
 		"enabled": 0,
 		"document_type": "LMS Batch",
 		"event": "Value Change",
@@ -830,22 +614,22 @@ LMS_NOTIFICATIONS = [
 		"from_attach_field": None,
 	},
 	{
+		# Must stay before "LMS New Course Published". One save can change both
+		# fields, and reversing the two silences this mail rather than
+		# duplicating it.
 		"name": "LMS Course Availability",
 		"document_type": "LMS Course",
 		"event": "Value Change",
 		"method": None,
 		"date_changed": None,
 		"days_in_advance": None,
-		# Develop fired this from `LMSCourse.on_update`:
-		# `if not self.upcoming and self.has_value_changed("upcoming")`. It is the
-		# course leaving "upcoming" that makes it available to the people who
-		# registered interest, not the course being published. `upcoming` is a
-		# Check, and core casts both sides of the Value Change comparison before
-		# testing them (`notification.py:852-864`), so 1 -> 0 reads as a change.
+		# Develop fired this when a course left "upcoming", not when it was
+		# published. `upcoming` is a Check, and core casts both sides before
+		# comparing, so 1 to 0 reads as a change.
 		"value_changed": "upcoming",
-		# Deliberately no `notification_sent`-style guard: marking a course upcoming
-		# again and then clearing it is meant to re-mail everyone who has registered
-		# interest in the meantime, not just the first cohort.
+		# No `notification_sent`-style guard on purpose. Marking a course upcoming
+		# again and clearing it should re-mail everyone who registered interest
+		# since, not just the first cohort.
 		"condition": "not doc.upcoming",
 		"subject": "{{ doc.title }} is available!",
 		"message": COURSE_AVAILABILITY_MESSAGE,
@@ -864,8 +648,7 @@ LMS_NOTIFICATIONS = [
 		"days_in_advance": 1,
 		"value_changed": None,
 		# `doc.published` matches develop's `send_batch_start_reminder`, which
-		# selected `{"start_date": add_days(nowdate(), 1), "published": 1}` -- a
-		# draft batch was never reminded.
+		# never reminded a draft batch.
 		"condition": "doc.published and doc.show_live_class",
 		"subject": "Your batch {{ doc.title }} is starting tomorrow",
 		"message": BATCH_START_REMINDER_MESSAGE,
@@ -940,13 +723,9 @@ LMS_NOTIFICATIONS = [
 		"condition": "",
 		"subject": "New Job Applicant",
 		"message": JOB_APPLICATION_MESSAGE,
-		# The employer belongs on `recipients`, where develop put it
-		# (`recipients=company_email` in `send_email_to_employer`). A rule whose
-		# only recipient row is a cc leaves `recipients` empty, and
-		# `send_an_email` passes `expose_recipients="header"`, which renders
-		# `"To": ", ".join(self.recipients)` -- the empty string. `receiver_by_document_field`
-		# reads a field on the document itself and cannot follow `job.`, hence the
-		# fetched `company_email` mirror on LMS Job Application.
+		# The employer belongs on `recipients`, where develop put it. A rule whose
+		# only recipient row is a cc renders an empty "To" header, and
+		# `receiver_by_document_field` cannot follow a link, hence the mirror.
 		"recipients": [{"receiver_by_document_field": "company_email"}],
 		"set_property_after_alert": None,
 		"property_value": None,
@@ -979,10 +758,8 @@ def rule_names() -> list[str]:
 
 def seed_notifications():
 	"""Create any rule the site is missing. Never rewrite one it already has.
-
-	Not a fixture: `sync_fixtures` imports with force, which deletes and re-inserts
-	the row on every migrate and would reset an admin's wording. Not `is_standard`
-	either, which makes the row read-only outside developer mode.
+	Not a fixture, because `sync_fixtures` imports with force and would reset an
+	admin's wording on every migrate.
 	"""
 	for rule in LMS_NOTIFICATIONS:
 		if frappe.db.exists("Notification", rule["name"]):

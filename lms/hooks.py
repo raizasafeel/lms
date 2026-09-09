@@ -79,9 +79,8 @@ after_migrate = [
 	"lms.lms.doctype.lms_payment.lms_payment.add_unique_payment_id_constraint",
 	"lms.lms.notifications.seed_notifications",
 	# Also on migrate, not only after_sync. Both seeders are create-if-absent, and
-	# running the sidebar one on fresh installs alone means a fourteenth built-in
-	# added to `standard_sidebar_items` later never reaches a site that has
-	# already run the v2_0 patch -- which is what its own docstring promises.
+	# a fourteenth built-in added later would otherwise never reach a site that
+	# has already run the v2_0 patch.
 	"lms.lms.sidebar.seed_sidebar_items",
 ]
 
@@ -322,10 +321,9 @@ raven_membership_providers = ["lms.raven_provider.get_provider"]
 # permissions its own doctypes need on install/migrate.
 raven_integration_manager_roles = ["Moderator"]
 
-# The sidebar's built-in rows, and their default order — which reproduces what
-# getSidebarItems() renders today, exactly. An app that wants a fourteenth adds
-# it here; the row says where it sits and whether it shows, and the JavaScript
-# entry of the same name1 says what it is.
+# The sidebar's built-in rows, and their default order, which reproduces what
+# getSidebarItems() renders today. The row says where an item sits and whether it
+# shows; the JavaScript entry of the same name1 says what it is.
 standard_sidebar_items = [
 	{"name1": "home", "is_standard": 1, "item_type": "Built-in"},
 	{"name1": "search", "is_standard": 1, "item_type": "Built-in"},

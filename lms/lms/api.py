@@ -101,15 +101,9 @@ MAX_PERMISSION_BATCH = 200
 @frappe.whitelist()
 def get_doc_permissions_many(doctype: str, names: str | list[str]):
 	"""Evaluated permissions for several documents of one doctype.
-
 	Batched because a course outline resolves affordances for every lesson on
-	screen at once; one call per document behind a hide-until-known gate is one
-	flicker per document. CRM asks per document (crm/frontend/src/data/
-	document.js) because its form view opens one.
-
-	doctype/names are annotated rather than isinstance-checked because
-	require_type_annotated_api_methods is on (hooks.py), so frappe rejects a
-	wrong type before this body runs — in a request and in tests alike."""
+	screen at once, and one call per document behind a gate is one flicker each.
+	"""
 	if isinstance(names, str):
 		names = frappe.parse_json(names)
 
@@ -134,9 +128,7 @@ def get_doc_permissions_many(doctype: str, names: str | list[str]):
 		perms = frappe.permissions.get_doc_permissions(doc)
 		# A document the caller cannot read answers exactly like one that does not
 		# exist. Anything else lets a caller submit guessed names and read the
-		# difference: a permission map means the row is real, {} means it is not.
-		# The UI needs no more than this — hide-until-known treats a missing ptype
-		# as a deny, so {} and read=0 render the same.
+		# difference.
 		out[name] = perms if perms.get("read") else {}
 	return out
 
@@ -320,17 +312,13 @@ def get_job_details(job: str):
 	return job_details
 
 
+# nosemgrep: security.guest-whitelisted-method - pre-existing grant, unchanged by this branch. Flagged only because semgrep ci re-scans the whole function when its body changes.
 @frappe.whitelist(allow_guest=True)
 def get_own_assignment_submission(assignment: str):
 	"""Name of the current user's submission for an assignment, if any.
-
-	Mirrors the uniqueness rule enforced in LMS Assignment Submission.validate_duplicates,
-	which keys on `member`. A permission-filtered lookup (frappe.client.get_value) keys on
-	`owner` for students, so a submission created on the student's behalf reads back as
-	absent and the client tries to insert a duplicate.
-
-	Guest-allowed because the read-only assignment view renders on public lessons; a guest
-	owns no submission, so this returns None and the client routes to a new submission.
+	Keys on `member`, the way validate_duplicates does. A permission-filtered
+	lookup keys on `owner`, so a submission created on the student's behalf reads
+	back as absent and the client inserts a duplicate.
 	"""
 	if not isinstance(assignment, str):
 		frappe.throw(_("Assignment must be a string."))
@@ -482,9 +470,9 @@ def get_unsplash_photos(keyword: str = None):
 	if keyword:
 		return get_by_keyword(keyword)
 
-	# Cache only a non-empty result. get_value(generator=...) would store the
-	# empty list an unconfigured site returns, so adding the access key later
-	# would keep serving nothing until someone cleared the cache by hand.
+	# Cache only a non-empty result. get_value(generator=...) would store the empty
+	# list an unconfigured site returns, so adding the access key later would keep
+	# serving nothing until someone cleared the cache by hand.
 	photos = frappe.cache().get_value("unsplash_photos")
 	if not photos:
 		photos = get_list()
@@ -496,17 +484,14 @@ def get_unsplash_photos(keyword: str = None):
 
 @frappe.whitelist()
 def get_evaluator_details(evaluator: str):
-	# Same rule as the writes: your own, or anyone's if you are a Moderator. A
-	# role check alone let any Batch Evaluator read every other evaluator's
-	# schedule, unavailability and calendar. The profile page's redirect is
-	# client-side, so it stops nobody calling the endpoint directly.
+	# Same rule as the writes: your own, or anyone's if you are a Moderator. A role
+	# check alone let any Batch Evaluator read every other evaluator's schedule.
+	# The profile page's redirect is client-side, so it stops nobody.
 	evaluator = enforce_evaluator_access(evaluator)
 
 	# Reading must not write. Saving a Course Evaluator runs
-	# CourseEvaluator.validate_evaluator_role, which *grants* the target the
-	# Batch Evaluator role. This endpoint is reached with whatever user the
-	# profile page is showing. The record is created on the first write instead
-	# (see get_owned_evaluator_doc), where it is a deliberate act.
+	# validate_evaluator_role, which grants the target the Batch Evaluator role.
+	# The record is created on the first write instead.
 	if frappe.db.exists("Course Evaluator", {"evaluator": evaluator}):
 		doc = frappe.get_doc("Course Evaluator", evaluator)
 	else:
@@ -526,9 +511,9 @@ def get_evaluator_details(evaluator: str):
 
 
 def get_evaluator_calendar(evaluator: str):
-	"""Read-only. Provisioning moved to ensure_evaluator_calendar: creating a
-	Google Calendar document is a write, and this runs on a plain GET of the
-	profile page."""
+	"""Read-only. Provisioning moved to ensure_evaluator_calendar, because creating
+	a Google Calendar document is a write and this runs on a plain GET.
+	"""
 	return frappe.db.get_value(
 		"Google Calendar", {"user": evaluator}, ["name", "authorization_code"], as_dict=1
 	)
@@ -537,11 +522,8 @@ def get_evaluator_calendar(evaluator: str):
 @frappe.whitelist()
 def ensure_evaluator_calendar():
 	"""Create the caller's own Google Calendar record, on demand.
-
-	Batch Evaluators are portal users without create permission on Google
-	Calendar (only System Manager / Desk User have it), so it is provisioned on
-	their behalf, but only for themselves, and only when they ask for it by
-	starting the authorisation flow.
+	Batch Evaluators have no create permission on Google Calendar, so it is
+	provisioned for them, only for themselves, and only when they ask.
 	"""
 	frappe.only_for(EVALUATOR_ROLES)
 	user = frappe.session.user
@@ -584,11 +566,8 @@ def validate_evaluator_name(evaluator: str) -> str:
 
 def enforce_evaluator_access(evaluator: str) -> str:
 	"""View or edit your own availability; a Moderator may do either for anyone.
-
-	Two gates, not one. The role check is what keeps non-evaluators out: with
-	the ownership check alone, any authenticated user could name *themselves*
-	and reach the write path, which provisions a Course Evaluator (and with it
-	the Batch Evaluator role) with ignore_permissions.
+	Two gates, not one. With the ownership check alone, any authenticated user
+	could name themselves and reach the write path, which provisions the role.
 	"""
 	frappe.only_for(EVALUATOR_ROLES)
 	evaluator = validate_evaluator_name(evaluator)
@@ -603,14 +582,9 @@ def enforce_evaluator_access(evaluator: str) -> str:
 
 
 def get_owned_evaluator_doc(evaluator: str, create: bool = False):
-	"""Resolve the caller's (or, for a Moderator, the target's) availability.
-
+	"""Resolve the caller's, or for a Moderator the target's, availability.
 	`create` is only ever set by the one endpoint that means "this person is an
-	evaluator now" (adding a slot), and only after that call's own arguments
-	have been validated. Editing, deleting or setting unavailability on a record
-	that does not exist is a mistake, not a reason to conjure one: saving a
-	Course Evaluator grants the Batch Evaluator role, so creating on those paths
-	handed out a role for a write that was then rejected.
+	evaluator now", because saving a Course Evaluator grants the role.
 	"""
 	evaluator = enforce_evaluator_access(evaluator)
 
@@ -669,12 +643,9 @@ def validate_unavailability_date(value: str | None) -> str | None:
 
 
 def get_owned_slot(doc, slot: str | int):
-	"""Resolve a slot *within* the caller's own schedule.
-
+	"""Resolve a slot within the caller's own schedule.
 	Looking the row up by name alone would let a valid actor point a write at
-	someone else's row; the slot has to belong to the evaluator they passed.
-	Evaluator Schedule rows are autoincrement-named, so the identifier arrives
-	as a number from JSON. Compare as strings rather than trusting the type.
+	someone else's row. The identifier arrives as a number, so compare as strings.
 	"""
 	if slot is None or not str(slot).strip():
 		frappe.throw(_("Slot is required."))
@@ -858,10 +829,9 @@ def get_sidebar_settings():
 	rows = get_sidebar_rows(lms_settings)
 	sidebar_items = frappe._dict()
 
-	# The seven legacy keys, derived from the rows that replaced them. Emitted
-	# for anything not updated in this change; the rows are the contract.
-	# Seeded from the Check fields first so a site whose patch has not run yet
-	# still gets an answer rather than seven missing keys.
+	# The seven legacy keys, derived from the rows that replaced them. Seeded from
+	# the Check fields first, so a site whose patch has not run yet still gets an
+	# answer rather than seven missing keys.
 	for field in LEGACY_VISIBILITY_FIELDS:
 		sidebar_items[field] = cint(lms_settings.get(field))
 	for row in rows:
@@ -888,11 +858,8 @@ def get_sidebar_settings():
 @frappe.whitelist()
 def update_sidebar_item(webpage: str, icon: str | None = None):
 	"""Add a published Web Page to the sidebar, or re-icon one already there.
-
-	The only writer the "New" dialog has. It appends to LMS Settings and saves
-	the parent, so validate_sidebar_items assigns the row its id and idx and the
-	target checks run — the sidebar then folds the new row into "More" like any
-	other web page.
+	It appends to LMS Settings and saves the parent, so validate_sidebar_items
+	assigns the row its id and idx and the target checks run.
 	"""
 	frappe.only_for("Moderator")
 
@@ -1078,10 +1045,8 @@ def member_roles(member: str) -> list[str]:
 @frappe.whitelist()
 def get_member(member: str):
 	"""One member by exact name, for the member edit form.
-
-	get_members is a paginated search that also hides disabled users, so it
-	cannot answer "give me this one row": a member past the first page, or a
-	disabled one, came back empty and left the form unable to save.
+	get_members is a paginated search that also hides disabled users, so a member
+	past the first page came back empty and left the form unable to save.
 	"""
 	frappe.only_for(["Moderator"])
 
@@ -1161,9 +1126,7 @@ def save_evaluation_details(
 	rating: float = 0,
 	summary: str = None,
 ):
-	"""
-	Save evaluation details for a member against a course.
-	"""
+	"""Save evaluation details for a member against a course."""
 	frappe.only_for(["Batch Evaluator", "Moderator"])
 	assigned_evaluator = get_evaluator(course, batch_name)
 	if not has_moderator_role() and frappe.session.user != assigned_evaluator:
@@ -1212,9 +1175,7 @@ def save_certificate_details(
 	expiry_date: str = None,
 	published: bool = True,
 ):
-	"""
-	Save certificate details for a member against a course.
-	"""
+	"""Save certificate details for a member against a course."""
 	frappe.only_for(["Batch Evaluator", "Moderator"])
 	assigned_evaluator = get_evaluator(course, batch_name)
 	if not has_moderator_role() and frappe.session.user != assigned_evaluator:
@@ -1505,15 +1466,9 @@ def upsert_chapter(
 
 		stored = _stored_scorm_values(name, scorm_package.name)
 		if stored:
-			# The File row was deleted out from under the chapter, but the package
-			# was already extracted to disk. Re-extracting is impossible and is not
-			# what a title edit asked for, so keep the extraction and let the save
-			# through — otherwise the chapter can never be renamed again.
-			#
-			# scorm_package itself is cleared rather than rewritten: it is a Link to
-			# File, and save() validates every non-empty Link unconditionally, so
-			# putting the missing name back would just trade this error for a
-			# LinkValidationError. The chapter stays playable off scorm_package_path.
+			# The File row was deleted out from under the chapter, but the package was
+			# already extracted, so keep it and let a title edit through.
+			# scorm_package is cleared, because save() validates a non-empty Link.
 			values.update(stored)
 			values["scorm_package"] = None
 		else:
@@ -1549,16 +1504,8 @@ def upsert_chapter(
 
 def _stored_scorm_values(name: str | None, posted_package: str) -> dict | None:
 	"""The extraction already on `name`, when `posted_package` cannot be extracted.
-
-	Returns None — meaning "extract normally" — unless all three hold:
-
-	- this is an edit of an existing chapter,
-	- the File behind the posted package is gone, so extraction is impossible,
-	- and the caller posted the package the chapter already has.
-
-	That last condition is what keeps this to the rename case. Without it, a
-	creator replacing a package whose File row happened to be missing would get a
-	success response and a chapter still serving the old content.
+	Returns None, meaning extract normally, unless this is an edit, the File behind
+	the posted package is gone, and the caller posted the package it already has.
 	"""
 	if not name or frappe.db.exists("File", posted_package):
 		return None
@@ -1901,11 +1848,9 @@ def job_route(job: str | None) -> str | None:
 
 
 def payment_route(name: str) -> str | None:
-	# Routes to the paid-for document's billing page -- the same
-	# `billing/<type>/<name>` link the `LMS Payment Reminder` email itself
-	# builds (`lms/lms/notifications.py`), not a page about the payment
-	# record. `type` is the last word of the Select option ("LMS Course" /
-	# "LMS Batch"), lowercased, matching that template exactly.
+	# Routes to the paid-for document's billing page, the same `billing/<type>/<name>`
+	# link the payment reminder mail builds. `type` is the last word of the Select
+	# option, lowercased, matching that template exactly.
 	payment = frappe.db.get_value(
 		"LMS Payment",
 		name,
@@ -1938,18 +1883,12 @@ def job_application_route(name: str) -> str | None:
 	return job_route(frappe.db.get_value("LMS Job Application", name, "job"))
 
 
-# A rule's in-app copy records what it is about, not where to go: core's
-# `create_system_notification` sets `document_type` and `document_name` on the
-# log and never sets `link` (frappe/email/doctype/notification/notification.py).
-# The panel routes on `link`, so an unresolved log would be a row that does
-# nothing when clicked. Each builder above degrades to `None` on a missing
-# lookup -- a deleted reference, or an empty link field -- rather than
-# fabricating a route like `/lms/courses/None`. Any doctype not listed here
-# stays unlinked rather than sending someone into desk, which they may not
-# have access to. Every value here is a plain function reference (never an
-# inline `frappe.db` call in the dict literal itself) so the table stays out
-# of `frappe-breaks-multitenancy`'s reach -- each lookup only runs when a
-# builder is actually called, scoped to that call's site.
+# A rule's in-app copy records what it is about, not where to go, and the panel
+# routes on `link`, so an unresolved log would be a row that does nothing when
+# clicked. Any doctype not listed here stays unlinked.
+
+# Every value is a plain function reference, never an inline `frappe.db` call, so
+# each lookup runs only when a builder is called and stays scoped to that site.
 NOTIFICATION_ROUTES = {
 	"LMS Batch": batch_route,
 	"LMS Course": course_route,
@@ -2010,8 +1949,8 @@ def get_notifications(filters: dict = None):
 	for notification in notifications:
 		notification["from_user_details"] = senders.get(notification.from_user, {})
 		# Core never sets `link` on the log it creates for a rule's system
-		# notification -- only `document_type`/`document_name`. An explicit
-		# `link` (e.g. one a caller wrote by hand) is left untouched.
+		# notification, only `document_type` and `document_name`. An explicit link a
+		# caller wrote by hand is left untouched.
 		if not notification.link:
 			notification.link = lms_route_for(notification.document_type, notification.document_name)
 
@@ -2353,9 +2292,7 @@ def update_test_cases(test_cases: list, submission: str):
 
 @frappe.whitelist()
 def track_video_watch_duration(lesson: str, videos: list):
-	"""
-	Track the watch duration of videos in a lesson.
-	"""
+	"""Track the watch duration of videos in a lesson."""
 	from lms.lms.permissions import can_access_lesson
 
 	if not isinstance(lesson, str):
@@ -2450,6 +2387,7 @@ def get_progress_distribution(progressList: list):
 	return distribution
 
 
+# nosemgrep: security.guest-whitelisted-method - pre-existing grant, unchanged by this branch. Flagged only because semgrep ci re-scans the whole function when its body changes.
 @frappe.whitelist(allow_guest=True)
 def get_pwa_manifest():
 	"""Web app manifest for installing the LMS as a PWA."""
@@ -2457,15 +2395,8 @@ def get_pwa_manifest():
 	route = get_lms_route()
 
 	# `display` was absent, so it defaulted to "browser" and the installed app
-	# launched inside full browser chrome — the one thing installing is meant to
-	# remove. Everything else here follows from actually being standalone: a
-	# `scope` so in-app navigation stays in the app, a stable `id` so a changed
-	# start_url is not treated as a different app, and colours so the OS paints
-	# its own surfaces to match instead of flashing white.
-	#
-	# theme_color matches the light-mode `theme-color` meta in index.html. A
-	# manifest carries a single value, so the light one wins here and the meta
-	# tags keep handling the light/dark split.
+	# launched inside full browser chrome. Everything else here follows from being
+	# standalone. theme_color matches the light-mode meta in index.html.
 	manifest = {
 		"id": route,
 		"name": title,
@@ -2477,14 +2408,9 @@ def get_pwa_manifest():
 		"orientation": "portrait",
 		"theme_color": "#FFFFFF",
 		"background_color": "#FFFFFF",
-		# Split by purpose rather than the previous combined "maskable any": a
-		# maskable icon is drawn with its edges cropped to the platform's shape,
-		# so reusing one image for both gives a clipped icon wherever the "any"
-		# slot is used. The 512 has been on disk unused.
-		#
-		# Website Settings' banner_image is deliberately NOT a source here. It is
-		# a wide banner, and it was being declared as 192x192, so any site that
-		# set one got a squashed app icon.
+		# Split by purpose rather than a combined "maskable any": a maskable icon
+		# is drawn with its edges cropped, so reusing one image gives a clipped
+		# icon. Website Settings' banner_image is deliberately not a source.
 		"icons": [
 			{
 				"src": "/assets/lms/frontend/manifest/manifest-icon-192.maskable.png",
@@ -2537,12 +2463,9 @@ def get_profile_details(username: str):
 		],
 		as_dict=True,
 	)
-	# Every user created through the LMS picks up `LMS Student` from the
-	# before_insert hook, but users made in Desk, by Data Import or by another
-	# app do not. They must still be able to open their own profile. Viewing
-	# anyone else's still requires an LMS role, and that refusal comes before
-	# the not-found check so a caller without one can't use the difference
-	# between the two errors to enumerate usernames.
+	# Every user created through the LMS picks up `LMS Student`, but users made in
+	# Desk or by Data Import do not, and they must still open their own profile.
+	# The refusal comes before the not-found check so neither can enumerate names.
 	is_own_profile = bool(details) and details.name == frappe.session.user
 	if not is_own_profile and not has_lms_role():
 		frappe.throw(
@@ -3168,10 +3091,8 @@ def import_course_from_zip(zip_file_path: str):
 @frappe.whitelist()
 def delete_category(category: str):
 	"""Unlink a category from every course and batch, then delete it.
-
-	LMS Course.category and LMS Batch.category are Link fields, so Frappe
-	refuses to delete a category that is still in use. Clearing the references
-	first keeps the two steps in one transaction.
+	Both are Link fields, so Frappe refuses to delete a category still in use.
+	Clearing the references first keeps the two steps in one transaction.
 	"""
 	frappe.only_for("Moderator")
 
@@ -3242,10 +3163,8 @@ NOTIFICATION_CHANNELS = ("Email", "System Notification")
 @frappe.whitelist()
 def get_notification_rules(search: str = None):
 	"""Every mail Frappe Learning sends, as the rules that send them.
-
-	Read through a gated method rather than a doctype resource: core Notification
-	grants DocPerms to System Manager only, and this page is reachable by
-	Moderators too.
+	Read through a gated method rather than a doctype resource, because core
+	Notification grants DocPerms to System Manager only.
 	"""
 	frappe.only_for(NOTIFICATION_ROLES)
 
@@ -3277,27 +3196,13 @@ def set_notification_rule(
 	subject: str = None,
 	message: str = None,
 ):
-	"""Write the wording and channel for one of Frappe Learning's own
-	Notification rules.
-
-	Writes only the arguments it was given: a Moderator editing just the
-	Enabled switch must not blank out a subject nobody sent this call.
-
-	Security boundary: `subject` and `message` require System Manager, not
-	just a Moderator. A rule's `message` renders as Jinja at send time with
-	`restrict_globals=True` (frappe/utils/safe_exec.py), and that restricted
-	namespace still hands the template `frappe.db.sql` (arbitrary SELECT),
-	`frappe.get_all` (called with `ignore_permissions=True` inside safe_exec,
-	unconditionally) and `frappe.db.get_value` -- none of them permission
-	-checked, evaluated under the scheduler or triggering user. Writing a
-	rule's wording is therefore equivalent to handing that Moderator a
-	read-anything-on-the-site primitive, which is exactly why core Frappe
-	reserves Notification writes to System Manager in the first place. Widen
-	this back to NOTIFICATION_ROLES for subject/message -- a one-line change
-	below -- only if the product owner deliberately decides Moderators should
-	carry that risk; `enabled`, `channel` and `send_system_notification` carry
-	none of it and stay open to every NOTIFICATION_ROLES member.
+	"""Write the wording and channel for one of Frappe Learning's own rules.
+	Writes only the arguments it was given, so a Moderator editing the Enabled
+	switch cannot blank out a subject nobody sent.
 	"""
+	# `subject` and `message` need System Manager. A rule's message renders as
+	# Jinja whose restricted namespace still exposes unchecked reads, so writing
+	# one lets a caller read any table on the site.
 	frappe.only_for(NOTIFICATION_ROLES)
 	if subject is not None or message is not None:
 		frappe.only_for("System Manager")
@@ -3334,12 +3239,9 @@ def set_notification_rule(
 	# nosemgrep: lms-unjustified-ignore-permissions - the caller is gated on NOTIFICATION_ROLES above
 	doc.save(ignore_permissions=True)
 
-	# channel is `set_only_once` on core Notification (notification.json), so
-	# doc.save() throws CannotChangeConstantError for ANY change to it -- a
-	# valid value included. Every seeded rule already has a channel from
-	# insert_rule(), so the ORM route can never move one. Written directly,
-	# the way Zoom's own "enabled" toggle writes a single field through
-	# frappe.client.set_value rather than a document resource.
+	# channel is `set_only_once` on core Notification, so doc.save() throws for any
+	# change to it, a valid value included. Written directly, the way Zoom's own
+	# "enabled" toggle writes a single field.
 	if channel is not None:
 		frappe.db.set_value("Notification", name, "channel", channel)
 
