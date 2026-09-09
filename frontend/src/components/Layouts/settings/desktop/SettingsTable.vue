@@ -1,13 +1,9 @@
 <template>
-	<List
-		:columns="tracks"
-		class="-mx-3 list-row-px-3 flex min-h-0 flex-col [--list-row-height:3.5rem]"
+	<div
+		class="-mx-3 min-h-0 flex-1 overflow-y-auto [--list-row-height:3.5rem]"
+		:style="scrollerStyle"
 	>
-		<div
-			role="presentation"
-			class="min-h-0 flex-1 overflow-y-auto"
-			:style="scrollerStyle"
-		>
+		<List :columns="tracks" class="list-row-px-3">
 			<ListHeader class="sticky top-0 z-10 bg-surface-elevation-1">
 				<ListHeaderCell
 					v-for="column in columns"
@@ -128,16 +124,16 @@
 					</ListRow>
 				</ListRows>
 			</div>
-		</div>
-	</List>
+		</List>
 
-	<div v-if="hasNextPage" class="mt-4 flex shrink-0 justify-center">
-		<Button @click="emit('loadMore')">
-			<template #prefix>
-				<span class="lucide-refresh-cw size-3" />
-			</template>
-			{{ __('Load More') }}
-		</Button>
+		<div v-if="hasNextPage" class="mt-4 flex justify-center">
+			<Button @click="emit('loadMore')">
+				<template #prefix>
+					<span class="lucide-refresh-cw size-3" />
+				</template>
+				{{ __('Load More') }}
+			</Button>
+		</div>
 	</div>
 </template>
 
@@ -156,10 +152,13 @@
 // `-mx-3` cancels `list-row-px-3` against the page so the first column sits on
 // the page title's left edge.
 //
-// Load More stays OUTSIDE the List. `List` is a `role="table"`, which owns only
-// rows and rowgroups, and a `role="presentation"` scroller does not launder a
-// button placed inside it. With `visibleRows` capping the scroller it would also
-// sit below the fold.
+// Load More is inside the scroller and outside the List. Inside the scroller
+// because it is the row after the last row: it belongs to the list you are
+// reading, and a button pinned under a capped window would sit there announcing
+// more rows while the rows themselves are still above the fold. Outside the
+// List because `List` is a `role="table"`, which owns only rows and rowgroups,
+// and a `role="presentation"` wrapper does not launder a button placed inside
+// one. The scroller being the outer element is what allows both at once.
 //
 // The dark hover wash is re-toned because frappe-ui's `surface-gray-1` resolves
 // to the same value as `surface-elevation-1`, the only surface a SettingsTable

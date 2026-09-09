@@ -80,12 +80,14 @@ describe('SettingsTable: the scrolling window', () => {
 		expect(scroller(build()).style.maxHeight).toBe('')
 	})
 
-	it('leaves Load More outside the table', () => {
-		// Two reasons, either sufficient. `List` is a `role="table"`, which owns
-		// only rows and rowgroups, the scroller being `role="presentation"` does
-		// not launder a button placed inside it, it re-parents it onto the table.
-		// And under `visibleRows` an inside button sits below the fold: the page
-		// fetches 13 rows, the tabs show 9.
+	it('keeps Load More inside the window but outside the table', () => {
+		// Inside the window, because it is the row after the last row: pinned
+		// under a capped scroller it would advertise more rows while the rows it
+		// belongs to are still above the fold. Outside the table, because `List`
+		// is a `role="table"`, which owns only rows and rowgroups — a
+		// `role="presentation"` wrapper does not launder a button placed inside
+		// one, it re-parents it onto the table. The scroller being the outer
+		// element is what allows both at once.
 		const wrapper = build({ visibleRows: 9, hasNextPage: true })
 		const button = '[data-testid="load-more"]'
 
@@ -93,6 +95,9 @@ describe('SettingsTable: the scrolling window', () => {
 		expect(wrapper.get('[data-testid="list"]').find(button).exists()).toBe(
 			false
 		)
+		expect(
+			scroller(wrapper).contains(wrapper.get(button).element)
+		).toBe(true)
 	})
 
 	it('emits loadMore from there all the same', async () => {

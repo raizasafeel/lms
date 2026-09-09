@@ -48,6 +48,7 @@
 			<SettingsTable
 				:columns="columns"
 				:rows="rows"
+				:visible-rows="VISIBLE_ROWS"
 				:row-key="rowKey"
 				:row-status="rowStatus"
 				:has-next-page="hasNextPage"
@@ -139,6 +140,22 @@ const emit = defineEmits<{
 }>()
 
 const search = defineModel<string>('search', { default: '' })
+
+/**
+ * Twelve rows fit; row thirteen is reached by scrolling.
+ *
+ * A settings list is its own page, so it could take the height it has and let
+ * the dialog body scroll instead. It does not, because the region has to be a
+ * definite size for the column header to pin against and for the panel below to
+ * stay put as rows arrive: a body that grows with its list moves everything
+ * under it on every Load More. Twelve is what fits the dialog without the panel
+ * itself ever scrolling.
+ *
+ * SettingsLayout is told `flush` for the same reason: the region begins at the
+ * body's own top edge, and padding above it would push the twelfth row past the
+ * bottom of a body that no longer scrolls to compensate.
+ */
+const VISIBLE_ROWS = 12
 
 const searchPlaceholder = computed(() => __('Search'))
 </script>
