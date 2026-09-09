@@ -4,6 +4,7 @@ import Categories from '@/components/Settings/Categories.vue'
 import { membersSettingsPage } from '@/components/Settings/Members/members'
 import { emailTemplatesPage } from '@/components/Settings/EmailTemplate/emailTemplates'
 import { emailAccountsPage } from '@/components/Settings/EmailAccount/emailAccounts'
+import { notificationsPage } from '@/components/Settings/Notifications/notifications'
 import { sidebarSettingsPage } from '@/components/Settings/Sidebar/sidebar'
 // BrandSettings.vue is still `<script setup>` with no `lang="ts"`, so a TS
 // importer gets TS7016. Only settingsStructure.js reached it before, and a .js
@@ -179,6 +180,13 @@ export const settingsTree: SettingsGroup[] = [
 				records: true,
 				page: emailTemplatesPage,
 			},
+			{
+				label: 'Notifications',
+				slug: 'notifications',
+				icon: 'lucide-bell',
+				records: true,
+				page: notificationsPage,
+			},
 		],
 	},
 	{
@@ -254,6 +262,25 @@ export const settingsTree: SettingsGroup[] = [
 									type: 'checkbox',
 									description:
 										'If enabled, GST will be applied to the price for students from India.',
+								},
+							],
+						},
+						{
+							label: 'Payment Reminders',
+							fields: [
+								{
+									label: 'Send payment reminders for batch',
+									name: 'send_payment_reminders_for_batch',
+									type: 'checkbox',
+									description:
+										'If enabled, it sends payment reminders to students who left the payment incomplete for a batch.',
+								},
+								{
+									label: 'Send payment reminders for course',
+									name: 'send_payment_reminders_for_course',
+									type: 'checkbox',
+									description:
+										'If enabled, it sends payment reminders to students who left the payment incomplete for a course.',
 								},
 							],
 						},

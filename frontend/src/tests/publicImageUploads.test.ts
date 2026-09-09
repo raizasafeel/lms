@@ -311,6 +311,10 @@ const MANIFEST: Record<string, Privacy[]> = {
 	// the record alike — New and an existing template included — so there is a
 	// single editor here where there were once two forms carrying one each.
 	'components/Settings/EmailTemplate/EmailTemplateForm.vue': ['undeclared'],
+	// The Message body of a Notification rule, same shape as the email
+	// template's own editor above: no uploadArgs, so an image pasted into a
+	// notification's message lands private by RichTextEditor's own default.
+	'components/Settings/Notifications/NotificationRecord.vue': ['undeclared'],
 	// Two uploaders: the FileUploader an `upload` field draws, which reads that
 	// field's own `public` flag, and the RichTextEditor a `richtext` field
 	// draws, which passes no uploadArgs — so an image pasted into an email
