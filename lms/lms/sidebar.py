@@ -61,7 +61,11 @@ def seed_sidebar_items() -> None:
 	"""
 	settings = frappe.get_single("LMS Settings")
 	existing = [{field: row.get(field) for field in ROW_FIELDS} for row in settings.sidebar_items]
-	taken = {row["name1"] for row in existing if row["name1"]}
+	present = {row["name1"] for row in existing if row["name1"]}
+	# Reserved separately from what is present. A web page titled "Courses" scrubs
+	# to the built-in's own id, and stamping it there would make the built-in look
+	# seeded and drop that row from the sidebar for good.
+	taken = present | standard_names()
 
 	# Web-page rows predate every field added for this feature.
 	stamped = False
@@ -72,9 +76,10 @@ def seed_sidebar_items() -> None:
 		if not row["name1"]:
 			row["name1"] = unique_name(row["web_page"], taken)
 			taken.add(row["name1"])
+			present.add(row["name1"])
 			stamped = True
 
-	missing = [item for item in standard_items() if item["name1"] not in taken]
+	missing = [item for item in standard_items() if item["name1"] not in present]
 	if not missing and not stamped:
 		return
 
