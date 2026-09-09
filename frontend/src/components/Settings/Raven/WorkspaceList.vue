@@ -1,14 +1,12 @@
 <template>
 	<SettingsList
 		:title="__(label)"
-		:description="__(description)"
 		:columns="columns"
 		:rows="paged.visible.value"
 		:has-next-page="paged.hasNextPage.value"
 		:loading="list.loading.value"
 		v-model:search="search"
 		searchable
-		:search-label="__('Search workspaces')"
 		:row-status="rowStatus"
 		:filtered="state !== 'all'"
 		row-key="key"
@@ -74,7 +72,7 @@ import { openInRavenOptions } from '@/utils/raven/openInRaven'
 import type { SettingsListColumn, SettingsListRow } from '@/types'
 
 // Settings.vue hands every panel its label and description.
-defineProps<{ label: string; description: string }>()
+defineProps<{ label: string }>()
 
 // Create opens a New Workspace page rather than POSTing create_workspace: it used
 // to write immediately, so an accidental click left a live Raven workspace behind

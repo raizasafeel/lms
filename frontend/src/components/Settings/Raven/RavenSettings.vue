@@ -23,16 +23,11 @@
 	<WorkspaceList
 		v-else-if="ready"
 		:label="label"
-		:description="description"
 		@open="openWorkspace"
 		@new="openNewWorkspace"
 	/>
 
-	<SettingsLayout
-		v-else-if="!setup.loading"
-		:title="__(label)"
-		:description="__(description)"
-	>
+	<SettingsLayout v-else-if="!setup.loading" :title="__(label)">
 		<template #title-badge>
 			<Badge
 				v-if="!notPermitted && missingApp"
@@ -83,9 +78,11 @@ import ChannelView from './ChannelView.vue'
 import type { MappingRow } from '@/composables/raven/useMappingList'
 import type { RavenSetupState } from '@/types'
 
-// Settings.vue passes every panel a label/description; declaring them keeps them out
-// of $attrs, where `description` would fall through and override SettingsLayout's.
-defineProps<{ label: string; description: string }>()
+// Settings.vue passes a custom panel its label and nothing else, and a panel
+// titles itself from that — see Categories.vue and BrandSettings.vue.
+// `description` is not part of that contract (settingsPanelProps.test.ts), so
+// the heading here is the label alone, as on every other panel.
+defineProps<{ label: string }>()
 
 // Endpoints are System Manager-only but Settings opens for any moderator. Its own
 // state, else they get the "not set up" card telling them to fix what they can't.
