@@ -15,6 +15,7 @@
 		<div
 			:id="inputId"
 			ref="editor"
+			:aria-label="ariaLabel"
 			class="h-auto flex-1 overflow-hidden overscroll-none !rounded border border-outline-gray-2 bg-surface-gray-2 transition-colors hover:border-outline-gray-3 focus-within:border-outline-gray-4 focus-within:shadow-sm dark:bg-gray-900"
 		/>
 		<InputDescription
@@ -59,6 +60,14 @@ const props = defineProps({
 	label: {
 		type: String,
 		default: '',
+	},
+	// Names the ACTUAL editor region, not the wrapper InputLabel already
+	// associates via labelId/inputId. Optional and undefined by default so
+	// EmailTemplateForm and BadgeForm — which pass `label` and rely on
+	// InputLabel's own association — are unaffected by this prop existing.
+	ariaLabel: {
+		type: String,
+		default: undefined,
 	},
 	readonly: {
 		type: Boolean,

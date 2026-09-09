@@ -31,20 +31,30 @@
 						@input="report(field, 'typing')"
 						@focusout="report(field, 'now')"
 					>
+						<div
+							data-testid="code-field-label"
+							class="text-p-base-medium text-ink-gray-7 mb-2"
+						>
+							{{ __(field.label) }}
+						</div>
 						<CodeEditor
-							:label="__(field.label)"
 							:type="codeType(field)"
-							:description="
-								field.description ? __(field.description) : undefined
-							"
 							v-model="data[field.name]"
 							:height="codeHeight(field)"
 							class="shrink-0"
 							:required="field.reqd"
 							:readonly="field.disabled"
 							:showLineNumbers="true"
+							:aria-label="__(field.label)"
 						>
 						</CodeEditor>
+						<div
+							v-if="field.description"
+							data-testid="code-field-description"
+							class="text-p-sm text-ink-gray-5 mt-2"
+						>
+							{{ __(field.description) }}
+						</div>
 					</div>
 
 					<div
