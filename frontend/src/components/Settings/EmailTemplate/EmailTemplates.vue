@@ -1,6 +1,6 @@
 <template>
 	<SettingsList
-		v-if="view === 'list'"
+		v-if="!record"
 		v-model:search="list.search"
 		:title="__(label)"
 		:columns="templateColumns"
@@ -15,7 +15,7 @@
 		@row-click="openForm"
 	/>
 
-	<EmailTemplateForm v-else :name="selected" @back="closeForm()" />
+	<EmailTemplateForm v-else :name="record" @back="closeForm()" />
 </template>
 
 <script setup lang="ts">
@@ -40,7 +40,11 @@ import type { SettingsListRow } from '@/types'
 
 defineProps<{ label: string }>()
 
-const view = ref<'list' | 'form'>('list')
+// The open record, as a model rather than state of its own -- the same contract
+// SettingsListPanel has, and what makes '#settings/templates/<name>' land on it.
+// Whether the form is showing is read off this and never stored beside it: a
+// second copy could disagree with the URL, and a derived one cannot.
+const record = defineModel<string | null>('record', { default: null })
 
 const list = useSettingsListResource<SettingsListRow>({
 	doctype: DOCTYPE,
@@ -50,19 +54,14 @@ const list = useSettingsListResource<SettingsListRow>({
 	orderBy: TEMPLATE_ORDER_BY,
 })
 
-// The record the form is on: a template name, or NEW_RECORD.
-const selected = ref<string | null>(null)
-
 const openForm = (row: SettingsListRow | null) => {
-	selected.value = row ? String(row.name) : NEW_RECORD
-	view.value = 'form'
+	record.value = row ? String(row.name) : NEW_RECORD
 }
 
 // The list is refetched rather than trusted: a rename moved a row's name and a
 // save moved its subject, and neither reached the rows already on screen.
 const closeForm = () => {
-	view.value = 'list'
-	selected.value = null
+	record.value = null
 	list.reload()
 }
 </script>

@@ -1,6 +1,6 @@
 <template>
 	<SettingsList
-		v-if="view === 'list'"
+		v-if="!record"
 		:title="__(label)"
 		:columns="columns"
 		:rows="list.rows"
@@ -25,7 +25,7 @@
 		</template>
 	</SettingsList>
 
-	<TransactionForm v-else :name="selected" @back="closeForm()" />
+	<TransactionForm v-else :name="record" @back="closeForm()" />
 </template>
 
 <script setup lang="ts">
@@ -50,8 +50,11 @@ import { NEW_RECORD } from '@/composables/useSettingsSource'
 
 defineProps<{ label: string }>()
 
-const view = ref<'list' | 'form'>('list')
-const selected = ref<string | null>(null)
+// The open record, as a model rather than state of its own -- the same contract
+// SettingsListPanel has, and what makes '#settings/transactions/<name>' land on it.
+// Whether the form is showing is read off this and never stored beside it: a
+// second copy could disagree with the URL, and a derived one cannot.
+const record = defineModel<string | null>('record', { default: null })
 
 const list = useSettingsListResource(transactionList)
 
@@ -62,13 +65,11 @@ const status = ref(STATUS_ALL)
 watch(status, (value) => list.applyFilters(statusFilters(value)))
 
 const openForm = (name: string) => {
-	selected.value = name
-	view.value = 'form'
+	record.value = name
 }
 
 const closeForm = () => {
-	view.value = 'list'
-	selected.value = null
+	record.value = null
 	list.reload()
 }
 </script>
