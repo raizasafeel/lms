@@ -181,6 +181,7 @@ const form = recordForm({
 				{
 					name: 'title',
 					label: 'Title',
+					description: 'The name this badge is awarded and displayed under.',
 					type: 'text',
 					placeholder: 'e.g. Course Champion',
 					reqd: true,
@@ -218,6 +219,7 @@ const form = recordForm({
 				{
 					name: 'reference_doctype',
 					label: 'Assign For',
+					description: 'The record whose events award this badge.',
 					type: 'select',
 					get options() {
 						return referenceDoctypeOptions()
@@ -227,6 +229,7 @@ const form = recordForm({
 				{
 					name: 'user_field',
 					label: 'Assign To',
+					description: 'Which user on that record receives it.',
 					type: 'select',
 					get options() {
 						return userFieldOptions()
@@ -236,6 +239,8 @@ const form = recordForm({
 				{
 					name: 'event',
 					label: 'Event',
+					description:
+						'What awards it: a new record, a changed value, or a manual assignment.',
 					type: 'select',
 					get options() {
 						return eventOptions()
