@@ -1,8 +1,7 @@
 <template>
 	<SettingsList
-		v-if="view === 'list'"
-		:title="label"
-		:description="__(description)"
+		v-if="!record"
+		:title="__(label)"
 		:columns="columns"
 		:rows="list.rows"
 		:loading="list.loading"
@@ -12,146 +11,92 @@
 		:search-label="__('Search badges')"
 		empty-name="Badges"
 		empty-icon="lucide-award"
-		@new="openForm('new')"
+		@new="openForm(null)"
 		@load-more="list.loadMore()"
-		@row-click="(row) => openForm(row.name)"
+		@row-click="openForm"
 	/>
-	<BadgeForm
-		v-else
-		:badgeName="selectedBadge"
-		v-model:badges="list.resource"
-		@updateStep="(step) => (view = step)"
-	/>
-	<BadgeAssignments
-		v-if="showAssignments"
-		v-model="showAssignments"
-		:badgeName="showAssignmentsFor"
-	/>
+
+	<BadgeForm v-else :name="record" :row="selectedRow" @back="closeForm()" />
 </template>
+
 <script setup lang="ts">
-import { toast } from 'frappe-ui'
-import { computed, ref } from 'vue'
-import { cleanError } from '@/utils'
+import { call, toast } from 'frappe-ui'
+import { computed } from 'vue'
 import BadgeForm from '@/components/Settings/Badges/BadgeForm.vue'
-import BadgeAssignments from '@/components/Settings/Badges/BadgeAssignments.vue'
-import SettingsList from '@/components/Layouts/SettingsList.vue'
+import SettingsList from '@/components/Layouts/settings/desktop/SettingsList.vue'
+import {
+	BADGE_DOCTYPE,
+	BADGE_FIELDS,
+	BADGE_SEARCH_FIELDS,
+	badgeColumns,
+} from '@/components/Settings/Badges/badges'
 import { useSettingsListResource } from '@/composables/useSettingsListResource'
-import type { Badge, SettingsListColumn } from '@/types'
+import { NEW_RECORD } from '@/composables/useSettingsSource'
+import { cleanError } from '@/utils'
+import type { Badge, SettingsListRow } from '@/types'
 
-const view = ref<'list' | 'form'>('list')
-const selectedBadge = ref<string | null>(null)
-const showAssignments = ref<boolean>(false)
-const showAssignmentsFor = ref<string | null>(null)
+// Settings > Badges: the list, with the badge behind New and behind a row in
+// BadgeForm.vue. Three files per list page — the config, this list, the form —
+// and the form is imported statically so a row click reveals it on the same
+// tick.
 
-defineProps<{
-	label: string
-	description: string
-}>()
+defineProps<{ label: string }>()
+
+// The open record, as a model rather than state of its own — the same contract
+// SettingsListPanel has, and what makes '#settings/badges/<name>' land on that
+// badge. Whether the form is showing is read off this and never stored beside
+// it: a second copy could disagree with the URL, and a derived one cannot.
+const record = defineModel<string | null>('record', { default: null })
 
 const list = useSettingsListResource<Badge>({
-	doctype: 'LMS Badge',
-	fields: [
-		'name',
-		'title',
-		'enabled',
-		'description',
-		'image',
-		'grant_only_once',
-		'event',
-		'reference_doctype',
-		'condition',
-		'user_field',
-		'field_to_check',
-	],
-	searchFields: ['title', 'description'],
+	doctype: BADGE_DOCTYPE,
+	fields: BADGE_FIELDS,
+	searchFields: BADGE_SEARCH_FIELDS,
 	orderBy: 'creation desc',
 })
 
-const doctypeLabel = computed(() => {
-	return {
-		'LMS Course': __('Course'),
-		'LMS Batch': __('Batch'),
-		'LMS Enrollment': __('Course Enrollment'),
-		'LMS Batch Enrollment': __('Batch Enrollment'),
-		'LMS Quiz Submission': __('Quiz Submission'),
-		'LMS Assignment Submission': __('Assignment Submission'),
-		'LMS Programming Exercise Submission': __(
-			'Programming Exercise Submission'
-		),
-	}
+// The row behind the open record, so the header can name the badge before its
+// document lands. Looked up rather than remembered from the click: a deep link
+// arrives with no click behind it, and a create form has no row at all.
+const selectedRow = computed<SettingsListRow | null>(() => {
+	if (!record.value || record.value === NEW_RECORD) return null
+	return list.rows.find((row) => row.name === record.value) ?? null
 })
 
-const deleteBadge = (badgeName: string) => {
-	list.remove(badgeName, {
+// Written straight through, and the row moved first so the switch answers the
+// press rather than the round trip. A refused write puts the row back.
+const toggleEnabled = async (row: SettingsListRow, value: boolean) => {
+	const previous = row.enabled
+	row.enabled = value
+	try {
+		await call('frappe.client.set_value', {
+			doctype: BADGE_DOCTYPE,
+			name: row.name,
+			fieldname: 'enabled',
+			value: value ? 1 : 0,
+		})
+	} catch (err: any) {
+		row.enabled = previous
+		toast.error(cleanError(err?.messages?.[0]) || __('Error updating badge'))
+	}
+}
+
+const deleteBadge = (row: SettingsListRow) => {
+	list.remove(String(row.name), {
 		onSuccess: () => toast.success(__('Badge deleted successfully')),
 		onError: (err) =>
 			toast.error(cleanError(err.messages?.[0]) || __('Error deleting badge')),
 	})
 }
 
-const getMoreOptions = (badgeName: string) => [
-	{
-		label: __('Assignments'),
-		icon: 'lucide-download',
-		onClick() {
-			showAssignmentsFor.value = badgeName
-			showAssignments.value = true
-		},
-	},
-	{
-		label: __('Delete'),
-		icon: 'lucide-trash-2',
-		onClick() {
-			deleteBadge(badgeName)
-		},
-	},
-]
+const columns = badgeColumns({ toggleEnabled, remove: deleteBadge })
 
-const columns: SettingsListColumn[] = [
-	{
-		key: 'title',
-		label: __('Badge'),
-		type: 'text',
-		width: 'minmax(0, 1.3fr)',
-		value: (row) => row.title,
-	},
-	{
-		key: 'reference_doctype',
-		label: __('Awarded For'),
-		type: 'text',
-		value: (row) =>
-			doctypeLabel.value[
-				row.reference_doctype as keyof typeof doctypeLabel.value
-			] || row.reference_doctype,
-	},
-	{
-		key: 'grant',
-		label: __('Grant'),
-		type: 'text',
-		width: '7rem',
-		value: (row) => (row.grant_only_once ? __('Once') : __('Every time')),
-	},
-	{
-		key: 'status',
-		label: __('Status'),
-		type: 'badge',
-		width: '6.5rem',
-		badges: (row) => [
-			row.enabled
-				? { label: __('Enabled'), theme: 'green' }
-				: { label: __('Disabled'), theme: 'gray' },
-		],
-	},
-	{
-		key: 'actions',
-		type: 'actions',
-		ariaLabel: (row) => __('Actions for {0}').format(row.title),
-		options: (row) => getMoreOptions(row.name),
-	},
-]
+const openForm = (row: SettingsListRow | null) => {
+	record.value = row ? String(row.name) : NEW_RECORD
+}
 
-const openForm = (badgeName: string) => {
-	selectedBadge.value = badgeName
-	view.value = 'form'
+const closeForm = () => {
+	record.value = null
+	list.reload()
 }
 </script>
