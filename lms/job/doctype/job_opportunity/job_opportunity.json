@@ -21,7 +21,9 @@
   "company_logo",
   "company_email_address",
   "company_details_section",
-  "description"
+  "description",
+  "reported_by",
+  "report_reason"
  ],
  "fields": [
   {
@@ -119,6 +121,19 @@
    "fieldtype": "Select",
    "label": "Work Mode",
    "options": "\nRemote\nHybrid\nOn-site"
+  },
+  {
+   "fieldname": "reported_by",
+   "fieldtype": "Link",
+   "label": "Reported By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "report_reason",
+   "fieldtype": "Small Text",
+   "label": "Report Reason",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

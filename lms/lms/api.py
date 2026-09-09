@@ -1882,6 +1882,94 @@ def get_week_difference(start_date: str, current_date: str) -> int:
 	return diff_in_days // 7
 
 
+def course_route(course: str | None) -> str | None:
+	if not course:
+		return None
+	return get_lms_route(f"courses/{course}")
+
+
+def batch_route(batch: str | None) -> str | None:
+	if not batch:
+		return None
+	return get_lms_route(f"batches/{batch}")
+
+
+def job_route(job: str | None) -> str | None:
+	if not job:
+		return None
+	return get_lms_route(f"job-openings/{job}")
+
+
+def payment_route(name: str) -> str | None:
+	# Routes to the paid-for document's billing page -- the same
+	# `billing/<type>/<name>` link the `LMS Payment Reminder` email itself
+	# builds (`lms/lms/notifications.py`), not a page about the payment
+	# record. `type` is the last word of the Select option ("LMS Course" /
+	# "LMS Batch"), lowercased, matching that template exactly.
+	payment = frappe.db.get_value(
+		"LMS Payment",
+		name,
+		["payment_for_document_type", "payment_for_document"],
+		as_dict=True,
+	)
+	if not (payment and payment.payment_for_document_type and payment.payment_for_document):
+		return None
+	doc_type = payment.payment_for_document_type.split(" ")[-1].lower()
+	return get_lms_route(f"billing/{doc_type}/{payment.payment_for_document}")
+
+
+def certificate_route(name: str) -> str | None:
+	return course_route(frappe.db.get_value("LMS Certificate", name, "course"))
+
+
+def batch_enrollment_route(name: str) -> str | None:
+	return batch_route(frappe.db.get_value("LMS Batch Enrollment", name, "batch"))
+
+
+def live_class_route(name: str) -> str | None:
+	return batch_route(frappe.db.get_value("LMS Live Class", name, "batch_name"))
+
+
+def certificate_request_route(name: str) -> str | None:
+	return course_route(frappe.db.get_value("LMS Certificate Request", name, "course"))
+
+
+def job_application_route(name: str) -> str | None:
+	return job_route(frappe.db.get_value("LMS Job Application", name, "job"))
+
+
+# A rule's in-app copy records what it is about, not where to go: core's
+# `create_system_notification` sets `document_type` and `document_name` on the
+# log and never sets `link` (frappe/email/doctype/notification/notification.py).
+# The panel routes on `link`, so an unresolved log would be a row that does
+# nothing when clicked. Each builder above degrades to `None` on a missing
+# lookup -- a deleted reference, or an empty link field -- rather than
+# fabricating a route like `/lms/courses/None`. Any doctype not listed here
+# stays unlinked rather than sending someone into desk, which they may not
+# have access to. Every value here is a plain function reference (never an
+# inline `frappe.db` call in the dict literal itself) so the table stays out
+# of `frappe-breaks-multitenancy`'s reach -- each lookup only runs when a
+# builder is actually called, scoped to that call's site.
+NOTIFICATION_ROUTES = {
+	"LMS Batch": batch_route,
+	"LMS Course": course_route,
+	"LMS Certificate": certificate_route,
+	"LMS Batch Enrollment": batch_enrollment_route,
+	"LMS Live Class": live_class_route,
+	"LMS Certificate Request": certificate_request_route,
+	"LMS Payment": payment_route,
+	"LMS Job Application": job_application_route,
+	"Job Opportunity": job_route,
+}
+
+
+def lms_route_for(doctype: str, name: str) -> str | None:
+	builder = NOTIFICATION_ROUTES.get(doctype)
+	if not (builder and name):
+		return None
+	return builder(name)
+
+
 @frappe.whitelist()
 def get_notifications(filters: dict = None):
 	filters = frappe._dict(filters or {})
@@ -1893,7 +1981,17 @@ def get_notifications(filters: dict = None):
 	notifications = frappe.get_all(
 		"Notification Log",
 		filters=query_filters,
-		fields=["name", "subject", "from_user", "link", "read", "creation", "type"],
+		fields=[
+			"name",
+			"subject",
+			"from_user",
+			"link",
+			"read",
+			"creation",
+			"type",
+			"document_type",
+			"document_name",
+		],
 		order_by="creation desc",
 		limit_page_length=50,
 	)
@@ -1911,6 +2009,11 @@ def get_notifications(filters: dict = None):
 
 	for notification in notifications:
 		notification["from_user_details"] = senders.get(notification.from_user, {})
+		# Core never sets `link` on the log it creates for a rule's system
+		# notification -- only `document_type`/`document_name`. An explicit
+		# `link` (e.g. one a caller wrote by hand) is left untouched.
+		if not notification.link:
+			notification.link = lms_route_for(notification.document_type, notification.document_name)
 
 	return notifications
 
@@ -3117,3 +3220,133 @@ def set_system_preferences(language: str = None, time_zone: str = None):
 		frappe.db.set_single_value("System Settings", "time_zone", time_zone)
 
 	frappe.clear_cache()
+
+
+NOTIFICATION_ROLES = ("Moderator", "System Manager")
+
+NOTIFICATION_RULE_FIELDS = [
+	"name",
+	"enabled",
+	"channel",
+	"send_system_notification",
+	"subject",
+	"message",
+]
+
+# LMS has a send path for exactly these two. Notification.channel also offers
+# Slack and SMS, but nothing here ever delivers either, so the settings page
+# must never offer them and a write naming one is refused.
+NOTIFICATION_CHANNELS = ("Email", "System Notification")
+
+
+@frappe.whitelist()
+def get_notification_rules(search: str = None):
+	"""Every mail Frappe Learning sends, as the rules that send them.
+
+	Read through a gated method rather than a doctype resource: core Notification
+	grants DocPerms to System Manager only, and this page is reachable by
+	Moderators too.
+	"""
+	frappe.only_for(NOTIFICATION_ROLES)
+
+	if search is not None and not isinstance(search, str):
+		frappe.throw(_("Invalid search query."), frappe.ValidationError)
+
+	# nosemgrep: lms-unjustified-ignore-permissions - the read is gated on NOTIFICATION_ROLES above; core Notification has no LMS-side perms
+	rows = frappe.get_all(
+		"Notification",
+		filters={"module": "LMS"},
+		fields=NOTIFICATION_RULE_FIELDS,
+		order_by="name asc",
+		ignore_permissions=True,
+	)
+
+	term = (search or "").strip().lower()
+	if not term:
+		return rows
+
+	return [row for row in rows if term in row.name.lower() or term in (row.subject or "").lower()]
+
+
+@frappe.whitelist()
+def set_notification_rule(
+	name: str,
+	enabled: int = None,
+	channel: str = None,
+	send_system_notification: int = None,
+	subject: str = None,
+	message: str = None,
+):
+	"""Write the wording and channel for one of Frappe Learning's own
+	Notification rules.
+
+	Writes only the arguments it was given: a Moderator editing just the
+	Enabled switch must not blank out a subject nobody sent this call.
+
+	Security boundary: `subject` and `message` require System Manager, not
+	just a Moderator. A rule's `message` renders as Jinja at send time with
+	`restrict_globals=True` (frappe/utils/safe_exec.py), and that restricted
+	namespace still hands the template `frappe.db.sql` (arbitrary SELECT),
+	`frappe.get_all` (called with `ignore_permissions=True` inside safe_exec,
+	unconditionally) and `frappe.db.get_value` -- none of them permission
+	-checked, evaluated under the scheduler or triggering user. Writing a
+	rule's wording is therefore equivalent to handing that Moderator a
+	read-anything-on-the-site primitive, which is exactly why core Frappe
+	reserves Notification writes to System Manager in the first place. Widen
+	this back to NOTIFICATION_ROLES for subject/message -- a one-line change
+	below -- only if the product owner deliberately decides Moderators should
+	carry that risk; `enabled`, `channel` and `send_system_notification` carry
+	none of it and stay open to every NOTIFICATION_ROLES member.
+	"""
+	frappe.only_for(NOTIFICATION_ROLES)
+	if subject is not None or message is not None:
+		frappe.only_for("System Manager")
+
+	if not isinstance(name, str) or not name:
+		frappe.throw(_("Invalid rule name."), frappe.ValidationError)
+	if enabled is not None and not isinstance(enabled, int):
+		frappe.throw(_("Invalid enabled value."), frappe.ValidationError)
+	if channel is not None and (not isinstance(channel, str) or channel not in NOTIFICATION_CHANNELS):
+		frappe.throw(_("Invalid channel."), frappe.ValidationError)
+	if send_system_notification is not None and not isinstance(send_system_notification, int):
+		frappe.throw(_("Invalid send_system_notification value."), frappe.ValidationError)
+	if subject is not None and not isinstance(subject, str):
+		frappe.throw(_("Invalid subject."), frappe.ValidationError)
+	if subject is not None and not subject.strip():
+		frappe.throw(_("Subject cannot be empty."), frappe.ValidationError)
+	if message is not None and not isinstance(message, str):
+		frappe.throw(_("Invalid message."), frappe.ValidationError)
+
+	if not frappe.db.exists("Notification", {"name": name, "module": "LMS"}):
+		frappe.throw(
+			_("{0} is not a Frappe Learning notification rule.").format(name), frappe.ValidationError
+		)
+
+	doc = frappe.get_doc("Notification", name)
+	if enabled is not None:
+		doc.enabled = enabled
+	if send_system_notification is not None:
+		doc.send_system_notification = send_system_notification
+	if subject is not None:
+		doc.subject = subject
+	if message is not None:
+		doc.message = message
+	# nosemgrep: lms-unjustified-ignore-permissions - the caller is gated on NOTIFICATION_ROLES above
+	doc.save(ignore_permissions=True)
+
+	# channel is `set_only_once` on core Notification (notification.json), so
+	# doc.save() throws CannotChangeConstantError for ANY change to it -- a
+	# valid value included. Every seeded rule already has a channel from
+	# insert_rule(), so the ORM route can never move one. Written directly,
+	# the way Zoom's own "enabled" toggle writes a single field through
+	# frappe.client.set_value rather than a document resource.
+	if channel is not None:
+		frappe.db.set_value("Notification", name, "channel", channel)
+
+	# nosemgrep: lms-unjustified-ignore-permissions - reads back the row just written, under the same role gate
+	return frappe.get_all(
+		"Notification",
+		filters={"name": name},
+		fields=NOTIFICATION_RULE_FIELDS,
+		ignore_permissions=True,
+	)[0]

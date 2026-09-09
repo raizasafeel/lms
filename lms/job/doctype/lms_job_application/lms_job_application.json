@@ -10,7 +10,8 @@
   "column_break_deax",
   "job",
   "job_title",
-  "company"
+  "company",
+  "company_email"
  ],
  "fields": [
   {
@@ -55,6 +56,14 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Company",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "job.company_email_address",
+   "fieldname": "company_email",
+   "fieldtype": "Data",
+   "label": "Company Email",
+   "options": "Email",
    "read_only": 1
   }
  ],

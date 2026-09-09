@@ -4,8 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import add_months, get_link_to_form, getdate, validate_url
-from frappe.utils.user import get_system_managers
+from frappe.utils import add_months, getdate, validate_url
 
 from lms.lms.utils import generate_slug, validate_image
 
@@ -34,22 +33,38 @@ def update_job_openings():
 		frappe.db.set_value("Job Opportunity", job, "status", "Closed")
 
 
+REPORT_REASON_MAX_LENGTH = 1000
+
+
 @frappe.whitelist()
 def report(job: str, reason: str):
-	system_managers = get_system_managers(only_name=True)
-	user = frappe.db.get_value("User", frappe.session.user, "full_name")
-	subject = _("User {0} has reported the job post {1}").format(user, job)
-	args = {
-		"job": job,
-		"job_url": get_link_to_form("Job Opportunity", job),
-		"user": user,
-		"reason": reason,
-	}
-	frappe.sendmail(
-		recipients=system_managers,
-		subject=subject,
-		header=[subject, "green"],
-		template="job_report",
-		args=args,
-		now=True,
-	)
+	# frappe's whitelist argument coercion is switched off in several run modes
+	# (see lms/tests/test_notification_rules.py), so an annotated signature is
+	# not an input check -- these stay explicit.
+	if not isinstance(job, str) or not isinstance(reason, str):
+		frappe.throw(_("job and reason must be strings"))
+
+	reason = reason.strip()
+	if not reason:
+		frappe.throw(_("Reason is required"))
+	if len(reason) > REPORT_REASON_MAX_LENGTH:
+		frappe.throw(_("Reason must be under {0} characters").format(REPORT_REASON_MAX_LENGTH))
+
+	doc = frappe.get_doc("Job Opportunity", job)
+
+	# This write is deliberately privileged: report() exists so a NON-owner can
+	# flag someone else's listing -- Job Opportunity grants only System
+	# Manager full rights and LMS Student if_owner, so a reporter by
+	# definition has neither read nor write on the document being reported. A
+	# has_permission check on the target document would defeat the feature it
+	# guards. What bounds this instead: the endpoint is not allow_guest, so a
+	# caller is at least authenticated; report_reason and reported_by are both
+	# read_only on the doctype; reported_by is always frappe.session.user,
+	# never a caller-supplied value (report()'s signature takes no such
+	# argument); and reason is rejected above if empty or over
+	# REPORT_REASON_MAX_LENGTH characters, so an unbounded blob cannot be
+	# stored and mailed.
+	doc.db_set("reported_by", frappe.session.user, update_modified=False)
+	doc.db_set("report_reason", reason, update_modified=False)
+	doc.reload()
+	doc.run_method("lms_notify")

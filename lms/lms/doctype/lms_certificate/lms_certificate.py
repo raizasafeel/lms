@@ -3,7 +3,6 @@
 
 import frappe
 from frappe import _
-from frappe.email.doctype.email_template.email_template import get_email_template
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
 from frappe.utils import nowdate
@@ -20,40 +19,6 @@ class LMSCertificate(Document):
 
 	def after_insert(self):
 		capture("certificate_issued", "lms")
-		self.send_certification_email()
-
-	def send_certification_email(self):
-		outgoing_email_account = frappe.get_cached_value(
-			"Email Account", {"default_outgoing": 1, "enable_outgoing": 1}, "name"
-		)
-		if outgoing_email_account or frappe.conf.get("mail_login"):
-			self.send_mail()
-
-	def send_mail(self):
-		subject = _("Congratulations on getting certified!")
-		template = "certification"
-		custom_template = frappe.db.get_single_value("LMS Settings", "certification_template")
-
-		args = {
-			"member_name": self.member_name,
-			"course_name": self.course,
-			"course_title": frappe.db.get_value("LMS Course", self.course, "title"),
-			"name": self.name,
-			"template": self.template,
-		}
-
-		if custom_template:
-			email_template = get_email_template(custom_template, args)
-			subject = email_template.get("subject")
-			content = email_template.get("message")
-		frappe.sendmail(
-			recipients=self.member,
-			subject=subject,
-			template=template if not custom_template else None,
-			content=content if custom_template else None,
-			args=args,
-			header=[subject, "green"],
-		)
 
 	def validate_criteria(self):
 		self.validate_role_of_owner()

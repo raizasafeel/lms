@@ -19,4 +19,6 @@ export interface LMSJobApplication {
 	job_title?: string
 	/**	Company : Data	*/
 	company?: string
+	/**	Company Email : Data	*/
+	company_email?: string
 }

@@ -7,7 +7,7 @@ import frappe
 import requests
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, format_date, format_time, get_datetime, nowdate
+from frappe.utils import cint, format_date, format_time, get_datetime
 
 from lms.lms.doctype.lms_batch.lms_batch import authenticate
 
@@ -148,46 +148,6 @@ class LMSLiveClass(Document):
 					"join_url": google_meet_link,
 				},
 			)
-
-
-def send_live_class_reminder():
-	classes = frappe.get_all(
-		"LMS Live Class",
-		{
-			"date": nowdate(),
-		},
-		["name", "batch_name", "title", "date", "time"],
-	)
-
-	for live_class in classes:
-		students = frappe.get_all(
-			"LMS Batch Enrollment",
-			{"batch": live_class.batch_name},
-			["member", "member_name"],
-		)
-		for student in students:
-			send_mail(live_class, student)
-
-
-def send_mail(live_class, student):
-	subject = _("Your class on {0} is today").format(live_class.title)
-	template = "live_class_reminder"
-
-	args = {
-		"student_name": student.member_name,
-		"title": live_class.title,
-		"date": live_class.date,
-		"time": live_class.time,
-		"batch_name": live_class.batch_name,
-	}
-
-	frappe.sendmail(
-		recipients=student.member,
-		subject=subject,
-		template=template,
-		args=args,
-		header=[_(f"Class Reminder: {live_class.title}"), "orange"],
-	)
 
 
 def update_attendance():

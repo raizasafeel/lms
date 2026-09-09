@@ -3,6 +3,7 @@ from frappe.permissions import add_permission, update_permission_property
 
 from lms.lms.api import give_discussions_permission
 from lms.lms.enrollment_constraints import ensure_enrollment_unique_constraints
+from lms.lms.notifications import seed_notifications
 from lms.lms.sidebar import seed_sidebar_items
 
 
@@ -27,6 +28,7 @@ def after_sync():
 	create_lms_roles()
 	set_default_certificate_print_format()
 	give_lms_roles_to_admin()
+	seed_notifications()
 
 
 def before_uninstall():

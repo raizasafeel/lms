@@ -469,7 +469,6 @@ def handle_notifications(doc: Document, method: str):
 		return
 	create_notification_log(doc, topic)
 	notify_mentions_on_portal(doc, topic)
-	notify_mentions_via_email(doc, topic)
 
 
 def get_course_details_for_notification(topic: dict):
@@ -563,53 +562,6 @@ def notify_mentions_on_portal(doc: Document, topic: dict):
 			}
 		)
 		make_notification_logs(notification, user)
-
-
-def notify_mentions_via_email(doc: Document, topic: dict):
-	outgoing_email_account = frappe.get_cached_value(
-		"Email Account", {"default_outgoing": 1, "enable_outgoing": 1}, "name"
-	)
-	if not outgoing_email_account or not frappe.conf.get("mail_login"):
-		return
-
-	mentions = extract_mentions(doc.reply)
-	if not mentions:
-		return
-
-	sender_fullname = get_fullname(doc.owner)
-	recipients = [
-		frappe.db.get_value(
-			"User",
-			{"enabled": 1, "name": name},
-			"email",
-		)
-		for name in mentions
-	]
-	subject = _("{0} mentioned you in a comment").format(sender_fullname)
-	template = "mention_template"
-
-	if topic.reference_doctype == "LMS Batch":
-		link = f"/batches/{topic.reference_docname}#discussions"
-	if topic.reference_doctype == "Course Lesson":
-		course = frappe.db.get_value("Course Lesson", topic.reference_docname, "course")
-		lesson_index = get_lesson_index(topic.reference_docname)
-		link = get_lesson_url(course, lesson_index)
-
-	args = {
-		"sender": sender_fullname,
-		"content": doc.reply,
-		"link": link,
-	}
-
-	for recipient in recipients:
-		frappe.sendmail(
-			recipients=recipient,
-			subject=subject,
-			template=template,
-			args=args,
-			header=[subject, "green"],
-			retry=3,
-		)
 
 
 def get_lesson_count(course: str) -> int:
@@ -2509,7 +2461,7 @@ def serialize_callbacks_without_the_constraint():
 	site-wide, which is coarse (and is why it only happens while the constraint
 	is missing), but it puts them back in line, so the second one sees the first
 	payment recorded."""
-	# Imported here: lms_payment imports get_lms_route from this module.
+	# Imported here, not at module level, to avoid a circular import.
 	from lms.lms.doctype.lms_payment.lms_payment import has_unique_payment_id
 
 	if has_unique_payment_id():

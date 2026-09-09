@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import json
-from datetime import datetime
 
 import frappe
 from frappe import _
@@ -22,9 +21,6 @@ from frappe.utils import (
 
 from lms.lms.utils import (
 	PRIVILEGED_ROLES,
-	convert_from_system_timezone,
-	format_timezone,
-	get_evaluation_display_timezone,
 	get_evaluator,
 )
 
@@ -48,9 +44,6 @@ class LMSCertificateRequest(Document):
 				frappe.PermissionError,
 			)
 		self.member = frappe.session.user
-
-	def after_insert(self):
-		self.send_notification()
 
 	def set_evaluator(self):
 		if not self.evaluator:
@@ -144,39 +137,6 @@ class LMSCertificateRequest(Document):
 		The display zone comes from the batch or course at render time.
 		"""
 		self.timezone = get_system_timezone()
-
-	def send_notification(self):
-		outgoing_email_account = frappe.get_cached_value(
-			"Email Account", {"default_outgoing": 1, "enable_outgoing": 1}, "name"
-		)
-		if outgoing_email_account or frappe.conf.get("mail_login"):
-			subject = _("Your evaluation slot has been booked")
-			template = "certificate_request_notification"
-
-			# The same instant the learner picked, rendered in the same zone the
-			# picker rendered it in. Otherwise the email restates their booking
-			# in a clock they never saw.
-			timezone = get_evaluation_display_timezone(self.course, self.batch_name)
-			date, start_time = convert_from_system_timezone(self.date, self.start_time, timezone)
-
-			args = {
-				"course": self.course_title,
-				"timezone": format_timezone(timezone, datetime.combine(date, start_time)),
-				"date": format_date(date, "medium"),
-				"member_name": self.member_name,
-				"start_time": format_time(start_time, "short"),
-				"evaluator": self.evaluator_name,
-			}
-
-			frappe.sendmail(
-				recipients=[self.member],
-				cc=[self.evaluator],
-				subject=subject,
-				template=template,
-				args=args,
-				header=[subject, "green"],
-				retry=3,
-			)
 
 
 def schedule_evals():

@@ -77,6 +77,7 @@ setup_wizard_complete = "lms.demo.demo_data.create_demo_data"
 after_migrate = [
 	"lms.sqlite.build_index_in_background",
 	"lms.lms.doctype.lms_payment.lms_payment.add_unique_payment_id_constraint",
+	"lms.lms.notifications.seed_notifications",
 ]
 
 # Desk Notifications
@@ -150,14 +151,19 @@ scheduler_events = {
 	"daily": [
 		"lms.job.doctype.job_opportunity.job_opportunity.update_job_openings",
 		"lms.lms.doctype.lms_payment.lms_payment.send_payment_reminder",
-		"lms.lms.doctype.lms_batch.lms_batch.send_batch_start_reminder",
-		"lms.lms.doctype.lms_live_class.lms_live_class.send_live_class_reminder",
-		"lms.lms.doctype.lms_course.lms_course.send_notification_for_published_courses",
 		"lms.lms.doctype.course_lesson.course_lesson.rename_settled_untitled_lessons",
 	],
 }
 
-fixtures = ["Custom Field", "Function", "Industry", "LMS Category"]
+# `Custom Field` is filtered on purpose: a bare doctype name here exports every
+# Custom Field any installed app on the bench has created straight into LMS's
+# fixture file, from where the next migrate installs them on every LMS site.
+fixtures = [
+	{"dt": "Custom Field", "filters": [["dt", "in", ["User"]]]},
+	"Function",
+	"Industry",
+	"LMS Category",
+]
 
 # Testing
 # -------
@@ -228,6 +234,11 @@ jinja = {
 		"lms.lms.utils.get_lms_route",
 		"lms.lms.utils.is_instructor",
 		"lms.lms.utils.get_palette",
+		"lms.lms.utils.get_evaluation_display_timezone",
+		"lms.lms.utils.convert_from_system_timezone",
+		"lms.lms.utils.format_timezone",
+		"lms.lms.notifications.email_override_subject",
+		"lms.lms.notifications.email_override_body",
 	],
 	"filters": [],
 }
