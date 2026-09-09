@@ -81,7 +81,13 @@ export function useSettingsRecord(
 		options.dirty ? Boolean(options.dirty(source)) : source.isDirty
 	)
 
-	useDirtyGuard(() => isDirty.value)
+	// Refetch rather than reset field by field: the resource is module-cached by
+	// [doctype, name], so without this the discarded edits stay in the document
+	// and the next Save writes them.
+	useDirtyGuard(
+		() => isDirty.value,
+		() => void source.reload()
+	)
 
 	const enabled = computed<boolean | undefined>({
 		get: () => (doc.value ? Boolean(doc.value[enabledField]) : undefined),
