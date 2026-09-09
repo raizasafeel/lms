@@ -28,17 +28,11 @@
 
 <script setup lang="ts">
 // The only component that knows how a settings row is drawn. Screens hand it
-// `groups` — plain objects — and never write a row themselves.
-//
-// A row either navigates (`to`, drawn with a chevron) or reports a choice
-// (`action`, drawn with a check when selected). Routing is done here so a
-// screen does not repeat the push; a choice is emitted upward because only the
-// screen knows what picking it means.
-//
-// A row with an `href` goes somewhere this router cannot — an admin's Contact
-// Us URL, a page Frappe serves itself. It is not handled here at all: SettingsRow
-// draws it as a real <a> and the browser follows it, so there is no push to
-// make and no click to emit.
+// plain objects and never write a row themselves.
+
+// A row either navigates or reports a choice. Routing is done here so a screen
+// does not repeat the push; a choice is emitted upward because only the screen
+// knows what picking it means. A row with an `href` is handled by SettingsRow.
 import { useRouter } from 'vue-router'
 import { safeUrl } from '@/utils/safeUrl'
 import SettingsRow from '@/components/Layouts/settings/mobile/SettingsRow.vue'

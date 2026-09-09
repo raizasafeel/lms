@@ -140,39 +140,15 @@
 <script setup lang="ts">
 // The rows of a settings list, without the page around them. A panel declares
 // columns and never writes cell markup, so every settings table reads the same
-// way. Split out of SettingsList so a table living inside a page (the Channels
-// tab of a Raven workspace) gets the same header, grid and cells as one that is
-// the whole page.
-//
+// way, whether it is the whole page or a tab inside one.
+
 // Header and rows are separate grid containers over one `--list-columns` track
-// list, and they must share the SAME scroller: a classic scrollbar makes the
-// rows' content box ~15px narrower than a header outside it, and the `fr` track
-// absorbs all of it, so every fixed column after it lands 15px off. Being
-// sticky, the header needs an opaque background or rows scroll through it.
-// `-mx-3` cancels `list-row-px-3` against the page so the first column sits on
-// the page title's left edge.
-//
-// Load More is inside the scroller and outside the List. Inside the scroller
-// because it is the row after the last row: it belongs to the list you are
-// reading, and a button pinned under a capped window would sit there announcing
-// more rows while the rows themselves are still above the fold. Outside the
-// List because `List` is a `role="table"`, which owns only rows and rowgroups,
-// and a `role="presentation"` wrapper does not launder a button placed inside
-// one. The scroller being the outer element is what allows both at once.
-//
-// The dark hover wash is re-toned because frappe-ui's `surface-gray-1` resolves
-// to the same value as `surface-elevation-1`, the only surface a SettingsTable
-// is drawn on, so pointing at a row did nothing. It wins on source order, not
-// specificity: `dark:` compiles to `:where(...)`, which contributes nothing.
-// Reordering the variants would silently undo it.
-//
-// `outline-offset: -3px` draws the row's focus ring inside its own box: the
-// scroller is `overflow-y: auto`, so `overflow-x` computes to `auto` too, a row
-// is exactly as wide as the content box, and a ring at the default offset loses
-// its left and right strokes to the clip.
-//
-// An `actions` column renders its trigger only where the row has an action: its
-// options depend on the row, and a trigger opening an empty menu answers nothing.
+// list, and they must share the same scroller, or a classic scrollbar narrows
+// the rows and every fixed column after the `fr` track lands 15px off.
+
+// Load More is inside the scroller because it is the row after the last row,
+// and outside the List because `List` is a `role="table"` that owns only rows.
+// The dark hover wash wins on source order, so reordering the variants undoes it.
 import { computed } from 'vue'
 import { Avatar, Badge, Button, Dropdown, Switch } from 'frappe-ui'
 import {
@@ -200,13 +176,8 @@ const props = withDefaults(
 		rowStatus?: (row: SettingsListRow) => string | null
 		/**
 		 * Fix the scrolling area to this many rows, instead of letting it fill the
-		 * room its page gives it.
-		 *
-		 * Opt-in, because it is a statement about one page's shape rather than
-		 * about tables: a panel that IS its page (the settings lists, the Raven
-		 * workspace list) should use the height it has, and only a table sharing a
-		 * page with other things above it, the workspace tabs, wants a fixed window
-		 * with the rest of the card left visible below it.
+		 * room its page gives it. Opt-in, because a panel that IS its page should
+		 * use the height it has.
 		 */
 		visibleRows?: number
 	}>(),
@@ -218,11 +189,9 @@ const props = withDefaults(
 	}
 )
 
-// A ceiling, not a fixed height: a hard height clips on a short viewport, where
-// the tab panel above bounds it and the rows past the edge are gone rather than
-// scrolled to. An inline style because the row height is a custom property, and
-// a tailwind class assembled from a prop is what the JIT scan cannot see. The
-// `2rem` is the header, which shares the scroll box.
+// A ceiling, not a fixed height, because a hard height clips on a short
+// viewport. An inline style, because the row height is a custom property and a
+// class assembled from a prop is what the JIT scan cannot see.
 const scrollerStyle = computed(() =>
 	props.visibleRows
 		? {
@@ -243,11 +212,9 @@ const tracks = computed(() =>
 	})
 )
 
-// Badges are bounded by counting, not clipping. The grid track is an `fr`, but
-// the badges inside are flex items whose automatic minimum size is their own
-// label, so they refuse to shrink and paint out of the cell. Past the limit they
-// collapse into a `+N`: clipping would slice a badge through its text, and
-// wrapping would tie the row height to how many channels a member is in.
+// Badges are bounded by counting, not clipping. They are flex items whose
+// automatic minimum size is their own label, so they refuse to shrink and paint
+// out of the cell. Past the limit they collapse into a `+N`.
 const DEFAULT_MAX_BADGES = 3
 
 const badgeLimit = (column: BadgeColumn): number =>
@@ -263,7 +230,7 @@ const hiddenBadges = (
 	row: SettingsListRow
 ): SettingsListBadge[] => column.badges(row).slice(badgeLimit(column))
 
-// What the `+N` stands for, as text: a bare number tells a screen reader
+// What the `+N` stands for, as text. A bare number tells a screen reader
 // nothing, `title` is not reachable from the keyboard, and the row is already a
 // button, so a tooltip trigger inside it would nest one control in another.
 const hiddenBadgeSummary = (

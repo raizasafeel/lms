@@ -25,12 +25,9 @@
 import type { FieldMeta, FieldsSection } from '@/types/settingsSchema'
 
 /**
- * Lays the server's `reqd` over each field's static one. A field the meta says
- * nothing about keeps whatever the schema declared for it.
- *
- * Pure, and returns new objects: the schema is a module-level constant shared
- * by every mount, so writing a runtime flag into it would leak into the next
- * page that reads the same field.
+ * Lays the server's `reqd` over each field's static one. Pure, and returns new
+ * objects: the schema is a module-level constant shared by every mount, so a
+ * runtime flag written into it would leak into the next page.
  */
 export function applyFieldMeta(
 	sections: FieldsSection[],
@@ -67,8 +64,8 @@ const props = defineProps<{
 	/** The record id, for a page whose source takes one from the route. */
 	record?: string | null
 	/**
-	 * A resource the caller already loaded. Settings.vue holds LMS Settings, so
-	 * a panel over it is handed the document rather than entering it again.
+	 * A resource the caller already loaded. Settings.vue holds LMS Settings, so a
+	 * panel over it is handed the document rather than entering it again.
 	 */
 	data?: SettingsDocumentResource
 }>()
@@ -81,14 +78,9 @@ const source = useSettingsSource(props.page.source, {
 	renameField: props.page.renameField,
 })
 
-// A panel whose every section carries a heading needs no title above them: the
-// title and the first heading sit at the same type token and say the same
-// thing twice. A panel with even one unlabelled section keeps it, because for
-// that block the title is the only heading there is.
-//
-// A back control is exempt. There the title is not a heading at all but the
-// way out of the page, and a record's own name is the only thing that says
-// which record this is.
+// A panel whose every section carries a heading needs no title above them,
+// because the two sit at the same type token and say the same thing twice. A
+// back control is exempt, since there the title is the way out of the page.
 const heading = computed(() => {
 	if (props.showBack) return props.title
 	const sections = props.page.sections
@@ -96,12 +88,9 @@ const heading = computed(() => {
 	return headed ? undefined : props.title
 })
 
-// frappe-ui's own isDirty and its own save: `save.submit()` sends the changed
-// fields and skips the round trip entirely when there are none, and the
-// resource re-clones originalDoc on success so the flag settles itself.
-//
-// No toast. A failed write leaves the resource dirty and the header reading
-// "Not saved", which is both true and quieter than a toast per rest period.
+// frappe-ui's own isDirty and its own save, which skips the round trip when
+// there are no changed fields and re-clones originalDoc on success. No toast: a
+// failed write leaves the header reading "Not saved", which is quieter.
 const autosave =
 	props.page.save === 'auto'
 		? useAutosave({
@@ -110,36 +99,24 @@ const autosave =
 		  })
 		: null
 
-// Only the manual path registers. Settings.vue mounts every panel at once, so
-// an autosave panel nobody is looking at would be registered too — and one is
-// dirty for the whole of each in-flight write, and stays dirty for good after a
-// refused one. That is a prompt on the next tab change, over a page whose only
-// answer to it is Discard: there is no Save to offer. A manual panel is the
-// case the guard exists for. Deregistration is the composable's, via
-// onScopeDispose.
+// Only the manual path registers. Settings.vue mounts every panel at once, and
+// an autosave panel is dirty for the whole of each in-flight write, so it would
+// prompt on the next tab change over a page that has no Save to offer.
 if (!autosave)
 	useDirtyGuard(
 		() => source.isDirty,
 		() => void source.reload()
 	)
 
-// SettingsFields reports every settled edit whether or not anyone is
-// listening — PaymentGatewayDetails renders it behind a Save button and binds
-// no handler at all. A manual page simply has nothing to do with the report.
-// 'cancel' is not a write, it is the withdrawal of one: a bounded field has gone
-// out of bounds mid-type, so the rest period armed by its last valid keystroke
-// must be disarmed before it fires against a value validate() would reject.
+// SettingsFields reports every settled edit whether or not anyone is listening,
+// and a manual page has nothing to do with the report. 'cancel' is not a write
+// but the withdrawal of one, disarming a rest period a bounded field armed.
 const commit = (mode: CommitMode | 'cancel') =>
 	mode === 'cancel' ? autosave?.cancel() : autosave?.commit(mode)
 
-// A rename moves the record out from under the URL: the hash still carries the
-// name the server has forgotten, so a refresh here deep-links to nothing. The
-// panel does not own the hash, so it reports the move and lets the page above
-// rehash in place.
-//
-// Compared against the PREVIOUS name rather than the record prop, because a
-// panel opened from a list is handed its record inside `page.source` and gets
-// no prop at all. On mount there is no previous name, so nothing is reported.
+// A rename moves the record out from under the URL, and the panel does not own
+// the hash, so it reports the move. Compared against the previous name, because
+// a panel opened from a list gets no record prop at all.
 watch(
 	() => source.name,
 	(name, previous) => {
@@ -172,9 +149,8 @@ onMounted(() => {
 })
 
 // `enabledField` hoists one Check out of the body and into the header, beside
-// Save, where every other settings record draws its on/off state. The field is
-// removed from the sections here rather than left out of the page's own schema,
-// so a page opts in with one key and its sections stay a plain field list.
+// Save. The field is removed from the sections here rather than left out of the
+// page's schema, so a page opts in with one key.
 const sections = computed(() => {
 	const withMeta = applyFieldMeta(props.page.sections, meta.value)
 	const hoisted = props.page.enabledField

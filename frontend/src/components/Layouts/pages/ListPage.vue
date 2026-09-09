@@ -189,10 +189,8 @@ const props = withDefaults(
 const emit = defineEmits<{ loadMore: [] }>()
 
 // On a phone the bulk-action banner docks against the same bottom edge the
-// footer holds, and the banner is what the reader is working with, so the
-// footer gives the edge up for as long as the selection lasts rather than
-// being covered by it — the page size and Load More are still there, at the
-// end of the rows, and come back the moment the selection is cleared.
+// footer holds, so the footer gives the edge up for as long as the selection
+// lasts. The page size and Load More are still there, at the end of the rows.
 const listView = ref<InstanceType<typeof ResponsiveListView> | null>(null)
 
 const selecting = computed(() => Boolean(listView.value?.selections.size))
@@ -256,34 +254,21 @@ const skeletonVariant = computed(() =>
 	props.layout === 'grid' ? 'cards' : 'list'
 )
 
-// The skeleton above is `aria-hidden`, and on this page it IS the body, so
-// without this a reader lands on a document with nothing in it and no sign that
-// anything is on its way. The `role="status"` span is a sibling of the whole
-// v-if chain rather than part of it, so it is mounted for the life of the page
-// and every message lands in a region that was already there.
-//
-// It is the only thing here that speaks, so a load says one thing once:
-// PageHeader's breadcrumbs and PageBody's h1 are plain content, `usePageMeta`
-// writes document.title but no screen reader announces an SPA title change, and
-// ResponsiveListView's own `role="status"` lives in the `rows.length` branch and
-// holds nothing until a selection opens.
-//
-// It watches the whole flag rather than the skeleton's `loading && !rows.length`
-// because a filter or a search keeps the old rows on screen while it refetches:
-// no skeleton, but the list underneath is replaced, and "24 results loaded" is
-// the canonical status message. The rows still being readable is exactly why
-// that case gets no "Loading…" — an announcement with nothing on screen to
-// pair it with is the opposite of the parity a status message is for.
+// The skeleton above is `aria-hidden`, and on this page it is the body, so
+// without this a reader lands on a document with nothing in it. The status span
+// is a sibling of the whole v-if chain, so it lives as long as the page.
+
+// It watches the whole loading flag rather than the skeleton's condition,
+// because a filter keeps the old rows on screen while it refetches. That case
+// gets no "Loading", since the rows are still readable.
 const loadedMessage = () => {
-	// Says the same thing as the empty state it stands beside, deliberately:
-	// wording that diverged would read as a second, different event. Note that a
-	// failed first fetch also lands here, since the resource leaves `rows` empty
-	// and only records the failure on `error` — a signal this component is not
-	// given.
+	// Says the same thing as the empty state it stands beside, deliberately,
+	// because wording that diverged would read as a second event. A failed first
+	// fetch also lands here, since the resource leaves `rows` empty.
 	if (!props.rows.length) return __('No {0} Found').format(props.emptyName)
-	// Counted rather than named. `emptyName` is a plural noun passed untranslated
-	// ("Courses"), so a translated frame around it reads half-English, and there
-	// is no singular of it to reach for when the count is one.
+	// Counted rather than named. `emptyName` is a plural noun passed untranslated,
+	// so a translated frame around it reads half-English, and there is no singular
+	// of it to reach for when the count is one.
 	if (props.rows.length === 1) return __('1 result loaded')
 	return __('{0} results loaded').format(props.rows.length)
 }

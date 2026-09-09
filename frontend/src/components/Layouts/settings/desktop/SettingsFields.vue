@@ -212,16 +212,9 @@ import ImageUploadField from '@/components/Controls/ImageUploadField.vue'
 import TextEditor from '@/components/Controls/TextEditor.vue'
 import { seedCheckboxDefaults } from '@/components/Settings/Mobile/mobileRows'
 
-// The ImageUploadField above binds :is_private="!field.public", and it is
-// written inline deliberately. Privacy is the FIELD's decision, never this
-// component's: the backend maps every Attach / Attach Image field of a
-// third-party <Gateway> Settings doctype to type 'Upload' (api.py
-// get_transformed_fields), and those reach here via the payment gateway form —
-// merchant QR codes and KYC documents among them. Only a field that opts in with
-// `public: true` may be world-readable; everything else keeps frappe's private
-// default. Behind a helper the privacy ratchet in publicImageUploads.test.ts can
-// only see "computed" and would stop catching a flip to public — which is why
-// the negation stays here and is not folded into the shared row.
+// The ImageUploadField above binds :is_private="!field.public" inline on
+// purpose. Behind a helper the manifest in publicImageUploads.test.ts sees only
+// "computed" and stops catching a flip to public.
 
 const props = defineProps({
 	sections: {
@@ -232,30 +225,18 @@ const props = defineProps({
 		type: Object,
 		required: true,
 	},
-	// A settings page is a long list of unrelated settings, and the rule under
-	// each row is what keeps one from reading as part of the next. A record form
-	// is one block of fields about one thing, where the same rules only chop it
-	// into stripes — so a form asks for them off.
+	// A settings page is a long list of unrelated settings, and the rule under each
+	// row keeps one from reading as part of the next. A record form is one block
+	// about one thing, where the same rules only chop it into stripes.
 	flush: {
 		type: Boolean,
 		default: false,
 	},
 })
 
-// There is no Update button on these panels, so every control has to say when
-// its value is settled and the panel above decides what to do about it.
-//
-// A checkbox, radio, dropdown, switch or Link commits 'now' — a pick is whole
-// at the first interaction. A text, number or code field commits 'typing',
-// which the panel writes only after a rest period, so a half-typed value is
-// not sent a character at a time into a doctype that validates on save
-// (contact_us_email, contact_us_url and lesson_dwell_time each throw from
-// validate()).
-//
-// Leaving the field ends the typing, so focusout commits 'now' too. That is
-// not a second write: dirtiness is a comparison, so it writes if the value
-// changed and does nothing if it did not. focusout and not blur, because blur
-// does not bubble past the input.
+// There is no Update button on these panels, so every control says when its
+// value is settled. A pick commits 'now'; a text, number or code field commits
+// 'typing', which the panel writes only after a rest period.
 const emit = defineEmits(['commit'])
 
 // The template branches out switch, Link and select on its own. This is for
@@ -281,24 +262,22 @@ const visibleFields = (section) =>
 	section.fields.filter((field) => !field.showIf || field.showIf(props.data))
 
 // The schema names a language the way a CodeMirror mode does; CodeEditor names
-// it the way Ace does. One is not derivable from the other, so the mapping is
-// written out — and anything unmapped falls back to HTML, which is what every
-// code field rendered as before any of them was asked.
+// it the way Ace does. Neither is derivable from the other, and anything
+// unmapped falls back to HTML.
 const CODE_TYPES = { htmlmixed: 'HTML', javascript: 'JavaScript', json: 'JSON' }
 
 const codeType = (field) => CODE_TYPES[field.mode] || 'HTML'
 
 // 25px a line, which is what the one pre-existing code field's `rows: 10` was
-// already being drawn at back when the height was hardcoded to 250px. Its
-// height must not move because a second field finally reads the number.
+// drawn at when the height was hardcoded to 250px. Its height must not move
+// because a second field finally reads the number.
 const codeHeight = (field) => `${(field.rows ?? 10) * 25}px`
 
 const CONTENT_TYPES = ['textarea', 'richtext']
 
 // Whether another content control stands in for this one. Two conditional
-// fields in the same section drawn at the same `rows` are the two halves of a
-// single slot — Email Template's HTML body and its rich one, swapped by Use
-// HTML — and the shared number is how the schema says so.
+// fields in the same section drawn at the same `rows` are the two halves of one
+// slot, and the shared number is how the schema says so.
 const swapsWithSibling = (section, field) =>
 	Boolean(field.showIf) &&
 	section.fields.some(
@@ -309,27 +288,17 @@ const swapsWithSibling = (section, field) =>
 			CONTENT_TYPES.includes(other.type)
 	)
 
-// The height a swap slot is reserved, so the box keeps it whichever control is
-// inside and nothing below the field moves when the toggle is flipped.
-//
-// Only a swap slot gets it. The floor is computed at 1.5rem a line and a
-// textarea is drawn at frappe-ui's `text-base`, whose line box is 16.1px, so
-// the floor always comes out taller than the control it holds — 116px against
-// 78px at SEO's `rows: 4`. Where two controls swap that surplus is the price of
-// the slot not moving; where one control stands alone it was pure dead space
-// between the textarea and its description, which is what put a gap under the
-// two meta fields and nowhere else.
+// The height a swap slot is reserved, so nothing below the field moves when the
+// toggle is flipped. Only a swap slot gets it: the floor comes out taller than
+// the control it holds, which is dead space anywhere else.
 const contentBox = (section, field) =>
 	field.rows && swapsWithSibling(section, field)
 		? { minHeight: `calc(${field.rows} * 1.5rem + 1.25rem)` }
 		: undefined
 
-// A `disabled` field is shown and never written: a consent flag and a
-// redemption count are records of what happened, not settings. Every write and
-// every report goes through these two, so the flag is enforced once here rather
-// than on each of the eight controls — a control that reports a change anyway
-// (a rich text editor still fires `change` while uneditable) would have the
-// panel save a value nobody chose.
+// A `disabled` field is shown and never written. Every write and every report
+// goes through these two, so the flag is enforced once here rather than on each
+// of the eight controls.
 const setValue = (field, value) => {
 	if (field.disabled) return
 	props.data[field.name] = value
@@ -341,8 +310,7 @@ const report = (field, mode) => {
 }
 
 // The editor owns its own content, so it reports a new value rather than being
-// written to. 'typing' and not 'now': it fires on every keystroke, and a body
-// of prose sent a character at a time is what the rest period exists to stop.
+// written to. It commits 'typing' because it fires on every keystroke.
 const onRichText = (field, value) => {
 	if (field.disabled) return
 	props.data[field.name] = value
@@ -360,42 +328,28 @@ const commitMode = (field) =>
 	INSTANT_TYPES.includes(field.type) ? 'now' : 'typing'
 
 // The floor the schema declared for a number field, or null where it declared
-// none. Only a stated bound is enforced, so a number field without a `min` goes
-// through untouched.
+// none. Only a stated bound is enforced.
 const minOf = (field) =>
 	field.type === 'number' && typeof field.min === 'number' ? field.min : null
 
 const isBlank = (value) =>
 	value === null || value === undefined || String(value).trim() === ''
 
-// What a picker SHOWS while the document has nothing: the schema's
-// `displayFallback`. Display only, and that is the whole point — writing it
-// onto the document would make it differ from originalDoc, so the panel would
-// report dirty the instant it opened and, because status reports dirty ahead of
-// saved, the header would read "Not saved" untouched and never reach "Saved".
-// The blank stays blank until the user picks something.
-//
-// The checkbox `default` is the other thing entirely and still IS seeded, by
-// seedCheckboxDefaults: a null checkbox renders off but saves nothing, so a
-// declared `1` would flip off behind the user's back. A picker has no such trap.
+// What a picker shows while the document has nothing. Display only: writing it
+// onto the document would make the panel read dirty the instant it opened. The
+// checkbox `default` is seeded instead, because a null checkbox saves nothing.
 const displayValue = (field) =>
 	isBlank(props.data[field.name]) && field.displayFallback !== undefined
 		? field.displayFallback
 		: props.data[field.name]
 
-// The user picked it, so it is written like any other value — including when
+// The user picked it, so it is written like any other value, including when
 // what they picked is the fallback they were already being shown.
 const onPick = (field, value) => setValue(field, value)
 
 // Link renders its "Create New" footer on the presence of this handler, so a
-// field that declares none must be given none — otherwise every link field
-// grows a button that does nothing.
-//
-// The value Link passes is the name the user typed into the inline create box,
-// which IS the record being created, so it is written back like any other pick.
-// Without that the user creates the record and the field they created it from
-// is still empty. A handler that only opens a dialog is called with null and
-// writes nothing.
+// field that declares none must be given none. The value Link passes is the
+// name typed into the inline create box, so it is written back like any pick.
 const createHandler = (field) =>
 	field.onCreate
 		? (value, close) => {
@@ -414,11 +368,9 @@ const isOutOfBounds = (field, value) => {
 	return Number.isNaN(number) || number < min
 }
 
-// The last in-bounds value each bounded field held — where an out-of-bounds one
-// is put back to. The last VALID value and not the value the field held at
-// focus: a valid edit taken during the same visit may already have been written
-// by the rest period, and rewinding past it would leave the panel dirty with a
-// value nobody typed and no way to clear the marker.
+// The last in-bounds value each bounded field held, which is where an
+// out-of-bounds one is put back to. The last valid value, not the one held at
+// focus: a valid edit during the same visit may already have been written.
 const lastGood = {}
 
 const rememberBounded = (data) => {
@@ -429,13 +381,9 @@ const rememberBounded = (data) => {
 
 const onInput = (field) => {
 	if (field.disabled) return
-	// Mid-type the field is on its way somewhere — an empty box between 3 and 15
-	// is not a mistake — so an out-of-bounds value is left exactly as typed and
-	// never written. But a rest period armed by an earlier, valid keystroke is
-	// still ticking, and it would fire against the invalid value the field now
-	// holds. Disarm it. Cancelling the whole page's pending write is right, not
-	// merely expedient: the document carries a value validate() rejects, so
-	// there is nothing that could be saved from it until this field settles.
+	// Mid-type the field is on its way somewhere, so an out-of-bounds value is
+	// left as typed and never written. A rest period armed by an earlier valid
+	// keystroke would fire against it, so disarm that too.
 	if (isOutOfBounds(field, props.data[field.name])) {
 		emit('commit', 'cancel')
 		return
@@ -445,14 +393,8 @@ const onInput = (field) => {
 }
 
 // Leaving the field is the first moment the value is final, so this is the only
-// place a bound is enforced. An out-of-bounds value goes back to the last good
-// one -- and is still reported, because the rolled-back value only matches the
-// server's if the write carrying it actually fired. Type 15, clear the box
-// (which cancels that pending write), then tab away, and the document is left
-// holding 15 against a server holding 30: dirty, with no timer armed, so the
-// marker reads "Not saved" for good and the dispose-time flush finds nothing to
-// send. Reporting a settled field costs nothing when it is already clean --
-// useAutosave's send() returns on `!isDirty`.
+// place a bound is enforced. A settled field is reported even when it rolled
+// back, because a cancelled write leaves the document ahead of the server.
 const onSettle = (field) => {
 	if (field.disabled) return
 	if (isOutOfBounds(field, props.data[field.name])) {
@@ -468,8 +410,7 @@ const fileUrl = (value) =>
 
 // The row has one description slot. A field that explains itself uses it; one
 // that does not falls back to naming the attached file, which is what the
-// hand-written upload block this replaced always showed. Payment Gateways does
-// the same, for the same reason — its gateway fields carry no description.
+// hand-written upload block this replaced always showed.
 const uploadDescription = (field) =>
 	field.description
 		? __(field.description)

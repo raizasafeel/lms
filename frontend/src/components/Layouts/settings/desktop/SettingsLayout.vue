@@ -55,13 +55,9 @@ import { Button } from 'frappe-ui'
 import SettingsHeader from '@/components/Layouts/settings/desktop/SettingsHeader.vue'
 import type { AutosaveStatus } from '@/composables/useAutosave'
 
-// The frame, and only the frame: a header band and a scrolling body beneath
-// it. What a title is, and how a save reports itself, belong to
-// SettingsHeader — this passes them through so the twenty-odd panels that
-// want the ordinary header do not each have to assemble one.
-//
-// A panel that needs something else entirely overrides `#header` and keeps
-// the frame.
+// The frame, and only the frame: a header band and a scrolling body beneath it.
+// What a title is, and how a save reports itself, belong to SettingsHeader. A
+// panel that needs something else overrides `#header` and keeps the frame.
 const props = defineProps<{
 	title?: string
 	description?: string
@@ -71,24 +67,15 @@ const props = defineProps<{
 	/** Names the header switch when the record's state is not "enabled". */
 	enabledLabel?: string
 	/**
-	 * Takes the top padding off the body and spends it in the header band
-	 * instead, so a list's rows begin at the body's own top edge. A list caps its
-	 * rows region and scrolls there rather than here (see SettingsList), and
-	 * padding above that region would push it down inside a body that no longer
-	 * scrolls to compensate. The body keeps its `pb-8` either way: that is the
-	 * gap below the rows region, and it has to stay out here — the region is
-	 * border-box, so bottom padding on the region itself would come out of the
-	 * twelve rows it is sized to show.
+	 * Takes the top padding off the body and spends it in the header band instead,
+	 * so a list's rows begin at the body's own top edge. The body keeps its `pb-8`,
+	 * because the rows region is border-box and would lose a row to its own padding.
 	 */
 	flush?: boolean
 	/**
-	 * Draws Save in the header, labelled with this. Every record form had the
-	 * same Button written out in `#header-actions`, differing only in its word
-	 * and whether a draft said Create, so the frame draws it instead.
-	 *
-	 * Undefined draws nothing, which is how a page hides Save outright — a
-	 * member form refused to a non-moderator, say. `#header-actions` still
-	 * works, and comes before Save when both are used.
+	 * Draws Save in the header, labelled with this. Undefined draws nothing, which
+	 * is how a page hides Save outright. `#header-actions` still works, and comes
+	 * before Save when both are used.
 	 */
 	saveLabel?: string
 	/** Puts Save in its loading state while the write is in flight. */
@@ -100,19 +87,13 @@ const props = defineProps<{
 
 const slots = useSlots()
 
-// Whether the header takes a band of its own above the body.
-//
-// A panel whose sections each carry their own heading gives the header nothing
-// but the save marker, and a whole strip of padding for one line that is
-// usually empty reads as a gap where a title used to be. That header floats in
-// the top corner instead, and the body takes the full padding it would have
-// had. Anything else — a title, a description, a back control, an enabled
-// switch, a slotted action — keeps the band.
-//
-// The float is pushed to the end. The body's first line on every such panel is
-// a section heading at the start edge, and a marker at the start would land on
-// top of it. The end of that line is empty, and the only thing above it is the
-// dialog's close button, which stops where the header's padding begins.
+// Whether the header takes a band of its own above the body. A panel whose
+// sections each carry their own heading gives the header nothing but the save
+// marker, so that header floats in the top corner instead.
+
+// The float is pushed to the end edge. The body's first line on such a panel
+// is a section heading at the start edge, and a marker at the start would land
+// on top of it.
 const banded = computed(
 	() =>
 		Boolean(props.title || props.description || props.showBack) ||

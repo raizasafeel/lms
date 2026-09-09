@@ -60,18 +60,13 @@
 	</div>
 </template>
 <script setup>
-// Two browser constraints the markup depends on and neither expresses.
-//
-// The frame is `h-dvh`, not `h-screen`: 100vh is the URL-bar-retracted
-// viewport, so the tab bar would sit below the visible area on a phone, and
-// nothing above main scrolls, so the browser never retracts the bar to give
-// that band back.
-//
-// `main` is `min-h-0` so the flex child can actually shrink and scroll its own
-// overflow. The tab bar below is a sibling in normal flow, not fixed, so main
-// simply ends where the bar begins. Padding cannot do that job: Chromium drops
-// a flex column's bottom padding from the scrollable area and the last row
-// stays hidden under the bar.
+// The frame is `h-dvh`, not `h-screen`: 100vh is the URL-bar-retracted viewport,
+// so the tab bar would sit below the visible area on a phone, and nothing above
+// main scrolls, so the browser never retracts the bar.
+
+// `main` is `min-h-0` so the flex child can shrink and scroll its own overflow.
+// Padding cannot do that job, because Chromium drops a flex column's bottom
+// padding from the scrollable area and the last row stays hidden.
 import { skipToContent } from '@/utils/a11y'
 import { useRouter } from 'vue-router'
 import { ref, computed, watch } from 'vue'
@@ -97,39 +92,27 @@ const isSignedIn = computed(
 	() => isLoggedIn.value || Boolean(userResource.data)
 )
 
-// Five real routes, no overflow affordance: Home, Courses, Batches, Programs
-// and You. Whatever the bar does not hold is reached from the You page.
-//
-// The captions wrap rather than `truncate`. Nothing on the default bar needs
-// it (the longest, "Programs", is about 56px in a 67px column), but `text-p-xs`
-// is a fixed 12px inside a viewport-proportional column, so under OS text
-// scaling an ellipsis would eat half the word with no way to read the rest
-// (WCAG 1.4.4). `break-words` only splits a word that cannot fit a line alone.
+// Five real routes and no overflow affordance. Whatever the bar does not hold is
+// reached from the You page.
+
+// The captions wrap rather than `truncate`, because `text-p-xs` is a fixed
+// 12px inside a viewport-proportional column, so under OS text scaling an
+// ellipsis would eat half the word with no way to read the rest (WCAG 1.4.4).
 const primaryTabs = computed(() =>
 	pickPrimaryTabs(sidebarLinks.value, isSignedIn.value, sidebarSettings.data)
 )
 
-// The active You tab rings its avatar with `ring-outline-gray-5`, Gameplan's
-// grey one step darker. The token has to come from the `outline-*` family:
-// frappe-ui's preset extends `ringColor` with `outline`/`outline-alpha` only and
-// never extends `ringOffsetColor`, so an `ink-*` ring colour, or any
-// ring-offset colour, compiles to nothing and `ring-2` silently falls back to
-// Tailwind's stock blue-300/50 on a white offset. That is what shipped here.
-//
-// gray-5 rather than Gameplan's own gray-4 because this ring is the only
-// indicator here that WCAG 1.4.11 counts: `aria-current` is programmatic, and
-// the label's colour shift is text, so 1.4.3 covers it instead. Without a
-// ring-offset the ring also abuts an arbitrary user avatar, leaving
-// `surface-base` as the only adjacency we control, and gray-4 measures
-// 2.85:1 light / 2.48:1 dark against it, where gray-5 reaches 4.17 / 4.18.
-//
-// The links themselves live in `stores/mobileNavLinks`, because the You page
-// lists the same set and is a route of its own, and so does the decision about
-// whether a load is needed at all. Both watchers below announce a viewer rather
-// than commanding a load: they fire two or three times per boot between them,
-// and `ensureMobileNavLinks` turns the repeats into one run, so a learner is
-// asked for `get_programs` once instead of once per firing. The You page
-// announces the same viewer when it mounts and gets the same run back.
+// The active You tab rings its avatar with `ring-outline-gray-5`. The token has
+// to come from the `outline-*` family: frappe-ui extends `ringColor` with
+// `outline` only, so an `ink-*` ring falls back to Tailwind's stock blue.
+
+// gray-5 rather than Gameplan's gray-4, because this ring is the only
+// indicator here that WCAG 1.4.11 counts, and gray-4 measures 2.85:1 against
+// `surface-base` where gray-5 reaches 4.17.
+
+// The links live in `stores/mobileNavLinks`, because the You page lists the
+// same set. Both watchers below announce a viewer rather than commanding a
+// load, and `ensureMobileNavLinks` turns their repeats into one run.
 const updateSidebarLinks = () =>
 	ensureMobileNavLinks({
 		isSignedIn: isSignedIn.value,
@@ -155,9 +138,9 @@ watch(
 
 watch(() => sidebarSettings.data, updateSidebarLinks, { deep: true })
 
-// Against the whole matched chain, not just the leaf name: a tab may point at a
-// parent route that redirects to a child, so the leaf never equals the tab's own
-// name and it could never light up.
+// Against the whole matched chain, not just the leaf name. A tab may point at a
+// parent route that redirects to a child, so the leaf never equals the tab's
+// own name and it could never light up.
 let isActive = (tab) => {
 	if (!tab.activeFor?.length) return false
 	return router.currentRoute.value.matched.some((route) =>
@@ -165,9 +148,8 @@ let isActive = (tab) => {
 	)
 }
 
-// Every tab is a route: the session actions live on the You page. Log in is the
-// one exception, leaving the SPA for Frappe's own /login, which vue-router
-// knows nothing about.
+// Every tab is a route, because the session actions live on the You page. Log
+// in is the one exception, leaving the SPA for Frappe's own /login.
 const handleClick = (tab) => {
 	if (tab.label == 'Log in') window.location.href = '/login'
 	else router.push({ name: tab.to })

@@ -71,30 +71,21 @@ import { Button } from 'frappe-ui'
 import BottomSheet from '@/components/BottomSheet.vue'
 import { useScreenSize } from '@/utils/composables'
 
-// Filters on a phone were the desk's strip, wrapped: every filter a desk shows,
-// as a row of chips. Past three or four that is a wall of controls above the
-// content the reader came for. Below `sm` they collapse to one Filters button
-// beside the heading and open in a sheet.
-//
-// The slot is rendered in exactly ONE place — inline above `sm`, in the sheet
-// below it — rather than both with one hidden by CSS. Two renders would mount
-// two copies of every control, each bound to the same page ref, and each firing
-// its own update on change.
-//
-// `activeFilters` is optional and purely the badge. Putting filters behind a
-// sheet hides the fact that any are applied, so a page that can count its
-// active filters should pass the number; a page that does not just gets an
-// unbadged button.
+// Filters on a phone were a row of chips, which past three or four is a wall of
+// controls above the content the reader came for. Below `sm` they collapse to
+// one Filters button beside the heading and open in a sheet.
+
+// The slot is rendered in exactly one place rather than both with one hidden
+// by CSS, because two renders would mount two copies of every control, each
+// bound to the same page ref. `activeFilters` is optional and purely the badge.
 const props = withDefaults(
 	defineProps<{
 		title?: string
 		activeFilters?: number
 		/**
-		 * The page has a bulk selection open. On a phone its banner docks
-		 * against the bottom edge this footer holds, so the footer lets go of
-		 * it and travels with the rows for as long as that lasts. Left pinned
-		 * it would only be painted over: its controls would still take focus,
-		 * out of sight, underneath the banner.
+		 * The page has a bulk selection open. On a phone its banner docks against
+		 * the bottom edge this footer holds, so the footer travels with the rows.
+		 * Left pinned, its controls would take focus out of sight under the banner.
 		 */
 		selecting?: boolean
 	}>(),

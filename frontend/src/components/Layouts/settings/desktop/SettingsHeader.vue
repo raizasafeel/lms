@@ -67,21 +67,13 @@ import { Badge, Button, Switch } from 'frappe-ui'
 import type { BadgeProps } from 'frappe-ui'
 import type { AutosaveStatus } from '@/composables/useAutosave'
 
-// The header of every settings panel, in two variants.
-//
-// **back** — the title itself is the control (CRM's EditEmailTemplate): a
-// chevron and the label, no hover surface, pulled to the start so the label
-// keeps the header's leading edge. Sub-pages use this.
-//
-// **plain** — an optional title, an optional description, and whatever the
-// page needs in `#actions`: Save on a form, New on a list, Open the course on
-// a detail page. Top-level panels use this.
-//
-// The title is optional in both: a panel whose sections all carry a heading of
-// their own draws none, because the title and the first section heading sit at
-// the same type token and would say the same thing twice. With no title the
-// row goes entirely, unless a title-badge is slotted in — a marker belongs in
-// the header whether or not there is a title beside it.
+// The header of every settings panel, in two variants. **back** makes the title
+// itself the control, a chevron and the label pulled to the leading edge, which
+// is what sub-pages use. **plain** is a title, a description and `#actions`.
+
+// The title is optional in both: a panel whose sections all carry a heading
+// draws none, because the two would say the same thing twice. With no title the
+// row goes entirely, unless a title-badge is slotted in.
 const props = defineProps<{
 	title?: string
 	description?: string
@@ -92,8 +84,8 @@ const props = defineProps<{
 	/** Set by a panel that writes on commit instead of on a Save button. */
 	saveState?: AutosaveStatus
 	/**
-	 * Names the header switch when the record's state is not "enabled" — a
-	 * payment is Received, not Enabled. Defaults to Enabled.
+	 * Names the header switch when the record's state is not "enabled", because a
+	 * payment is Received rather than Enabled. Defaults to Enabled.
 	 */
 	enabledLabel?: string
 }>()
@@ -106,27 +98,17 @@ const enabled = defineModel<boolean | undefined>('enabled', {
 	default: undefined,
 })
 
-// One status marker, drawn here and nowhere else so a panel that autosaves and
-// a form that still has a Save button report themselves the same way. It is a
-// frappe-ui Badge because that is how CRM reports the same thing on its own
-// settings pages (`crm/.../Settings/SettingsPage.vue`: a subtle amber "Not
-// Saved" beside the title) and how Helpdesk's UnsavedBadge does. Left
-// untranslated: `__` belongs in the template, where the extractor looks for it.
-//
-// `error` gets its own word and its own colour rather than sharing amber with
-// `dirty`. A failed write is not an unsaved edit, and since the write path
-// raises no toast this badge is the only place the failure is ever reported —
-// so it cannot be told apart by colour alone either.
-//
-// It sits beside the title rather than in the actions cluster, which is where
-// CRM puts it too — between the Enabled switch and Save it read as a third
-// control, and a status is not something you press.
-//
-// `idle` returns null and the badge goes, but its wrapper stays: it is the
-// live region, and a region has to be in the DOM before its content changes
-// for a screen reader to announce the change at all. `min-h-5` on the title
-// row is what holds the height, so a marker appearing on every toggle does not
-// push the body down and back each time.
+// One status marker, drawn here and nowhere else, so a panel that autosaves and
+// a form with a Save button report themselves the same way. A frappe-ui Badge,
+// which is how CRM and Helpdesk report the same thing.
+
+// `error` gets its own word and colour rather than sharing amber with `dirty`.
+// The write path raises no toast, so this badge is the only place a failure is
+// reported, and it cannot be told apart by colour alone.
+
+// `idle` returns null and the badge goes, but its wrapper stays, because a live
+// region has to be in the DOM before its content changes to be announced.
+// `min-h-5` on the title row holds the height so the body does not shift.
 const marker = computed<{ label: string; theme: BadgeProps['theme'] } | null>(
 	() => {
 		switch (props.saveState) {

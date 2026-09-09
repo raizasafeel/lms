@@ -42,25 +42,17 @@
 import { computed } from 'vue'
 import { safeUrl } from '@/utils/safeUrl'
 
-// A single row of the inset-grouped settings list.
-//
-// The tag follows the shape rather than being a prop the caller can get wrong:
-// off-SPA is an <a>, in-SPA navigation is a <button> with a chevron, and a row
-// carrying its own control is a <div> — the control is already the interactive
-// element, and a button inside a button is invalid.
-//
+// A single row of the inset-grouped settings list. The tag follows the shape
+// rather than being a prop the caller can get wrong: off-SPA is an <a>, in-SPA
+// navigation is a <button>, and a row carrying its own control is a <div>.
+
 // A real <a>, not a button calling `window.open`, so it reaches the links rotor
-// and keeps middle-click, long-press and copy-link-address. Its "opens in a new
-// tab" note is an `sr-only` span because an <a> takes its name from contents;
-// the same span inside the <button> shape would be dropped, since `aria-label`
-// outranks name-from-contents.
-//
-// `chevron: false` keeps the button and drops the affordance, for a row that
-// commits a choice in place — the colour-mode options.
-//
+// and keeps middle-click and copy-link-address. Its "opens in a new tab" note
+// is `sr-only` because an <a> takes its name from contents.
+
 // The label is deliberately regular weight, matching Gameplan rather than
-// ResponsiveListView's `text-p-base-medium` card title. The two were aligned
-// once and reverted on sight; do not re-bold it.
+// ResponsiveListView's card title. The two were aligned once and reverted on
+// sight, so do not re-bold it.
 const props = withDefaults(
 	defineProps<{
 		label: string
@@ -79,16 +71,16 @@ const props = withDefaults(
 const emit = defineEmits<{ click: [] }>()
 
 // The shape follows the URL that will actually be rendered, not the one passed
-// in: a rejected scheme drops the attribute, and an <a> without href still takes
-// focus and announces as a link.
+// in. A rejected scheme drops the attribute, and an <a> without href still
+// takes focus and announces as a link.
 const safeHref = computed(() => safeUrl(props.href))
 
 const tag = computed(() =>
 	safeHref.value ? 'a' : props.navigates ? 'button' : 'div'
 )
 
-// Off this site, so a new tab: coming back is the phone's back gesture
-// otherwise, and it would have unloaded the app. A path this site serves itself
+// Off this site, so a new tab. Coming back would otherwise be the phone's back
+// gesture, which has already unloaded the app. A path this site serves itself
 // stays in the tab, the way the desktop sidebar sends one.
 const opensInNewTab = computed(() => /^https?:\/\//i.test(safeHref.value || ''))
 

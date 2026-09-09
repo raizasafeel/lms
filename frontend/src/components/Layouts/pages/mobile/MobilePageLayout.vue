@@ -31,12 +31,11 @@
 </template>
 
 <script setup lang="ts">
-// Does NOT scroll: MobileLayout's <main id="scrollContainer"> is the app's one
-// scroller, and a second one here left that element static, pointing the
-// skip-to-content link and scroll-to-top at a box that could not move. FormShell
-// keeps its own scroller — it is `fixed inset-0`, outside this container.
-//
-// Exactly one h1 renders whether or not the header shows: root tabs take their
+// Does not scroll. MobileLayout's <main id="scrollContainer"> is the app's one
+// scroller, and a second one here left that element static. FormShell keeps its
+// own, because it is `fixed inset-0` and outside this container.
+
+// Exactly one h1 renders whether or not the header shows. Root tabs take their
 // identity from the bottom bar, but the heading rotors still need a name.
 withDefaults(
 	defineProps<{
