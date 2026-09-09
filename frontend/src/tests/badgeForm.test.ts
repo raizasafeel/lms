@@ -69,6 +69,23 @@ vi.mock('frappe-ui', () => ({
 		</span>`,
 	},
 	LoadingIndicator: { template: `<span data-testid="spinner" />` },
+	Select: {
+		props: ['modelValue', 'label', 'options', 'required', 'ariaLabel'],
+		emits: ['update:modelValue'],
+		template: `<button
+			:aria-label="ariaLabel"
+			:data-value="modelValue"
+			@click="$emit('update:modelValue', options[0].value)"
+		/>`,
+	},
+}))
+
+// Imported by the schema renderer, drawn by no badge field.
+vi.mock('@/components/Controls/TextEditor.vue', () => ({
+	default: { template: `<div data-testid="richtext" />` },
+}))
+vi.mock('@/components/Controls/Link.vue', () => ({
+	default: { template: `<div data-testid="link" />` },
 }))
 
 vi.mock('@/components/Controls/BooleanSwitch.vue', () => ({
@@ -156,13 +173,19 @@ vi.mock('@/composables/useSettingsSource', async () => {
 	const { computed, reactive, ref, watch } = await import('vue')
 	return {
 		NEW_RECORD: 'new',
-		useSettingsSource: (_source: any, options: any) => {
+		useSettingsSource: (source: any, options: any) => {
 			const doc = ref<any>(null)
 			const original = ref<any>(null)
 			const isNew = ref(false)
 
+			// The list panel resolves `record: 'route'` into `{ doctype, name }`
+			// before it hands the page down, so the record is read off the source
+			// exactly as the real composable reads it.
+			const requested = () =>
+				'name' in source ? source.name : options.record?.value ?? null
+
 			watch(
-				() => options.record?.value ?? null,
+				requested,
 				(name: string | null) => {
 					isNew.value = name === 'new'
 					if (!name) {
@@ -171,8 +194,14 @@ vi.mock('@/composables/useSettingsSource', async () => {
 						return
 					}
 					const row = rows.find((item) => item.name === name)
-					doc.value = isNew.value ? {} : { ...row }
-					original.value = isNew.value ? null : { ...row }
+					// A draft opens on the page's declared defaults and is dirty
+					// against them, which is the behaviour the real composable has.
+					doc.value = isNew.value
+						? { ...(options.defaults?.() ?? {}) }
+						: { ...row }
+					original.value = isNew.value
+						? { ...(options.defaults?.() ?? {}) }
+						: { ...row }
 				},
 				{ immediate: true }
 			)
@@ -181,10 +210,8 @@ vi.mock('@/composables/useSettingsSource', async () => {
 				doc,
 				name: computed(() => options.record?.value ?? null),
 				isNew,
-				isDirty: computed(() =>
-					isNew.value
-						? false
-						: JSON.stringify(doc.value) !== JSON.stringify(original.value)
+				isDirty: computed(
+					() => JSON.stringify(doc.value) !== JSON.stringify(original.value)
 				),
 				loading: false,
 				save: saveMock,
@@ -206,7 +233,8 @@ vi.stubGlobal('__', (text: string) => text)
 	return args.reduce((out, arg, i) => out.replace(`{${i}}`, arg), String(this))
 }
 
-import Badges from '@/components/Settings/Badges/Badges.vue'
+import SettingsListPanel from '@/components/Layouts/settings/desktop/SettingsListPanel.vue'
+import { badgesSettingsPage } from '@/components/Settings/Badges/badges'
 
 const champion = {
 	name: 'Champion',
@@ -223,8 +251,8 @@ const champion = {
 }
 
 const mountPage = () =>
-	mount(Badges, {
-		props: { label: 'Badges' },
+	mount(SettingsListPanel, {
+		props: { page: badgesSettingsPage, title: 'Badges' },
 		global: { mocks: { __: (text: string) => text } },
 	})
 
@@ -245,8 +273,8 @@ const openNew = async (wrapper: Wrapper) => {
 // Either control: Description is a textarea and the rest are inputs. Both
 // halves are scoped to the testid, because a bare `, textarea` would match any
 // textarea on the page.
-const control = (testid: string) =>
-	`[data-testid="${testid}"] input, [data-testid="${testid}"] textarea`
+const control = (label: string) =>
+	`[aria-label="${label}"] input, [aria-label="${label}"] textarea`
 
 const field = (wrapper: Wrapper, testid: string) => wrapper.get(control(testid))
 
@@ -254,7 +282,7 @@ const valueOf = (wrapper: Wrapper, testid: string) =>
 	(wrapper.get(control(testid)).element as HTMLInputElement).value
 
 const save = (wrapper: Wrapper) =>
-	wrapper.get('[data-testid="badge-save"]').trigger('click')
+	wrapper.get('[data-testid="settings-fields-save"]').trigger('click')
 
 beforeEach(() => {
 	vi.clearAllMocks()
@@ -267,36 +295,32 @@ describe('the top of the badge form is editable', () => {
 	it('takes what is typed into the Title', async () => {
 		const wrapper = await openBadge(mountPage())
 
-		await field(wrapper, 'badge-title').setValue('Course Champion')
+		await field(wrapper, 'Title').setValue('Course Champion')
 
-		expect(valueOf(wrapper, 'badge-title')).toBe('Course Champion')
+		expect(valueOf(wrapper, 'Title')).toBe('Course Champion')
 	})
 
 	it('takes what is typed into the Description', async () => {
 		const wrapper = await openBadge(mountPage())
 
-		await field(wrapper, 'badge-description').setValue('Finished every lesson')
+		await field(wrapper, 'Description').setValue('Finished every lesson')
 
-		expect(valueOf(wrapper, 'badge-description')).toBe('Finished every lesson')
+		expect(valueOf(wrapper, 'Description')).toBe('Finished every lesson')
 	})
 
 	// The bug was that neither said it was a field. Both are drawn by a control
 	// that renders its own <label for>, so the box is named on screen and by a
 	// screen reader alike.
-	it('labels both of them on screen, pointing at the box', () => {
+	// The schema renderer names the box with `aria-label` and draws the wording
+	// beside it, where the form this replaces passed FormControl its own `label`
+	// and got a `<label for>`. Either way the control has an accessible name and
+	// the wording is on screen.
+	it('labels both of them on screen, and names the box', () => {
 		const wrapper = mountPage()
 		return openBadge(wrapper).then(() => {
-			for (const [testid, text] of [
-				['badge-title', 'Title'],
-				['badge-description', 'Description'],
-			]) {
-				const control = wrapper.get(`[data-testid="${testid}"]`)
-				expect(control.attributes('data-label')).toBe(text)
-				const label = control.get('label')
-				expect(label.text()).toBe(text)
-				expect(label.attributes('for')).toBe(
-					control.get('input').attributes('id')
-				)
+			for (const text of ['Title', 'Description']) {
+				expect(wrapper.find(`[aria-label="${text}"]`).exists()).toBe(true)
+				expect(wrapper.text()).toContain(text)
 			}
 		})
 	})
@@ -307,7 +331,7 @@ describe('the top of the badge form is editable', () => {
 	it('leaves every field its focus indicator', async () => {
 		const wrapper = await openBadge(mountPage())
 
-		const html = wrapper.get('[data-testid="badge-fields"]').html()
+		const html = wrapper.html()
 
 		expect(html).not.toContain('focus:outline-none')
 		expect(html).not.toContain('focus:ring-0')
@@ -317,12 +341,10 @@ describe('the top of the badge form is editable', () => {
 		const wrapper = await openBadge(mountPage())
 
 		expect(
-			wrapper.get('[data-testid="badge-title"]').attributes('data-required')
+			wrapper.get('[aria-label="Title"]').attributes('data-required')
 		).toBe('yes')
 		expect(
-			wrapper
-				.get('[data-testid="badge-description"]')
-				.attributes('data-required')
+			wrapper.get('[aria-label="Description"]').attributes('data-required')
 		).toBe('yes')
 	})
 
@@ -331,9 +353,7 @@ describe('the top of the badge form is editable', () => {
 
 		await wrapper.get('[data-testid="uploaded"]').trigger('click')
 
-		expect(
-			wrapper.get('[data-testid="badge-image"] img').attributes('src')
-		).toBe('/files/badge.png')
+		expect(wrapper.get('img').attributes('src')).toBe('/files/badge.png')
 	})
 })
 
@@ -341,23 +361,21 @@ describe('opening a badge', () => {
 	it('fills every field from the record', async () => {
 		const wrapper = await openBadge(mountPage())
 
-		expect(valueOf(wrapper, 'badge-title')).toBe('Champion')
-		expect(valueOf(wrapper, 'badge-description')).toBe('Finished a course')
+		expect(valueOf(wrapper, 'Title')).toBe('Champion')
+		expect(valueOf(wrapper, 'Description')).toBe('Finished a course')
 		expect(
-			wrapper.get('[data-testid="select-Assign For"]').attributes('data-value')
+			wrapper.get('[aria-label="Assign For"]').attributes('data-value')
 		).toBe('LMS Batch')
 		expect(
-			wrapper.get('[data-testid="select-Assign To"]').attributes('data-value')
+			wrapper.get('[aria-label="Assign To"]').attributes('data-value')
 		).toBe('owner')
-		expect(
-			wrapper.get('[data-testid="select-Event"]').attributes('data-value')
-		).toBe('Value Change')
+		expect(wrapper.get('[aria-label="Event"]').attributes('data-value')).toBe(
+			'Value Change'
+		)
 		expect(wrapper.get('[data-testid="code"]').attributes('data-value')).toBe(
 			'doc.status == "Complete"'
 		)
-		expect(
-			wrapper.get('[data-testid="badge-image"] img').attributes('src')
-		).toBe('/files/champion.png')
+		expect(wrapper.get('img').attributes('src')).toBe('/files/champion.png')
 	})
 
 	it('titles the page with the badge it opened', async () => {
@@ -374,12 +392,12 @@ describe('opening a badge', () => {
 		expect(wrapper.get('[data-title]').attributes('data-title')).toBe(
 			'New Badge'
 		)
-		expect(valueOf(wrapper, 'badge-title')).toBe('')
+		expect(valueOf(wrapper, 'Title')).toBe('')
+		expect(wrapper.get('[aria-label="Event"]').attributes('data-value')).toBe(
+			'New'
+		)
 		expect(
-			wrapper.get('[data-testid="select-Event"]').attributes('data-value')
-		).toBe('New')
-		expect(
-			wrapper.get('[data-testid="select-Assign To"]').attributes('data-value')
+			wrapper.get('[aria-label="Assign To"]').attributes('data-value')
 		).toBe('member')
 	})
 })
@@ -389,7 +407,7 @@ describe('save is offered only for something to save', () => {
 		const wrapper = await openBadge(mountPage())
 
 		expect(
-			wrapper.get('[data-testid="badge-save"]').attributes('disabled')
+			wrapper.get('[data-testid="settings-fields-save"]').attributes('disabled')
 		).toBeDefined()
 		expect(wrapper.find('[data-testid="badge-discard"]').exists()).toBe(false)
 	})
@@ -397,10 +415,10 @@ describe('save is offered only for something to save', () => {
 	it('arms Save once a field changes, and still offers no Discard', async () => {
 		const wrapper = await openBadge(mountPage())
 
-		await field(wrapper, 'badge-title').setValue('Renamed')
+		await field(wrapper, 'Title').setValue('Renamed')
 
 		expect(
-			wrapper.get('[data-testid="badge-save"]').attributes('disabled')
+			wrapper.get('[data-testid="settings-fields-save"]').attributes('disabled')
 		).toBeUndefined()
 		expect(wrapper.find('[data-testid="badge-discard"]').exists()).toBe(false)
 	})
@@ -409,13 +427,13 @@ describe('save is offered only for something to save', () => {
 		const wrapper = await openNew(mountPage())
 
 		expect(
-			wrapper.get('[data-testid="badge-save"]').attributes('disabled')
+			wrapper.get('[data-testid="settings-fields-save"]').attributes('disabled')
 		).toBeDefined()
 
-		await field(wrapper, 'badge-title').setValue('Champion II')
+		await field(wrapper, 'Title').setValue('Champion II')
 
 		expect(
-			wrapper.get('[data-testid="badge-save"]').attributes('disabled')
+			wrapper.get('[data-testid="settings-fields-save"]').attributes('disabled')
 		).toBeUndefined()
 	})
 
@@ -427,14 +445,14 @@ describe('save is offered only for something to save', () => {
 			await openBadge(mountPage()),
 			await openNew(mountPage()),
 		]) {
-			await field(wrapper, 'badge-title').setValue('Renamed')
+			await field(wrapper, 'Title').setValue('Renamed')
 
 			const actions = wrapper
-				.findAll('[data-testid^="badge-"]')
+				.findAll('[data-testid]')
 				.map((node) => node.attributes('data-testid'))
-				.filter((id) => id === 'badge-save' || id === 'badge-discard')
+				.filter((id) => id === 'settings-fields-save' || id === 'badge-discard')
 
-			expect(actions).toEqual(['badge-save'])
+			expect(actions).toEqual(['settings-fields-save'])
 			expect(wrapper.text()).not.toContain('Discard')
 		}
 	})
@@ -443,7 +461,7 @@ describe('save is offered only for something to save', () => {
 		const wrapper = await openBadge(mountPage())
 		expect(wrapper.get('[data-unsaved]').attributes('data-unsaved')).toBe('no')
 
-		await field(wrapper, 'badge-title').setValue('Renamed')
+		await field(wrapper, 'Title').setValue('Renamed')
 
 		expect(wrapper.get('[data-unsaved]').attributes('data-unsaved')).toBe('yes')
 	})
@@ -453,7 +471,7 @@ describe('saving', () => {
 	it('writes the record and goes back to the list', async () => {
 		const wrapper = await openBadge(mountPage())
 
-		await field(wrapper, 'badge-title').setValue('Renamed')
+		await field(wrapper, 'Title').setValue('Renamed')
 		await save(wrapper)
 		await flushPromises()
 
@@ -465,13 +483,11 @@ describe('saving', () => {
 	it('names the first missing field rather than sending an empty badge', async () => {
 		const wrapper = await openNew(mountPage())
 
-		await field(wrapper, 'badge-description').setValue('Won it')
+		await field(wrapper, 'Description').setValue('Won it')
 		await save(wrapper)
 		await flushPromises()
 
 		expect(saveMock).not.toHaveBeenCalled()
-		expect(wrapper.get('[data-testid="error"]').text()).toBe(
-			'Title is required'
-		)
+		expect(toast.error).toHaveBeenCalledWith('Title is required')
 	})
 })

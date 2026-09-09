@@ -275,13 +275,9 @@ const MANIFEST: Record<string, Privacy[]> = {
 	'components/DiscussionReplies.vue': ['undeclared', 'undeclared'],
 	'components/Modals/DiscussionModal.vue': ['undeclared'],
 	'components/Quiz.vue': ['undeclared'],
-	// A badge is shown to every learner who earns one, so public is what it has to
-	// be. The tile is the same row the gateway attachment above uses, so this
-	// `:is_private="false"` is the only thing separating the two.
-	// The question body in the redesigned quiz editor, which reached this
-	// branch with the same default as Quiz.vue above.
+	// The question body in the redesigned quiz editor, which reached this branch
+	// with the same default as Quiz.vue above.
 	'components/Quiz/QuestionEditor.vue': ['undeclared'],
-	'components/Settings/Badges/BadgeForm.vue': ['public'],
 	// The rich body of an email template. One component now holds the list and the
 	// record alike, so there is a single editor here where there were once two
 	// forms carrying one each.

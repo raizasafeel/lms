@@ -33,6 +33,10 @@ export interface RecordFormOptions {
 	renameField?: string
 	/** Supplies `reqd` at runtime where the server owns it. */
 	meta?: FieldsPage['meta']
+	/** What a new record opens holding, and its dirty baseline. */
+	defaults?: FieldsPage['defaults']
+	/** The first thing wrong with the document, before the server is asked. */
+	validate?: FieldsPage['validate']
 	/** The toast, the telemetry and the way back, once a save lands. */
 	onSaved?: FieldsPage['onSaved']
 	/** Header for the New page. */
@@ -52,6 +56,8 @@ export function recordForm(options: RecordFormOptions): RecordForm {
 		...(options.enabledField ? { enabledField: options.enabledField } : {}),
 		...(options.renameField ? { renameField: options.renameField } : {}),
 		...(options.meta ? { meta: options.meta } : {}),
+		...(options.defaults ? { defaults: options.defaults } : {}),
+		...(options.validate ? { validate: options.validate } : {}),
 		...(options.onSaved ? { onSaved: options.onSaved } : {}),
 	}
 

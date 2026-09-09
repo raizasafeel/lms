@@ -258,7 +258,7 @@ describe('useSettingsHash', () => {
 		const calls: string[] = []
 		const close = () => calls.push('closed')
 
-		// what ZoomAccountForm's Link does: dismiss its popover, then switch tab
+		// what a settings Link does: dismiss its popover, then switch tab
 		const open = (slug: string, cb: () => void) => {
 			cb()
 			pushSettingsHash(router, slug)

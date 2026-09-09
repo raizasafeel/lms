@@ -1,4 +1,11 @@
-import type { SelectOption } from 'frappe-ui'
+import { toast } from 'frappe-ui'
+import {
+	deleteRow,
+	setRowField,
+	toggleRowField,
+} from '@/components/Settings/rowActions'
+import { recordForm } from '@/components/Settings/recordForm'
+import type { ListPage, SelectOption } from '@/types/settingsSchema'
 import type {
 	SettingsListBadge,
 	SettingsListColumn,
@@ -7,7 +14,7 @@ import type {
 
 /**
  * Settings > Badges, as config: what the list shows and what the form offers.
- * Badges.vue draws both.
+ * SettingsListPanel draws both.
  */
 
 export const BADGE_DOCTYPE = 'LMS Badge'
@@ -53,17 +60,25 @@ export const awardedFor = (doctype: string): SettingsListBadge => ({
 	theme: 'gray',
 })
 
-export interface BadgeRowActions {
-	toggleEnabled: (row: SettingsListRow, value: boolean) => void
-	remove: (row: SettingsListRow) => void
-}
+const toggleEnabled = toggleRowField(
+	setRowField(BADGE_DOCTYPE),
+	'Error updating badge'
+)
 
-export const badgeColumns = (
-	actions: BadgeRowActions
-): SettingsListColumn[] => [
+const removeBadge = deleteRow(
+	BADGE_DOCTYPE,
+	'Badge deleted successfully',
+	'Error deleting badge'
+)
+
+// Every header is a getter: a config module is evaluated before the translation
+// plugin installs `__` on window.
+const columns: SettingsListColumn[] = [
 	{
 		key: 'title',
-		label: __('Badge'),
+		get label() {
+			return __('Badge')
+		},
 		type: 'stacked',
 		width: 'minmax(0, 1.6fr)',
 		primary: (row) => row.title,
@@ -71,20 +86,23 @@ export const badgeColumns = (
 	},
 	{
 		key: 'reference_doctype',
-		label: __('Awarded For'),
+		get label() {
+			return __('Awarded For')
+		},
 		type: 'badge',
 		badges: (row) => [awardedFor(row.reference_doctype)],
 	},
 	{
 		// A switch, not a status badge: the state is a thing to change from here.
-		// Same column shape Zoom accounts use, optimistic write and all.
 		key: 'enabled',
-		label: __('Enabled'),
+		get label() {
+			return __('Enabled')
+		},
 		type: 'switch',
 		width: '6.5rem',
 		checked: (row) => Boolean(row.enabled),
 		ariaLabel: (row) => __('Enable {0}').format(row.title),
-		onChange: (row, value) => actions.toggleEnabled(row, value),
+		onChange: toggleEnabled,
 	},
 	{
 		key: 'actions',
@@ -95,7 +113,7 @@ export const badgeColumns = (
 				label: __('Delete'),
 				icon: 'lucide-trash-2',
 				theme: 'red',
-				onClick: () => actions.remove(row),
+				onClick: () => removeBadge(row),
 			},
 		],
 	},
@@ -145,3 +163,133 @@ export const newBadge = (): Record<string, unknown> => ({
 	condition: '',
 	user_field: 'member',
 })
+
+/**
+ * The badge itself, behind New and behind a row alike. The image sits under the
+ * words it illustrates, and the rules that award it are their own section.
+ */
+const form = recordForm({
+	doctype: BADGE_DOCTYPE,
+	renameField: BADGE_RENAME_FIELD,
+	enabledField: 'enabled',
+	defaults: newBadge,
+	newTitle: () => __('New Badge'),
+	recordTitle: (row) => row.title || __('Badge'),
+	sections: [
+		{
+			fields: [
+				{
+					name: 'title',
+					label: 'Title',
+					type: 'text',
+					placeholder: 'e.g. Course Champion',
+					reqd: true,
+				},
+				{
+					name: 'description',
+					label: 'Description',
+					type: 'textarea',
+					rows: 3,
+					placeholder: 'What is this badge awarded for?',
+					reqd: true,
+				},
+				{
+					name: 'image',
+					label: 'Badge Image',
+					description: 'Shown wherever this badge is awarded.',
+					type: 'upload',
+					icon: 'lucide-award',
+					// A badge is shown to every learner who earns one, so public is
+					// what it has to be.
+					public: true,
+					reqd: true,
+				},
+			],
+		},
+		{
+			label: 'Assignment rules',
+			fields: [
+				{
+					name: 'grant_only_once',
+					label: 'Grant Only Once',
+					description: 'Each user can only receive this badge one time.',
+					type: 'checkbox',
+				},
+				{
+					name: 'reference_doctype',
+					label: 'Assign For',
+					type: 'select',
+					get options() {
+						return referenceDoctypeOptions()
+					},
+					reqd: true,
+				},
+				{
+					name: 'user_field',
+					label: 'Assign To',
+					type: 'select',
+					get options() {
+						return userFieldOptions()
+					},
+					reqd: true,
+				},
+				{
+					name: 'event',
+					label: 'Event',
+					type: 'select',
+					get options() {
+						return eventOptions()
+					},
+					reqd: true,
+				},
+				{
+					name: 'condition',
+					label: 'Condition',
+					get description() {
+						return conditionHint()
+					},
+					type: 'code',
+					mode: 'javascript',
+					rows: 10,
+					reqd: true,
+				},
+			],
+		},
+	],
+	// LMS Badge marks seven fields reqd, so the server would answer one gap per
+	// round trip. Naming the first here is additive: everything past it still has
+	// to survive the server saying no.
+	validate: (doc) => {
+		if (!doc.title) return __('Title is required')
+		if (!doc.reference_doctype) return __('Assign For is required')
+		if (!doc.description) return __('Description is required')
+		if (!doc.image) return __('Badge Image is required')
+		if (!doc.event) return __('Event is required')
+		if (!doc.user_field) return __('Assign To is required')
+		if (!doc.condition) return __('Condition is required')
+		return ''
+	},
+	onSaved: ({ created, back }) => {
+		toast.success(
+			created
+				? __('Badge created successfully')
+				: __('Badge updated successfully')
+		)
+		back()
+	},
+})
+
+export const badgesSettingsPage: ListPage = {
+	kind: 'list',
+	resource: {
+		doctype: BADGE_DOCTYPE,
+		fields: BADGE_FIELDS,
+		searchFields: BADGE_SEARCH_FIELDS,
+		orderBy: 'creation desc',
+	},
+	columns,
+	searchable: true,
+	empty: { name: 'Badges', icon: 'lucide-award' },
+	create: { detail: form.forNew() },
+	rowDetail: form.forRecord(),
+}

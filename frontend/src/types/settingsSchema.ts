@@ -103,6 +103,8 @@ export type SettingsField =
 	  })
 	| (FieldBase & {
 			type: 'upload'
+			/** The placeholder icon shown before anything is uploaded. */
+			icon?: string
 			/**
 			 * Opt in to a world-readable file. Everything else keeps frappe's private
 			 * default; gateway KYC documents and QR codes reach these pages.
@@ -153,6 +155,17 @@ export interface FieldsPage {
 	 * field accepts an edit that is silently dropped.
 	 */
 	renameField?: string
+	/**
+	 * What a new record opens holding, seeded into the draft and used as the
+	 * baseline it is dirty against.
+	 */
+	defaults?: () => Record<string, unknown>
+	/**
+	 * The first thing wrong with the document, or '' when it is fine. Named here
+	 * rather than left to the server, which answers one missing field per round
+	 * trip. Additive: everything past the first still has to survive a refusal.
+	 */
+	validate?: (doc: SettingsListRow) => string
 	/**
 	 * Ran once a manual save lands, holding what a hand-drawn form put after its
 	 * own write: the success toast, the telemetry, and `back` to the list.
