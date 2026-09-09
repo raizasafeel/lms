@@ -1399,6 +1399,48 @@ class TestJobMails(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			report.__wrapped__(job=self.job.name, reason="x" * 1001)
 
+	def test_the_poster_cannot_read_who_reported_them(self):
+		# Job Opportunity grants LMS Student read with if_owner, so a poster can
+		# fetch their own listing through frappe.client.get. Persisting the
+		# reporter on the reported document therefore handed the reporter's name
+		# to the person they reported; on develop it reached System Managers by
+		# email and went nowhere else. Both report fields are permlevel 1, which
+		# only the permlevel-1 System Manager row can read.
+		self.addCleanup(frappe.set_user, "Administrator")
+		frappe.set_user(self.student)
+		own_job = frappe.get_doc(
+			{
+				"doctype": "Job Opportunity",
+				"job_title": f"Poster Owned {frappe.generate_hash(length=6)}",
+				"location": "Remote",
+				"country": "India",
+				"type": "Full Time",
+				"company_name": "Poster Co",
+				"company_website": "https://example.com",
+				"company_logo": "/files/job-mail-logo.png",
+				"company_email_address": "poster@test.com",
+				"description": "A listing owned by the student who posted it.",
+			}
+		).insert(ignore_permissions=True)
+
+		frappe.set_user("Administrator")
+		report.__wrapped__(job=own_job.name, reason="Spam listing")
+
+		frappe.set_user(self.student)
+		seen = frappe.get_doc("Job Opportunity", own_job.name)
+		seen.apply_fieldlevel_read_permissions()
+		# The filter removes the key outright rather than blanking it.
+		self.assertIsNone(seen.get("reported_by"))
+		self.assertIsNone(seen.get("report_reason"))
+		# The listing itself is still theirs to read.
+		self.assertEqual(seen.company_name, "Poster Co")
+
+	def test_a_system_manager_still_reads_the_report(self):
+		report.__wrapped__(job=self.job.name, reason="Spam listing")
+		seen = frappe.get_doc("Job Opportunity", self.job.name)
+		seen.apply_fieldlevel_read_permissions()
+		self.assertEqual(seen.report_reason, "Spam listing")
+
 	def test_reported_by_is_the_session_user_not_a_caller_supplied_value(self):
 		# report()'s signature takes no reported_by argument at all -- the only
 		# way this could be spoofed is the write itself reading from the wrong

@@ -4,6 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.rate_limiter import rate_limit
 from frappe.utils import add_months, getdate, validate_url
 
 from lms.lms.utils import generate_slug, validate_image
@@ -37,6 +38,10 @@ REPORT_REASON_MAX_LENGTH = 1000
 
 
 @frappe.whitelist()
+# The write is privileged (see below), so the only thing bounding how often a
+# listing can be re-reported is this. Each report also overwrites the last, so
+# an unlimited endpoint lets one caller erase everyone else's reason.
+@rate_limit(key="job", limit=5, seconds=60 * 60)
 def report(job: str, reason: str):
 	# frappe's whitelist argument coercion is switched off in several run modes
 	# (see lms/tests/test_notification_rules.py), so an annotated signature is

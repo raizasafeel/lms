@@ -127,12 +127,14 @@
    "fieldtype": "Link",
    "label": "Reported By",
    "options": "User",
+   "permlevel": 1,
    "read_only": 1
   },
   {
    "fieldname": "report_reason",
    "fieldtype": "Small Text",
    "label": "Report Reason",
+   "permlevel": 1,
    "read_only": 1
   }
  ],
@@ -175,6 +177,12 @@
    "role": "LMS Student",
    "select": 1,
    "share": 1,
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
    "write": 1
   }
  ],
