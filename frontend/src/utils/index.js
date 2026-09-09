@@ -873,7 +873,17 @@ export const openSettings = (slug, close = null) => {
 }
 
 export const cleanError = (message) => {
-	const cleanMessage = message.replace(/<[^>]+>/g, (match) => {
+	// Every caller passes `err.messages?.[0] || err`, and frappe-ui attaches
+	// `.messages` only to a server-error response: a transport failure (offline,
+	// aborted) re-throws a raw object. Coercing here rather than at each call
+	// site, because throwing a TypeError from inside a catch block loses the
+	// original error and skips whatever cleanup that block was there to do --
+	// the delete-confirm dialog's `close()`, in one case.
+	const text =
+		typeof message === 'string'
+			? message
+			: String(message?.message ?? message ?? '')
+	const cleanMessage = text.replace(/<[^>]+>/g, (match) => {
 		return match.replace(/<\/?[^>]+(>|$)/g, '')
 	})
 	return cleanMessage
