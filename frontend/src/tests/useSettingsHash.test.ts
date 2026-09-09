@@ -555,3 +555,71 @@ describe('useSettingsHash records', () => {
 		expect(api.activeRecord.value).toBe(null)
 	})
 })
+
+describe('useSettingsHash: dismissing twice', () => {
+	/**
+	 * `close()` had no re-entrancy guard, unlike `selectRecord`'s `dropping`.
+	 * `show` in Settings.vue is a computed whose getter is `isOpen`, and
+	 * `router.go()` is async, so the dialog is still visibly open when a second
+	 * dismiss arrives: `depthOf(router)` still reads the same value and the pop
+	 * runs again. Escape twice in quick succession, or a backdrop click landing
+	 * just after an Escape, went back four entries instead of two and left the
+	 * user two pages before the one they started on.
+	 */
+	it('pops once when two dismisses arrive before the first lands', async () => {
+		const { router, api } = await setup('/courses')
+
+		pushSettingsHash(router, 'badges')
+		await flushPromises()
+		api.selectRecord('badge-1')
+		await flushPromises()
+		expect(router.currentRoute.value.hash).toBe('#settings/badges/badge-1')
+		expect(router.options.history.state.settingsDepth).toBe(2)
+
+		// createMemoryHistory applies go() synchronously, so the real browser's
+		// window -- where history.go() is async and the dialog is still visibly
+		// open when the second dismiss arrives -- only exists here if the pop is
+		// held. Stubbing it models exactly that: the hash has not moved yet.
+		const go = vi.spyOn(router, 'go').mockImplementation(() => {})
+		api.close()
+		api.close()
+
+		expect(go).toHaveBeenCalledTimes(1)
+		expect(go).toHaveBeenCalledWith(-2)
+	})
+})
+
+describe('useSettingsHash: a dismiss the guard refuses', () => {
+	/**
+	 * The re-entrancy flag has to be cleared on aborts too. `closing` is nulled
+	 * only by the `route.hash` watcher, and a navigation the dirty guard refuses
+	 * never changes the hash -- so using it as the guard left `close()` dead for
+	 * the rest of the session. Open Settings, edit a manual-save record until
+	 * dirty, press Escape, choose "Keep editing": X, Escape and the backdrop all
+	 * stop working from then on, even after saving. `dropping` already avoids
+	 * this by clearing in router.afterEach, which vue-router fires for aborted
+	 * navigations as well.
+	 */
+	it('still closes after an earlier dismiss was refused', async () => {
+		const { router, api } = await setup('/courses')
+
+		pushSettingsHash(router, 'badges')
+		await flushPromises()
+		api.selectRecord('badge-1')
+		await flushPromises()
+		expect(router.currentRoute.value.hash).toBe('#settings/badges/badge-1')
+
+		const refuse = router.beforeEach(() => false)
+		api.close()
+		await flushPromises()
+		expect(router.currentRoute.value.hash).toBe('#settings/badges/badge-1')
+
+		refuse()
+		api.close()
+		await flushPromises()
+
+		expect(api.isOpen.value).toBe(false)
+		expect(router.currentRoute.value.hash).toBe('')
+	})
+})
+
