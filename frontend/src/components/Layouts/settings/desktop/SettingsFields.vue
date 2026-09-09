@@ -444,13 +444,17 @@ const onInput = (field) => {
 
 // Leaving the field is the first moment the value is final, so this is the only
 // place a bound is enforced. An out-of-bounds value goes back to the last good
-// one and reports nothing: the resource compares its way clean again, which is
-// what clears the "Not saved" marker the failed write used to leave behind.
+// one -- and is still reported, because the rolled-back value only matches the
+// server's if the write carrying it actually fired. Type 15, clear the box
+// (which cancels that pending write), then tab away, and the document is left
+// holding 15 against a server holding 30: dirty, with no timer armed, so the
+// marker reads "Not saved" for good and the dispose-time flush finds nothing to
+// send. Reporting a settled field costs nothing when it is already clean --
+// useAutosave's send() returns on `!isDirty`.
 const onSettle = (field) => {
 	if (field.disabled) return
 	if (isOutOfBounds(field, props.data[field.name])) {
 		props.data[field.name] = lastGood[field.name]
-		return
 	}
 	emit('commit', 'now')
 }

@@ -117,7 +117,11 @@ const autosave =
 // answer to it is Discard: there is no Save to offer. A manual panel is the
 // case the guard exists for. Deregistration is the composable's, via
 // onScopeDispose.
-if (!autosave) useDirtyGuard(() => source.isDirty)
+if (!autosave)
+	useDirtyGuard(
+		() => source.isDirty,
+		() => void source.reload()
+	)
 
 // SettingsFields reports every settled edit whether or not anyone is
 // listening — PaymentGatewayDetails renders it behind a Save button and binds
