@@ -186,7 +186,7 @@ import { computed } from 'vue'
  *
  *   course-page     pages/Courses/CourseOverview.vue, Batches/BatchOverview.vue
  *   form            pages/Courses/CourseForm.vue (grid only — no page header)
- *   header          components/Layouts/PageHeader.vue, via .header-frame
+ *   header          components/Layouts/pages/PageHeader.vue, via .header-frame
  *   editor-content  pages/LessonForm.vue
  *   editor-sidebar  components/CourseOutline.vue in CourseEditor's full-height
  *                   aside, which it fills — hence a fixed 8 rows

@@ -157,7 +157,7 @@ import {
 	usePageMeta,
 } from 'frappe-ui'
 import { computed, inject, watch, ref, onMounted, watchEffect } from 'vue'
-import PageHeader from '@/components/Layouts/PageHeader.vue'
+import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
 import HeaderButton from '@/components/HeaderButton.vue'
 import { sessionStore } from '@/stores/session'
 import { Github, Linkedin, Twitter } from 'lucide-vue-next'
@@ -238,6 +238,12 @@ watchEffect(() => {
 		Slots: { name: 'ProfileEvaluator' },
 		Schedule: { name: 'ProfileEvaluationSchedule' },
 	}[activeTab.value]
+	// `route.name` is read through the router's current-route ref, so this effect
+	// re-runs on every navigation — a hash-only one included — and a bare {name}
+	// push carries no hash. That is what took '#settings/<slug>' straight back
+	// off the URL, so settings never opened on this page. There is nothing to
+	// sync when the tab it names is already the one on screen.
+	if (!target || route.name === target.name) return
 	router.push(target)
 })
 
