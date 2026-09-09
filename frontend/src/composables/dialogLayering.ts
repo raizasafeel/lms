@@ -45,6 +45,21 @@ const POPPER = '[data-reka-popper-content-wrapper]'
  * never touches an attribute it does not bind, so both stay put.
  */
 const LAYER_ATTR = 'data-dialog-layer'
+
+/*
+ * reka gives every dismissable layer below the top one `pointer-events: none`,
+ * and a dialog holding an open menu is one of them. Its overlay stays live, so
+ * a click that looks like it lands inside the dialog lands on the overlay
+ * instead — outside `[role="dialog"]`, inside no layer at all — and the dialog
+ * dismisses on what was really its own click. Handing the content back its
+ * pointer events puts the click back inside the dialog, where the `pointerdown`
+ * guard on DialogContent already stops it from ever reaching the document.
+ *
+ * That value is a Vue style binding, so it is written inline and rewritten on
+ * every patch. Same lever as the layer rule below: an author `!important` rule
+ * outranks a normal inline declaration.
+ */
+const INTERACTIVE_ATTR = 'data-dialog-interactive'
 const STYLE_ID = 'dialog-layering'
 
 // One rule per layer actually used, written with a literal value. A custom
@@ -58,6 +73,7 @@ const sheet = (): HTMLStyleElement => {
 	if (found) return found as HTMLStyleElement
 	const style = document.createElement('style')
 	style.id = STYLE_ID
+	style.textContent = `[${INTERACTIVE_ATTR}]{pointer-events:auto !important}`
 	document.head.appendChild(style)
 	// A fresh document (a test's, or a reload) has none of the rules the
 	// previous one accumulated.
@@ -118,6 +134,16 @@ const restack = () => {
 	)
 	for (const overlay of open) overlay.inert = overlay !== top
 
+	// An open menu turns the dialog holding it off along with everything else
+	// below the top layer. Hand that one its pointer events back.
+	const menuOpen = poppers().length > 0
+	for (const overlay of open) {
+		const content = overlay.querySelector('[role="dialog"]')
+		if (!(content instanceof HTMLElement)) continue
+		if (menuOpen && overlay === top) content.setAttribute(INTERACTIVE_ATTR, '')
+		else content.removeAttribute(INTERACTIVE_ATTR)
+	}
+
 	// Fixed when the popper first appears, exactly as a dialog's own layer is.
 	// A popper belongs to the dialog it was opened from, so a dialog opened
 	// after it is a new top layer and has to come out above it — re-reading the
@@ -137,6 +163,24 @@ const restack = () => {
 	}
 }
 
+/*
+ * The click that now lands inside the dialog still has to close the menu, and it
+ * cannot do that on its own: DialogContent stops `pointerdown` before reka's
+ * document listener sees it, which is the very thing keeping the dialog open. So
+ * the dismissal is sent explicitly. Escape closes the highest layer and nothing
+ * else, and while a menu is open that is the menu — never the dialog under it.
+ */
+const dismissMenu = (event: Event) => {
+	const target = event.target
+	if (!(target instanceof Element)) return
+	if (!poppers().length) return
+	if (target.closest(POPPER)) return
+	if (!target.closest(`[${INTERACTIVE_ATTR}]`)) return
+	document.dispatchEvent(
+		new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+	)
+}
+
 export function useDialogLayering() {
 	// Overlays are teleported straight into <body>, so its direct children are
 	// the only place they appear — no subtree walk needed.
@@ -144,5 +188,10 @@ export function useDialogLayering() {
 	const observer = new MutationObserver(restack)
 	observer.observe(document.body, { childList: true })
 	restack()
-	onScopeDispose(() => observer.disconnect())
+	// Capture, so it runs before DialogContent swallows the event.
+	document.addEventListener('pointerdown', dismissMenu, true)
+	onScopeDispose(() => {
+		observer.disconnect()
+		document.removeEventListener('pointerdown', dismissMenu, true)
+	})
 }
