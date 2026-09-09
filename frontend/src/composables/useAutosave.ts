@@ -111,6 +111,10 @@ export function useAutosave(options: AutosaveOptions): Autosave {
 		clearTimeout(restTimer)
 		restTimer = undefined
 		tickPending = false
+		// A write queued behind one already in flight is a waiting edit too: the
+		// in-flight write's `.finally` re-fires `send()` off this flag, so leaving
+		// it set writes the very value the cancel exists to withhold.
+		queued = false
 		pending.value = false
 	}
 
@@ -205,7 +209,12 @@ export function useAutosave(options: AutosaveOptions): Autosave {
 		return 'idle'
 	})
 
+	// Send, don't drop. frappe-ui's SettingsDialog defaults to unmountOnHide, so
+	// closing the dialog or switching tabs inside the rest period disposes this
+	// scope while an edit is still waiting — and removing the focused input from
+	// the DOM fires no focusout, so no `now` commit rescues it either.
 	onScopeDispose(() => {
+		flush()
 		clearTimeout(restTimer)
 		clearTimeout(savedTimer)
 	})
