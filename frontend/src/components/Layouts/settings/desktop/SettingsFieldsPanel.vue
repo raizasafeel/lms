@@ -16,6 +16,7 @@
 			v-if="source.doc"
 			:sections="sections"
 			:data="source.doc"
+			:flush="showBack"
 			@commit="commit"
 		/>
 	</SettingsLayout>
