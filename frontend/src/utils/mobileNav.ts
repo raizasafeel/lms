@@ -121,17 +121,55 @@ export function isGuestAccessRevoked(visibility?: SidebarVisibility): boolean {
 	return Array.isArray(visibility)
 }
 
-// Otherwise the flags are keyed by the lowercased, underscored label, the same
-// convention the mobile nav store uses to drop a link from the bar. A label the
+// Rows (and labels) that cannot be switched off. The server refuses it; this
+// is the client refusing to draw the refusal wrong. One Set, so a second
+// locked row never drifts between a hardcoded string here and a separate
+// check elsewhere — `sidebarRows.ts` re-exports this rather than keeping its
+// own copy.
+export const LOCKED_VISIBLE: ReadonlySet<string> = new Set(['home'])
+
+// A payload can carry rows and still not be seeded: a site whose patch has not
+// run answers with the Web Pages it already had and no `Built-in` row at all.
+// Reading those as the whole sidebar would drop every built-in link, Home
+// included, so the rows only speak for the built-ins once one of them is in
+// the payload. `sidebarRows.ts` takes its fallback from this same predicate —
+// the two disagreed about the empty payload once already.
+export function hasBuiltInRow(rows: unknown): boolean {
+	return (
+		Array.isArray(rows) &&
+		rows.some(
+			(row) => (row as { item_type?: string })?.item_type === 'Built-in'
+		)
+	)
+}
+
+// Otherwise the flags are keyed by the lowercased, underscored label. Rows are
+// keyed the same way — every built-in row's `name1` IS that key, which is why
+// the seven legacy Check fieldnames could be reused as ids — so this reads the
+// rows when they are there and the flat keys when they are not. A label the
 // settings say nothing about always stays, and so does everything while
 // `visibility` is still unresolved: an empty bar is worse than one showing a
 // destination for a moment.
+//
+// A locked label is never switched off. The server refuses it; this is the
+// same refusal, so a hand-edited payload cannot strand a viewer with no way
+// back.
 export function isLinkEnabled(
 	label: string,
 	visibility?: SidebarVisibility
 ): boolean {
 	if (!visibility || isGuestAccessRevoked(visibility)) return true
 	const key = label.toLowerCase().split(' ').join('_')
+	if (LOCKED_VISIBLE.has(key)) return true
+
+	const rows = (visibility as Record<string, unknown>).sidebar_rows
+	if (hasBuiltInRow(rows)) {
+		const row = (rows as { name1?: string; hidden?: number }[]).find(
+			(candidate) => candidate.name1 === key
+		)
+		return row ? !row.hidden : true
+	}
+
 	if (!(key in visibility)) return true
 	return Boolean(parseInt(String((visibility as Record<string, unknown>)[key])))
 }
