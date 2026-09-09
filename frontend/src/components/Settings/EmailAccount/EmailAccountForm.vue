@@ -304,6 +304,9 @@ const createAccount = async () => {
 	await call(EMAIL_ACCOUNT_METHODS.create, {
 		data: buildCreatePayload(state),
 	})
+	// What the server now holds, so the form stops reading dirty and the guard
+	// does not prompt on top of the success toast.
+	loaded.value = { ...state }
 	toast.success(__('Email account created'))
 	capture('email_account_created', { data: { service: state.service } })
 }
@@ -324,6 +327,7 @@ const updateAccount = async () => {
 			name: state.email_account_name,
 			data: buildUpdatePayload(state),
 		})
+	loaded.value = { ...state }
 	toast.success(__('Email account updated successfully'))
 }
 

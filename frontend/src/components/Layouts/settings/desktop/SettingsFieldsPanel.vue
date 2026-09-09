@@ -144,8 +144,6 @@ const save = () => {
 		return
 	}
 	saving.value = true
-	// Read before the write. A successful insert clears isNew, so asking
-	// afterwards reports every save as an update.
 	const created = source.isNew
 	const finish = () =>
 		props.page.onSaved?.({

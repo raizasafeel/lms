@@ -191,10 +191,17 @@ export function useSettingsSource(
 	}
 
 	const save = async (): Promise<unknown> => {
-		if (isNew.value)
-			return call('frappe.client.insert', {
+		if (isNew.value) {
+			const inserted = await call('frappe.client.insert', {
 				doc: { doctype, ...draft.value },
 			})
+			// The draft has been written, so it is no longer something to discard.
+			// Without this a create form navigates away still registered dirty and
+			// the guard prompts on top of its own success toast.
+			draft.value = newDraft()
+			pristine.value = JSON.stringify(draft.value)
+			return inserted
+		}
 		const current = resource.value
 		if (!current) return undefined
 
