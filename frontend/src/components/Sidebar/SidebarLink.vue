@@ -103,7 +103,12 @@ function handleClick(): void {
 	}
 	if (props.link.to && router.hasRoute(props.link.to)) {
 		router.push({ name: props.link.to })
-	} else if (props.link.to?.includes('@')) {
+		// A URL can carry an `@` in its path, and an External row's target is
+		// whatever an admin typed, so the mailto guess only applies without a scheme.
+	} else if (
+		props.link.to?.includes('@') &&
+		!props.link.to.startsWith('http')
+	) {
 		showContactForm.value = true
 	} else if (props.link.to) {
 		if (props.link.to.startsWith('http')) {
