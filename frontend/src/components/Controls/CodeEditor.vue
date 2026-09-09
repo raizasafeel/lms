@@ -153,20 +153,27 @@ const setupEditor = () => {
 			aceEditor?.session.setMode('ace/mode/html')
 		})
 	}
-	aceEditor.on('blur', () => {
-		try {
-			let value = aceEditor?.getValue() || ''
-			if (props.type === 'JSON') {
-				value = JSON.parse(value)
-			}
-			if (value === props.modelValue) return
-			if (!props.showSaveButton && !props.readonly) {
-				emit('update:modelValue', value)
-			}
-		} catch (e) {
-			// do nothing
+	// `change` as well as `blur`: every autosave caller arms its rest period
+	// from the wrapper's `@input`, which ace's hidden textarea fires while
+	// typing, so a blur-only emit left the timer running against a document that
+	// was still clean. Closing the settings dialog with Escape unmounts the panel
+	// without moving focus, so blur never arrives and the typed value is lost.
+	aceEditor.on('change', pushValue)
+	aceEditor.on('blur', pushValue)
+}
+
+const pushValue = () => {
+	if (props.showSaveButton || props.readonly) return
+	try {
+		let value = aceEditor?.getValue() || ''
+		if (props.type === 'JSON') {
+			value = JSON.parse(value)
 		}
-	})
+		if (value === props.modelValue) return
+		emit('update:modelValue', value)
+	} catch (e) {
+		// A half-typed JSON body is not a value yet. blur emits it once it parses.
+	}
 }
 
 const getModelValue = () => {
@@ -207,6 +214,10 @@ watch(
 watch(
 	() => props.modelValue,
 	() => {
+		// The parent echoing back what was just typed would otherwise call
+		// setValue + clearSelection on every keystroke, dropping the caret to the
+		// end of the document.
+		if (aceEditor?.getValue() === getModelValue()) return
 		resetEditor(props.modelValue as string)
 	}
 )
