@@ -36,25 +36,22 @@ import { FileUploader, Button } from 'frappe-ui'
 import { validateFile } from '@/utils'
 
 /**
- * This control decides nothing about who may read the file it creates; the
+ * This control decides nothing about who may read the file it creates. The
  * caller does, in markup a reviewer and the manifest in
  * publicImageUploads.test.ts both read.
- *
- * `is_private` is declared at runtime rather than through the type-only form
- * because of what Vue does to a Boolean prop that is absent: it casts it to
- * false, which here would mean silently public. `default: undefined` is what
- * turns that off (runtime-core resolvePropValue casts only when there is no
- * default at all), so an omitted `is_private` stays undefined, and frappe-ui's
- * FileUploader reads that as private — the safe end, and a warned-about one.
  */
+
+// `is_private` is declared at runtime because Vue casts an absent Boolean prop
+// to false, which here would mean silently public. `default: undefined` turns
+// that off, and FileUploader reads undefined as private.
 defineProps({
 	is_private: { type: Boolean, required: true, default: undefined },
 	image_url: { type: String, default: '' },
 	image_type: { type: String, default: 'image/*' },
 	testid: { type: String, default: undefined },
-	// A read-only field still shows its image; it just offers no way to change
-	// it. Plain Boolean, unlike is_private: absent means "not disabled", which
-	// is both the safe reading and the common one.
+	// A read-only field still shows its image, it just offers no way to change it.
+	// Plain Boolean, unlike is_private: absent means "not disabled", which is both
+	// the safe reading and the common one.
 	disabled: { type: Boolean, default: false },
 })
 

@@ -45,20 +45,13 @@ const isLoaded = (resolved) =>
 		)
 	)
 
-// A form route renders a Dialog. Reaching it is a real navigation, so without
-// this the page it was opened from unmounts and the dialog floats over a blank
-// app. openFormRoute stamps the location it left into history.state; when one
-// is stamped the router-view inside the Layout is told to render THAT location
-// (RouterView's `route` prop — the supported mechanism) and a second
-// router-view renders the current route, the modal, on top of it.
-//
-// history.state is a plain object vue-router swaps out per navigation and never
-// makes reactive, so touching `route.fullPath` first is what re-runs this: the
-// current route changes on every navigation, and vue-router writes the new
-// entry's state BEFORE it assigns currentRoute, so the state read here always
-// belongs to the route we just landed on. Reading it through the router rather
-// than window.history is what keeps it working under createMemoryHistory, which
-// never touches window.history at all.
+// A form route renders a Dialog, and reaching it is a real navigation, so
+// without this the page it was opened from unmounts and the dialog floats over
+// a blank app. openFormRoute stamps the location it left into history.state.
+
+// history.state is never made reactive, so touching `route.fullPath` first is
+// what re-runs this. Reading it through the router rather than window.history
+// is what keeps it working under createMemoryHistory.
 const background = computed(() => {
 	void route.fullPath
 	const stored = formBackgroundPath(router)
@@ -72,29 +65,25 @@ const background = computed(() => {
 	}
 	// Never render the modal twice.
 	if (resolved.fullPath === route.fullPath) return undefined
-	// Most form routes are CHILDREN of the page that opens them, so the page is
-	// already mounted as the modal's own ancestor; rendering it here as well
+	// Most form routes are children of the page that opens them, so the page is
+	// already mounted as the modal's own ancestor and rendering it here as well
 	// would draw the list twice.
 	if (isAncestorOfCurrent(resolved)) return undefined
 	// Only pages whose lazy chunk is already loaded can be rendered
-	// synchronously. Awaiting the import instead would blank the layout for a
-	// tick and remount the very page this exists to keep mounted. Unloaded is
-	// the reload case (web history keeps the stamp across an F5), which then
-	// behaves exactly like a cold deep link: the modal stands alone.
+	// synchronously. Awaiting the import would blank the layout for a tick and
+	// remount the very page this exists to keep mounted.
 	if (!isLoaded(resolved)) return undefined
 
 	return resolved
 })
 
-// The Layout wraps the background when there is one, so it is that page — not
-// the modal floating above it — that decides whether a sidebar belongs here.
+// The Layout wraps the background when there is one, so it is that page, not
+// the modal floating above it, that decides whether a sidebar belongs here.
 const layoutRoute = computed(() => background.value ?? route)
 
 // Derive the layout from the route, not a navigation guard. Flipping it in
-// beforeEach swaps the layout the instant a navigation starts (before a lazy
-// route component resolves), which re-mounts <router-view> while the old page is
-// still showing, flashing it back into view. A route-driven computed changes in
-// the same tick as the route, so the swap and the page change happen together.
+// beforeEach swaps the layout the instant a navigation starts, which remounts
+// <router-view> while the old page is still showing and flashes it back.
 const noSidebar = computed(
 	() =>
 		Boolean(layoutRoute.value.query.fromLesson) ||

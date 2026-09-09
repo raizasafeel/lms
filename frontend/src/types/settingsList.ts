@@ -15,7 +15,7 @@ export interface SettingsListAvatar {
 /**
  * frappe-ui's Badge themes, minus the deprecated `orange` alias for `amber`.
  * Six, which is the ceiling on how many things a colour can tell apart in one
- * column — a page with more categories than that has to double up.
+ * column, so a page with more categories than that has to double up.
  */
 export type BadgeTheme =
 	| 'gray'

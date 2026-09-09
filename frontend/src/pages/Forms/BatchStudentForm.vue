@@ -76,12 +76,9 @@ const { close, saveAndReplace } = useFormRoute(
 	batchRouteLocation('BatchDetail', props.batchName, route.hash)
 )
 
-// Copied from BatchDetail.vue's isAdmin() gate on the Enroll button. A URL does
-// not go through a button. Read-only was not on that button, but every other
-// converted form checks it and a read-only site cannot insert.
-//
-// UX gate, not an authorization boundary — validate_owner() on LMS Batch
-// Enrollment is, and it demands the same two roles.
+// Copied from BatchDetail.vue's isAdmin() gate on the Enroll button, since a URL
+// does not go through a button. A UX gate, not an authorization boundary:
+// validate_owner() on LMS Batch Enrollment is, and it demands the same roles.
 const refusal = computed(() => {
 	if (readOnlyMode) return __('This site is in read-only mode.')
 	if (!user.data?.is_moderator && !user.data?.is_evaluator) {
@@ -110,14 +107,12 @@ const enrollment = createResource({
 })
 
 // The Overview overlay's Seats Left comes from get_batch_details, and enrolling
-// is what moves it. That resource deliberately carries no cache key
-// (useBatchForms.ts explains why one must never be added back), so it cannot be
-// reached by key the way the two below are — BatchDetail hosts this form in its
-// own <router-view> and hands the reload down instead.
+// is what moves it. That resource carries no cache key, so BatchDetail hands the
+// reload down instead of it being reached by key.
 const reloadBatchDetails = inject('reloadBatchDetails', null)
 
 // Both live on the dashboard tab behind this form. Null on a deep link, where
-// that tab was never mounted — correct, since each fetches on mount.
+// that tab was never mounted, which is correct: each fetches on mount.
 const reloadDashboard = () => {
 	getCachedListResource(['batchStudents', props.batchName])?.reload()
 	getCachedResource(['batch_student_count', props.batchName])?.reload()
@@ -125,13 +120,12 @@ const reloadDashboard = () => {
 }
 
 // Link calls these with one argument unless it is in `inlineCreate` mode, which
-// neither field is — it closes its own dropdown first, so there is no second
+// neither field is. It closes its own dropdown first, so there is no second
 // close callback to invoke here.
-//
-// The form stays open behind Settings. Settings is an overlay now — it pushes a
-// hash entry over the form's own route — so closing the form here would pop the
-// entry that was just pushed and Settings would never appear at all. Leaving it
-// up also keeps whatever the user had typed, which is what they come back to.
+
+// The form stays open behind Settings, which is an overlay pushing a hash entry
+// over the form's own route. Closing the form here would pop that entry and
+// Settings would never appear at all.
 const openMemberSettings = () => {
 	openSettings('members')
 }

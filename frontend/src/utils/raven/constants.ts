@@ -2,12 +2,8 @@
 // barrel stays type-only.
 
 /**
- * How deep condition groups may nest in this editor. ConditionBuilder counts the
- * root group as depth 0 and offers a group while `path.length < maxDepth`, so 1
- * means only the root may gain one, a single level of nesting, and no group
- * inside a group.
- *
- * Below `raven_integration.engine.MAX_TREE_DEPTH` (4) deliberately: everything
- * authorable here saves, and a tree already stored deeper still loads and reads.
+ * How deep condition groups may nest in this editor. ConditionBuilder offers a
+ * group while `path.length < maxDepth`, so 1 means one level of nesting. Below
+ * `raven_integration.engine.MAX_TREE_DEPTH` so everything authorable here saves.
  */
 export const MAX_CONDITION_DEPTH = 1

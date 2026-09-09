@@ -1,11 +1,10 @@
 // Wire format of the raven_integration API, plus the rule shapes the settings UI
-// works in. Provider-agnostic only. A provider's own rule vocabulary stays in its
-// app and crosses as `RavenMemberRule.rule_type: string`, described at runtime by
-// the provider declaration (`raven_integration.api.list_providers`).
-//
-// The `RuleCombinator` union below has a runtime counterpart, `RULE_COMBINATORS`
-// in `@/utils/raven/constants`; this module stays free of runtime values so the
-// `@/types` barrel pulls no code into its importers' chunks.
+// works in. Provider-agnostic only: a provider's own rule vocabulary stays in
+// its app and crosses as `RavenMemberRule.rule_type`.
+
+// This module stays free of runtime values, so the `@/types` barrel pulls no
+// code into its importers' chunks. `RuleCombinator`'s runtime counterpart is
+// `RULE_COMBINATORS` in `@/utils/raven/constants`.
 
 /** What a group joins its children with. One per gap between two conditions. */
 export type Conjunction = 'and' | 'or'
@@ -69,9 +68,9 @@ export interface WorkspaceMember {
 export interface ChannelDetail extends RavenChannel {
 	member_count: number
 	/**
-	 * The count above could not be worked out, no provider could evaluate the
-	 * channel's tree, so it reads 0 rather than a real total. Kept an int with a
-	 * flag beside it so a consumer that ignores this still gets a number.
+	 * The count above could not be worked out, so it reads 0 rather than a real
+	 * total. An int with a flag beside it, so a consumer that ignores this still
+	 * gets a number.
 	 */
 	member_count_unknown: boolean
 	/** The channel's condition tree, exactly as ConditionBuilder models one. */
@@ -79,10 +78,9 @@ export interface ChannelDetail extends RavenChannel {
 }
 
 /**
- * A group of conditions as raven_integration stores one: joined by `conjunctions`,
- * one joiner per gap, `conditions.length - 1` of them. A child is a rule or another
- * group; the two are told apart structurally, with no discriminator field to keep in
- * sync, which is what lets the tree survive a JSON round-trip untouched.
+ * A group of conditions as raven_integration stores one: joined by
+ * `conjunctions`, one per gap. A child is a rule or another group, told apart
+ * structurally, which is what lets the tree survive a JSON round-trip untouched.
  */
 export interface ApiRuleGroup {
 	conjunctions: Conjunction[]
@@ -93,21 +91,16 @@ export type ApiRuleNode = ApiRule | ApiRuleGroup
 
 /**
  * The same tree as the editor holds one: every leaf flattened into the shape the
- * rule row edits, and one `conjunction` for the whole group rather than one per
- * gap. That is ConditionBuilder's model, a level is all-and or all-or, and mixing
- * is spelled by nesting, so this is the shape the component reads and writes.
- * `ruleAdapter` collapses and re-expands the wire's array at the boundary.
+ * rule row edits, and one `conjunction` per group rather than one per gap, which
+ * is ConditionBuilder's model. `ruleAdapter` converts at the boundary.
  */
 export interface RuleGroup {
 	conjunction: Conjunction
 	conditions: RuleNode[]
 	/**
-	 * The per-gap joiners this group was loaded with, carried so a group the user
-	 * never touched can be written back exactly as it was stored. A tree authored
-	 * outside this UI can mix `and` with `or` at one level, which the single
-	 * `conjunction` above cannot say; without this, re-expanding that one token
-	 * across every gap rewrote the stored tree on any save at all, a rename
-	 * included. Absent on a group this editor made, there is nothing to preserve.
+	 * The per-gap joiners this group was loaded with, so a group the user never
+	 * touched is written back as it was stored. A tree authored elsewhere can mix
+	 * `and` with `or` at one level, which the single `conjunction` cannot say.
 	 */
 	storedConjunctions?: Conjunction[]
 }
@@ -142,9 +135,8 @@ export interface RuleDiff {
 	removed_users: string[]
 	/**
 	 * No provider could evaluate the proposed tree, so the counts above are zero
-	 * because nothing could be worked out, not because nobody moves. A channel
-	 * that is switched off, stale, or has no active rule reports zeros with this
-	 * false: those genuinely move nobody.
+	 * for want of an answer rather than because nobody moves. A channel that is
+	 * switched off or stale reports zeros with this false.
 	 */
 	unknown: boolean
 }
@@ -165,14 +157,9 @@ export interface RuleField {
 	reqd?: 0 | 1
 	default?: string
 	/**
-	 * Renders this field only while `field` holds one of the named values.
-	 *
-	 * `value` names one, a provider uses it when a single choice of a Select is
-	 * the only one the field applies to. `value_in` names a set, which is what a
-	 * cascade needs: a scope of "Both" applies to the same two multiselects that
-	 * "Batches" and "Courses" apply to one of each, and saying that with
-	 * equalities alone would mean declaring each multiselect twice under two
-	 * fieldnames.
+	 * Renders this field only while `field` holds one of the named values. `value`
+	 * names one; `value_in` names a set, which is what a cascade needs when one
+	 * scope applies to the same two multiselects that two others apply to singly.
 	 */
 	depends_on?:
 		| { field: string; value: string }

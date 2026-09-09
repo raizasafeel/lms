@@ -227,8 +227,8 @@ const setActiveTab = () => {
 }
 
 // The edit form is a child route, not a tab, and `edit` matches none of the tab
-// segments — so setActiveTab lands on About and this effect would push the About
-// tab straight over a deep link to the form before it ever renders.
+// segments, so setActiveTab lands on About and this effect would push the About
+// tab over a deep link to the form before it ever renders.
 watchEffect(() => {
 	if (!activeTab.value || route.name === 'ProfileEditForm') return
 	let target = {
@@ -239,10 +239,8 @@ watchEffect(() => {
 		Schedule: { name: 'ProfileEvaluationSchedule' },
 	}[activeTab.value]
 	// `route.name` is read through the router's current-route ref, so this effect
-	// re-runs on every navigation — a hash-only one included — and a bare {name}
-	// push carries no hash. That is what took '#settings/<slug>' straight back
-	// off the URL, so settings never opened on this page. There is nothing to
-	// sync when the tab it names is already the one on screen.
+	// re-runs on every navigation, a hash-only one included, and a bare {name}
+	// push carries no hash. That took '#settings/<slug>' straight off the URL.
 	if (!target || route.name === target.name) return
 	router.push(target)
 })

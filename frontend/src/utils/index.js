@@ -851,14 +851,12 @@ export const createLMSCategory = (name) => {
 }
 
 // Settings is the desktop dialog, mounted only inside the sidebar's
-// UserDropdown — this branch deliberately left the phone no settings pages. So
-// on a phone the hash below reaches nothing, and the `close()` above it threw
-// away the half-filled form the user was standing in for a dialog that never
-// arrived. Say so instead, and leave the form where it is.
-// Takes the tab's slug, not its label: the slug is the URL segment, and a
-// renamed label must not break the callers.
-// Returns whether Settings actually opened, so a caller that closes itself
-// separately can stay put when it did not.
+// UserDropdown, so on a phone the hash below reaches nothing and the `close()`
+// above it threw away a half-filled form for a dialog that never arrived.
+
+// Takes the tab's slug, not its label, because a renamed label must not break
+// the callers. Returns whether Settings actually opened, so a caller that
+// closes itself separately can stay put when it did not.
 export const openSettings = (slug, close = null) => {
 	const settingsStore = useSettings()
 	if (!settingsStore.isSettingsMounted) {
@@ -874,11 +872,8 @@ export const openSettings = (slug, close = null) => {
 
 export const cleanError = (message) => {
 	// Every caller passes `err.messages?.[0] || err`, and frappe-ui attaches
-	// `.messages` only to a server-error response: a transport failure (offline,
-	// aborted) re-throws a raw object. Coercing here rather than at each call
-	// site, because throwing a TypeError from inside a catch block loses the
-	// original error and skips whatever cleanup that block was there to do --
-	// the delete-confirm dialog's `close()`, in one case.
+	// `.messages` only to a server error, so a transport failure re-throws a raw
+	// object. Throwing from inside a catch block skips that block's own cleanup.
 	const text =
 		typeof message === 'string'
 			? message

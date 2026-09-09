@@ -618,9 +618,7 @@ createResource({
 
 // A new batch opens on the site's own timezone rather than an empty picker.
 // Sampling batchDetail.doc once inside that onSuccess dropped the default
-// whenever the preferences read -- two columns off a Single -- answered before
-// the full document fetch, which is the common case. Nothing watched the doc,
-// so there was no retry and no error: the picker just came up empty.
+// whenever the preferences read answered before the full document fetch.
 watch(
 	[() => batchDetail.doc, systemTimezone],
 	([doc, zone]) => {

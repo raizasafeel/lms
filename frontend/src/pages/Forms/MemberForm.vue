@@ -101,24 +101,19 @@ const { updateOnboardingStep } = useOnboarding('learning')
 // (`/job-opening/:jobName/edit`, JobForm.vue:147-149).
 const isEdit = computed(() => props.memberID !== 'new')
 
-// Only reached on a deep link or a reload — opened from Members.vue this pops
-// back to whatever page the settings dialog was floating over (useFormRoute.ts).
-// Settings itself is that dialog and has no address, so a URL that arrives here
-// cold has nothing settings-shaped to be sent back to.
-//
-// The You page, then: it is the phone's account surface, it is a real route on
-// every viewport, and it is the nearest thing left to the page this form used
-// to close onto. Home would work too and says less.
+// Only reached on a deep link or a reload. Opened from Members.vue this pops
+// back to whatever page the settings dialog was floating over, and settings
+// itself has no address, so a cold URL has nothing to be sent back to.
+
+// The You page, then. It is the phone's account page, a real route on every
+// viewport, and the nearest thing left to the page this form used to close onto.
 const { close } = useFormRoute({ name: 'MobileYou' })
 
-// Members.vue's Add button carried no gate of its own — the gate was on the
-// settings surface around it (UserDropdown.vue:59-62 for the desktop dialog),
-// and a URL goes through neither. `is_moderator` alone, deliberately: this is
-// the narrowest gate in settings and get_members/save_role both
-// `frappe.only_for("Moderator")`.
-//
-// UX gate, not an authorization boundary — those two only_for calls are
-// (lms/lms/api.py:977 and :1851).
+// Members.vue's Add button carried no gate of its own. The gate was on the
+// settings pages around it, and a URL goes through neither. `is_moderator`
+// alone, because get_members and save_role both `only_for("Moderator")`.
+
+// UX gate, not an authorization boundary. Those two only_for calls are.
 const refusal = computed(() => {
 	if ((window as Window & { read_only_mode?: boolean }).read_only_mode)
 		return __('This site is in read-only mode.')
@@ -147,10 +142,9 @@ const roles = reactive({
 	lms_student: false,
 })
 
-// Display order, and what each role is called on screen — neither of which is
-// the server's role name. One row per entry, so the name and the switch beside
-// it cannot drift apart; the 2x2 grid this replaced sat every label nearer the
-// next role's switch than its own, and this is the phone's surface.
+// Display order, and what each role is called on screen, neither of which is the
+// server's role name. One row per entry, because the 2x2 grid this replaced sat
+// every label nearer the next role's switch than its own.
 const ROLE_ROWS: { key: keyof typeof roles; label: string }[] = [
 	{ key: 'lms_student', label: 'Student' },
 	{ key: 'course_creator', label: 'Course Creator' },
@@ -159,23 +153,20 @@ const ROLE_ROWS: { key: keyof typeof roles; label: string }[] = [
 ]
 
 // The name is drawn by the row, not by the switch, so it has to reach the
-// control as a <label for>: frappe-ui's Switch generates an id only when it is
-// given none, and never hands it back out. An aria-label would not do — the
-// component forwards stray attrs to its wrapper div, not to the button.
+// control as a <label for>. frappe-ui's Switch generates an id only when it is
+// given none, and forwards a stray aria-label to its wrapper div.
 const formId = useId()
 const switchId = (key: string) => `${formId}-${key}`
 
 const initialRoles = reactive({ ...roles })
 const submitting = ref(false)
 
-// C4 — edit mode used to be seeded from the row Members.vue already held in
-// memory, which on a cold deep link does not exist.
-//
-// get_member, not the get_members list endpoint: that one hard-filters
-// `enabled = 1` and pages at MEMBERS_PAGE_LENGTH, so a disabled member, or one
-// whose address is a substring of more than a page of other members', never
-// came back — and the form sat with Save permanently disabled and nothing on
-// screen saying why.
+// Edit mode used to be seeded from the row Members.vue already held in memory,
+// which on a cold deep link does not exist.
+
+// get_member, not the get_members list endpoint. That one hard-filters
+// `enabled = 1` and pages, so a disabled member never came back and the form sat
+// with Save permanently disabled and nothing on screen saying why.
 const memberFetch = createResource({
 	url: 'lms.lms.api.get_member',
 	makeParams() {
@@ -206,11 +197,9 @@ watch(
 	{ immediate: true }
 )
 
-// Stands in for the modal's `created`/`updated` emits: a route component has no
-// parent listening. A signal rather than the parent's resource, because that
-// resource cannot be cached — see the note in @/stores/members. Nobody is
-// listening on a phone deep link, which is correct: Members.vue fetches on
-// mount.
+// Stands in for the modal's `created` and `updated` emits, because a route
+// component has no parent listening. A signal rather than the parent's resource,
+// because that resource cannot be cached.
 const reloadMembers = () => {
 	notifyMembersChanged()
 }

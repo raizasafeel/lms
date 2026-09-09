@@ -7,11 +7,9 @@ export let Dialogs = {
 	name: 'Dialogs',
 	render() {
 		return dialogs.value.map((dialog) => {
-			// A dialog that IS a component — AddressModal, opened from a settings
-			// Link's onCreate — draws its own Dialog, so it is rendered directly
-			// rather than nested inside a second one. It takes the same `show`
-			// model, which is what lets a caller with no template of its own open
-			// a modal at all.
+			// A dialog that IS a component, such as AddressModal opened from a
+			// settings Link, draws its own Dialog and is rendered directly rather
+			// than nested inside a second one. It takes the same `show` model.
 			if (dialog.component) {
 				return h(dialog.component, {
 					...dialog.props,

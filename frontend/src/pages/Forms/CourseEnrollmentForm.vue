@@ -83,9 +83,8 @@ const payment = ref<string | null>(null)
 const purchasedCertificate = ref<boolean>(false)
 
 // The course page keeps its active tab in route.hash and CourseEditor keeps the
-// open lesson in route.query, so both have to travel back with us — closing to a
-// hash-less CourseDetail would flip the parent to tab 0 behind the form. Same
-// reasoning as ChapterForm.vue, the other form this page hosts.
+// open lesson in route.query, so both have to travel back with us. Closing to a
+// hash-less CourseDetail would flip the parent to tab 0 behind the form.
 const parent = {
 	name: 'CourseDetail',
 	params: { courseName: props.courseName },
@@ -94,14 +93,13 @@ const parent = {
 }
 const { close, saveAndReplace } = useFormRoute(parent)
 
-// Parent context a URL cannot carry: the Enroll button only existed on the
+// Parent context a URL cannot carry. The Enroll button only existed on the
 // Dashboard tab, which CourseDetail shows to moderators and to the course's own
-// instructors — and instructor-ness is a walk over course.data.instructors.
-//
-// Its own fetch, NOT CourseDetail's instance: that resource deliberately carries
-// no cache key (CourseDetail.vue), because the router reuses the page when you
-// jump straight from one course to another, so getCachedResource has nothing to
-// hand back and adding a key to get one would reintroduce that bug.
+// instructors, and instructor-ness is a walk over course.data.instructors.
+
+// Its own fetch, not CourseDetail's instance. That resource carries no cache
+// key, because the router reuses the page when you jump straight from one course
+// to another, so adding a key would reintroduce that bug.
 const course = createResource({
 	url: 'lms.lms.utils.get_course_details',
 	makeParams() {
@@ -120,8 +118,8 @@ const isInstructor = computed(() =>
 
 // Copied from CourseDetail.vue's isAdmin(), which gated the Dashboard tab the
 // Enroll button lived on. A URL does not go through a button.
-//
-// UX gate, not an authorization boundary — LMS Enrollment's before_insert hooks
+
+// UX gate, not an authorization boundary. LMS Enrollment's before_insert hooks
 // are, and enforce_server_managed_fields reverts purchased_certificate for
 // anyone not entitled to set it.
 const refusal = computed(() => {
@@ -152,19 +150,18 @@ const enrollment = createResource({
 }) as unknown as Resource<unknown>
 
 // The list this page inserted into lives on the tab behind it. Null on a deep
-// link, where that tab was never mounted — correct, since it fetches on mount.
+// link, where that tab was never mounted, which is correct: it fetches on mount.
 const reloadStudents = () => {
 	getCachedListResource(['courseProgress', props.courseName])?.reload()
 }
 
 // Link calls these with one argument unless it is in `inlineCreate` mode, which
-// neither field is — it closes its own dropdown first, so there is no second
+// neither field is. It closes its own dropdown first, so there is no second
 // close callback to invoke here.
-//
-// The form stays open behind Settings. Settings is an overlay now — it pushes a
-// hash entry over the form's own route — so closing the form here would pop the
-// entry that was just pushed and Settings would never appear at all. Leaving it
-// up also keeps whatever the user had typed, which is what they come back to.
+
+// The form stays open behind Settings, which is an overlay pushing a hash entry
+// over the form's own route. Closing the form here would pop that entry and
+// Settings would never appear at all.
 const openMemberSettings = () => {
 	openSettings('members')
 }

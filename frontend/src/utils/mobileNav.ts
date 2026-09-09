@@ -20,9 +20,8 @@ export const PRIMARY_LABELS: readonly string[] = [
 ]
 
 // Hardcoded rather than matched against `sidebarLinks`, which arrive
-// asynchronously and left a signed-out visitor with an empty bar until the
-// settings call resolved. Mirrors CRM's components/Mobile/MobileSidebar.vue.
-// `pickPrimaryTabs` still hides any the admin has switched off.
+// asynchronously and left a signed-out visitor with an empty bar. Mirrors CRM's
+// MobileSidebar.vue, and `pickPrimaryTabs` still hides any the admin turned off.
 export const GUEST_TABS: readonly NavLink[] = [
 	{
 		label: 'Courses',
@@ -54,8 +53,7 @@ export const GUEST_TABS: readonly NavLink[] = [
 ]
 
 // The last slot on the bar. It is the user's own face rather than a glyph,
-// which is what makes the bar read as "you" instead of "menu", the detail
-// Gameplan's /g/more gets right and an ellipsis does not.
+// which is what makes the bar read as "you" instead of "menu".
 const YOU_TAB: NavLink = {
 	label: 'You',
 	icon: 'UserRound',
@@ -64,9 +62,9 @@ const YOU_TAB: NavLink = {
 	avatar: true,
 }
 
-// Five slots: the four PRIMARY_LABELS plus YOU_TAB. A ceiling on the whole bar,
-// and YOU_TAB is pushed last, so a fifth primary would cost the You tab its
-// place — widen this and the column widths together, or not at all.
+// Five slots: the four PRIMARY_LABELS plus YOU_TAB. YOU_TAB is pushed last, so
+// a fifth primary would cost the You tab its place. Widen this and the column
+// widths together, or not at all.
 const MAX_PRIMARY_TABS = 5
 
 const SECTION_MAP: Record<string, readonly string[]> = {
@@ -80,9 +78,9 @@ const SECTION_MAP: Record<string, readonly string[]> = {
 	DISCOVER: ['Jobs', 'Statistics'],
 }
 
-// Session actions belong to the account group no matter which list they
-// arrived in. Quizzes and friends reach us through the same `otherLinks`
-// array, and they are course content, not account settings.
+// Session actions belong to the account group no matter which list they arrived
+// in. Quizzes and friends reach us through the same `otherLinks` array, and they
+// are course content, not account settings.
 const ACCOUNT_LABELS: readonly string[] = [
 	'Notifications',
 	'Profile',
@@ -98,10 +96,9 @@ export function sectionFor(label: string): string {
 	return 'MORE'
 }
 
-// Five columns on a 375px phone leave ~67px of text each: roughly ten
+// Five columns on a 375px phone leave about 67px of text each, roughly ten
 // characters at 12px, which every default tab clears. The map is the one place
-// to shorten a label that does not fit, rather than letting `truncate` clip a
-// word.
+// to shorten a label that does not fit.
 const SHORT_TAB_LABELS: Record<string, string> = {
 	'Programming Exercises': 'Exercises',
 }
@@ -113,27 +110,21 @@ export function tabLabel(label: string): string {
 // What `get_sidebar_settings` can hand back, and what each shape means.
 export type SidebarVisibility = Record<string, unknown> | unknown[] | null
 
-// `get_sidebar_settings` returns a bare `[]` (a list, where the settled case
-// is an object) when the caller is a guest and guest access is off. That is an
-// answer, not a silence: nothing in the app is browsable at all, so it must not
-// be read as "no flags matched, keep everything".
+// `get_sidebar_settings` returns a bare `[]` when the caller is a guest and
+// guest access is off. That is an answer, not a silence: nothing is browsable
+// at all, so it must not read as "no flags matched, keep everything".
 export function isGuestAccessRevoked(visibility?: SidebarVisibility): boolean {
 	return Array.isArray(visibility)
 }
 
-// Rows (and labels) that cannot be switched off. The server refuses it; this
-// is the client refusing to draw the refusal wrong. One Set, so a second
-// locked row never drifts between a hardcoded string here and a separate
-// check elsewhere — `sidebarRows.ts` re-exports this rather than keeping its
-// own copy.
+// Rows and labels that cannot be switched off. The server refuses it; this is
+// the client refusing to draw the refusal wrong. One Set, which `sidebarRows.ts`
+// re-exports rather than keeping its own copy.
 export const LOCKED_VISIBLE: ReadonlySet<string> = new Set(['home'])
 
-// A payload can carry rows and still not be seeded: a site whose patch has not
-// run answers with the Web Pages it already had and no `Built-in` row at all.
-// Reading those as the whole sidebar would drop every built-in link, Home
-// included, so the rows only speak for the built-ins once one of them is in
-// the payload. `sidebarRows.ts` takes its fallback from this same predicate —
-// the two disagreed about the empty payload once already.
+// A payload can carry rows and still not be seeded, because a site whose patch
+// has not run answers with the Web Pages it already had. The rows only speak for
+// the built-ins once one of them is in the payload.
 export function hasBuiltInRow(rows: unknown): boolean {
 	return (
 		Array.isArray(rows) &&
@@ -143,17 +134,13 @@ export function hasBuiltInRow(rows: unknown): boolean {
 	)
 }
 
-// Otherwise the flags are keyed by the lowercased, underscored label. Rows are
-// keyed the same way — every built-in row's `name1` IS that key, which is why
-// the seven legacy Check fieldnames could be reused as ids — so this reads the
-// rows when they are there and the flat keys when they are not. A label the
-// settings say nothing about always stays, and so does everything while
-// `visibility` is still unresolved: an empty bar is worse than one showing a
-// destination for a moment.
-//
-// A locked label is never switched off. The server refuses it; this is the
-// same refusal, so a hand-edited payload cannot strand a viewer with no way
-// back.
+// Otherwise the flags are keyed by the lowercased, underscored label, and every
+// built-in row's `name1` is that key, so this reads the rows when they are
+// there and the flat keys when they are not.
+
+// A label the settings say nothing about always stays, and so does everything
+// while `visibility` is unresolved. A locked label is never switched off, so a
+// hand-edited payload cannot strand a viewer with no way back.
 export function isLinkEnabled(
 	label: string,
 	visibility?: SidebarVisibility
@@ -182,7 +169,7 @@ export function pickPrimaryTabs(
 	visibility?: SidebarVisibility
 ): NavLink[] {
 	if (!isSignedIn) {
-		// Guest access withdrawn: every in-app destination goes. Only Log in
+		// Guest access withdrawn, so every in-app destination goes. Only Log in
 		// survives, because it leaves the SPA for Frappe's own /login and is the
 		// one thing such a visitor can still do.
 		if (isGuestAccessRevoked(visibility))
@@ -200,11 +187,8 @@ export function pickPrimaryTabs(
 }
 
 // Everything that did not make the bottom bar, in the order it arrived.
-//
-// `sidebarLinks` and `otherLinks` overlap. Programs is spliced into the
-// sidebar list while the moderator extras are appended to the other list, and
-// a re-entrant reload can leave the same label in both. Dedupe by label so a
-// destination is never offered twice.
+// `sidebarLinks` and `otherLinks` overlap, and a re-entrant reload can leave
+// the same label in both, so dedupe by label.
 export function overflowLinks(
 	sidebarLinks: readonly NavLink[],
 	otherLinks: readonly NavLink[],

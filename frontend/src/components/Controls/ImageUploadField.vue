@@ -52,23 +52,13 @@ import { safeUrl } from '@/utils/safeUrl'
 
 /**
  * A settings row for one image: a square preview, the name and description of
- * what the image is for, and the Upload / Change / Remove pair on the end.
- *
- * The buttons are ImageUploader rather than a second copy of them, and privacy
- * travels straight through to it — this row is layout, and layout has no
- * opinion on who may read the file.
- *
- * `testid`, when given, names the preview tile and prefixes the buttons
- * (`<testid>-upload`, `<testid>-remove`), so a page with more than one row can
- * still be addressed a row at a time.
- *
- * `is_private` is declared at runtime for the reason ImageUploader's is: an
- * absent Boolean prop is cast to false, and false here means public.
- *
- * The name is an InputLabel rather than a span so that `required` draws the
- * same red mark a FormControl does — the buttons on the end are not a labelable
- * control, so the row is a group named by that label instead.
+ * what the image is for, and the Upload, Change and Remove buttons on the end.
+ * The buttons are ImageUploader, and privacy travels straight through to it.
  */
+
+// `testid` names the preview tile and prefixes the buttons, so a page with more
+// than one row can be addressed a row at a time. The name is an InputLabel so
+// that `required` draws the same red mark a FormControl does.
 defineProps({
 	is_private: { type: Boolean, required: true, default: undefined },
 	label: { type: String, required: true },

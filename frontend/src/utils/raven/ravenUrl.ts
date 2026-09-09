@@ -1,7 +1,6 @@
-// Raven's SPA is mounted at /raven (hooks.py website_route_rules), and its
-// channel route is nested under the workspace, `:workspaceID/:channelID` in
-// Raven's App.tsx. There is no channel-only route, so a channel link needs the
-// Raven workspace id as well as the channel id.
+// Raven's SPA is mounted at /raven and nests its channel route under the
+// workspace. There is no channel-only route, so a channel link needs the Raven
+// workspace id as well as the channel id.
 const RAVEN_BASE = '/raven'
 
 export function ravenWorkspaceUrl(ravenWorkspace: string): string {

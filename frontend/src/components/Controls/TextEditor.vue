@@ -142,10 +142,9 @@ const variantSpec = resolveTextEditorVariant(
 	props.features ?? {}
 )
 
-// `group`, not `toolbar`: a toolbar role tells a screen reader the buttons are
-// arrowed between, and frappe-ui's MenuItems renders plain tabbable buttons
-// with no roving tabindex. The role names the set without promising navigation
-// that is not there.
+// `group`, not `toolbar`. A toolbar role tells a screen reader the buttons are
+// arrowed between, and frappe-ui's MenuItems renders plain tabbable buttons with
+// no roving tabindex.
 const showFixedMenu = computed(() => variantSpec.fixedMenu && props.editable)
 
 const contentStyle = computed(() => {

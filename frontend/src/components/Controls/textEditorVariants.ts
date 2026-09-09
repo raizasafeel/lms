@@ -1,13 +1,12 @@
 /**
- * The feature sets `Controls/TextEditor.vue` can be put into.
- *
- * A variant picks a frappe-ui kit, the kit options that differ from its
- * defaults, and the toolbars. It never prunes a toolbar to match the kit:
- * every menu item carries `isAvailable`, and `MenuItems.vue` hides any item
- * whose extension is absent, so turning a capability off at the kit removes its
- * button on its own. Doing it the other way round would leave paste and
- * drag-drop working behind a button that is no longer there.
+ * The feature sets `Controls/TextEditor.vue` can be put into. A variant picks a
+ * frappe-ui kit, the kit options that differ from its defaults, and the
+ * toolbars.
  */
+
+// It never prunes a toolbar to match the kit. Every menu item carries
+// `isAvailable`, so turning a capability off at the kit removes its button; the
+// other way round would leave paste and drag-drop working behind no button.
 import {
 	AlignCenter,
 	AlignLeft,
@@ -44,9 +43,8 @@ import {
 export type TextEditorVariant = 'rich' | 'email' | 'comment' | 'inline'
 
 /**
- * Kit members a caller may override on top of a variant. `RichTextKitOptions`
- * is the widest of the three kits' option types and its keys cover the other
- * two, so one type serves every variant.
+ * Kit members a caller may override on top of a variant. `RichTextKitOptions` is
+ * the widest of the three kits' option types and its keys cover the other two.
  */
 export type TextEditorFeatures = Partial<RichTextKitOptions>
 
@@ -63,10 +61,9 @@ const hasNode =
 		name in editor.schema.nodes
 
 /*
- * Desk's Text Editor offers underline, code block and check lists. beta.24
- * ships the extension for all three and a menu item for none, so they are
- * defined here. Each drives a core tiptap command rather than the extension's
- * own, which keeps them typed without depending on a module augmentation.
+ * Desk's Text Editor offers underline, code block and check lists. beta.24 ships
+ * the extension for all three and a menu item for none, so they are defined
+ * here, each driving a core tiptap command rather than the extension's own.
  */
 
 export const Underline: CommandMenuItem = {
@@ -129,11 +126,9 @@ const RICH_TOOLBAR: MenuItem[] = [
 ]
 
 /**
- * Desk's default Text Editor toolbar, in its order
- * (`text_editor.js` `get_toolbar_options`), which is what an Email Template's
- * `response` field renders today. Four of its buttons have no beta.24
- * equivalent and are absent: font size, remove formatting, RTL direction and
- * indent.
+ * Desk's default Text Editor toolbar, in its own order, which is what an Email
+ * Template's `response` field renders today. Four of its buttons have no beta.24
+ * equivalent: font size, remove formatting, RTL direction and indent.
  */
 const EMAIL_TOOLBAR: MenuItem[] = [
 	HeadingGroup,
@@ -208,8 +203,7 @@ const VARIANTS: Record<TextEditorVariant, VariantSpec> = {
 		kit: 'rich',
 		// A mail body has nobody to mention and no slash palette worth carrying,
 		// and desk's editor offers neither. Video, attachment and iframe go with
-		// them: desk's toolbar inserts images only, so leaving those extensions
-		// loaded would let a drop insert what no button offers.
+		// them, or a drop would insert what no button offers.
 		defaults: {
 			slashCommands: false,
 			mention: false,
@@ -266,9 +260,8 @@ export function resolveTextEditorVariant(
 			? CommentKit.configure(options)
 			: InlineKit.configure(options)
 
-	// RichTextKit loads tables by default and CommentKit does not, so an
-	// untouched `table` means different things per kit. InlineKit has no table
-	// member at all.
+	// RichTextKit loads tables by default and CommentKit does not, so an untouched
+	// `table` means different things per kit. InlineKit has no table member at all.
 	const tableByDefault = spec.kit === 'rich'
 	const hasTables =
 		spec.kit === 'inline'

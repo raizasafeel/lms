@@ -61,10 +61,9 @@ const props = defineProps({
 		type: String,
 		default: '',
 	},
-	// Names the ACTUAL editor region, not the wrapper InputLabel already
-	// associates via labelId/inputId. Optional and undefined by default so
-	// EmailTemplateForm and BadgeForm — which pass `label` and rely on
-	// InputLabel's own association — are unaffected by this prop existing.
+	// Names the actual editor region, not the wrapper InputLabel already
+	// associates. Undefined by default, so callers that pass `label` and rely on
+	// InputLabel's own association are unaffected by this prop existing.
 	ariaLabel: {
 		type: String,
 		default: undefined,
@@ -153,11 +152,9 @@ const setupEditor = () => {
 			aceEditor?.session.setMode('ace/mode/html')
 		})
 	}
-	// `change` as well as `blur`: every autosave caller arms its rest period
-	// from the wrapper's `@input`, which ace's hidden textarea fires while
-	// typing, so a blur-only emit left the timer running against a document that
-	// was still clean. Closing the settings dialog with Escape unmounts the panel
-	// without moving focus, so blur never arrives and the typed value is lost.
+	// `change` as well as `blur`. Every autosave caller arms its rest period from
+	// the wrapper's `@input`, so a blur-only emit left the timer running against
+	// a document that was still clean, and Escape never fires blur at all.
 	aceEditor.on('change', pushValue)
 	aceEditor.on('blur', pushValue)
 }

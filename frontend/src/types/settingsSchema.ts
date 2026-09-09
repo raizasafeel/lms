@@ -3,10 +3,8 @@ import type { SettingsListColumn, SettingsListRow } from '@/types/settingsList'
 
 /**
  * The settings tree, as data. Three kinds of page and nothing else: a page of
- * fields, a page of records, or — for the handful that are genuinely not either —
- * a component.
- *
- * The kind is a discriminant, so a renderer never branches on a panel's name.
+ * fields, a page of records, or a component. The kind is a discriminant, so a
+ * renderer never branches on a panel's name.
  */
 
 export interface SelectOption {
@@ -25,32 +23,21 @@ interface FieldBase {
 	reqd?: boolean
 	/**
 	 * Shown, and never written. For a value the document records rather than
-	 * accepts — Transactions' member consent, Coupons' redemption count — where
-	 * hiding it would lose the very thing the page is there to report. The
+	 * accepts, where hiding it would lose the very thing the page reports. The
 	 * control is locked and the field commits nothing.
 	 */
 	disabled?: boolean
 	/**
-	 * Hides the field unless the document says otherwise — Transactions' coupon
-	 * block is the only caller. A hidden field is not written and not validated.
+	 * Hides the field unless the document says otherwise. A hidden field is not
+	 * written and not validated.
 	 */
 	showIf?: (doc: SettingsListRow) => boolean
 }
 
 /**
  * A value a control SHOWS while the document's own is empty, and nothing more.
- *
- * It is never written by being shown. Seeding it into the document instead
- * would make the document differ from `originalDoc`, so the resource reports
- * the panel dirty the instant it opens — and because `useAutosave`'s status
- * reports `dirty` ahead of `saved`, the header then reads "Not saved" before
- * anyone has touched it and never reaches "Saved" after a write either. The
- * document keeps its blank until the user picks something.
- *
- * Not the checkbox `default`, which is the opposite and IS written: a checkbox
- * Frappe returns as null renders off but saves nothing, so a `default: 1` field
- * would silently flip off the first time anything else on the page was saved.
- * A picker has no such trap — an unwritten blank stays blank.
+ * Seeding it into the document would make the panel read dirty the instant it
+ * opens. Not the checkbox `default`, which is written.
  */
 interface DisplayFallback {
 	displayFallback?: string
@@ -58,31 +45,22 @@ interface DisplayFallback {
 
 /**
  * Every control the settings pages use, as a discriminated union rather than a
- * bare string. frappe-ui's FormControl falls through to `<TextInput :type>` for
- * anything it does not recognise, so a mistyped `type` would render a text input
- * instead of failing — the union is what makes that a compile error.
+ * bare string. FormControl falls through to a text input for anything it does
+ * not recognise, so the union is what makes a mistyped `type` a compile error.
  */
 export type SettingsField =
 	| (FieldBase & {
 			type: 'text' | 'email' | 'password' | 'number'
 			/**
-			 * A floor for a `number` field, enforced and not merely suggested: the
-			 * renderer puts a value below it — or cleared, or non-numeric — back to
-			 * the last good one when the field is left, and writes nothing. Declare
-			 * it wherever the doctype's validate() would throw, since a rejected
-			 * autosave has no Save button to retry from.
+			 * A floor for a `number` field, enforced rather than suggested: the renderer
+			 * puts a value below it back to the last good one and writes nothing.
+			 * Declare it wherever the doctype's validate() would throw.
 			 */
 			min?: number
 			/**
-			 * Draw the control across the row with its label above, the way
-			 * `textarea` and `richtext` are drawn, instead of in the 12rem column
-			 * on the end edge.
-			 *
-			 * For a one-line value that is nonetheless long: an Email Template's
-			 * subject is a sentence carrying Jinja placeholders, and 12rem showed
-			 * the user "Your batch {{ batch }} star" and stopped. Not a textarea
-			 * instead — a control that accepts a newline would be lying about a
-			 * field the server stores as one line.
+			 * Draw the control across the row with its label above, the way `textarea`
+			 * and `richtext` are drawn. For a one-line value that is nonetheless long,
+			 * such as an Email Template subject carrying Jinja placeholders.
 			 */
 			fullWidth?: boolean
 	  })
@@ -95,11 +73,9 @@ export type SettingsField =
 				/** A function when the target depends on another field, as LMS Payment's does. */
 				doctype: string | ((doc: SettingsListRow) => string)
 				/**
-				 * Passed to search_link as-is. A bench that also runs Frappe CRM gets
-				 * an `enabled` Check custom field on Email Template, and frappe's
-				 * search_widget appends `enabled = 1` for any doctype carrying one
-				 * unless the caller sends `include_disabled` — so a template picker
-				 * that declares no filters answers "No results" over a full table.
+				 * Passed to search_link as-is. A bench that also runs Frappe CRM gets an
+				 * `enabled` field on Email Template, and search_widget then filters on it
+				 * unless the caller declares filters, answering "No results".
 				 */
 				filters?: Record<string, unknown>
 				onCreate?: (value: string, close: () => void) => void
@@ -112,22 +88,16 @@ export type SettingsField =
 			rows?: number
 	  })
 	/**
-	 * A body of prose, edited with a toolbar.
-	 *
-	 * Full-width — label above, control below — for the same reason `code` and
-	 * `textarea` are: the control column on the end of a row is 12rem wide and
-	 * one line tall, which is where a name or a number goes. An editor carrying
-	 * a fixed toolbar and several lines of content cannot live there, and
-	 * squeezing it in would make the row taller than the panel's other rows put
-	 * together.
+	 * A body of prose, edited with a toolbar. Full-width, because the control
+	 * column on the end of a row is 12rem wide and one line tall, and an editor
+	 * with a fixed toolbar cannot live there.
 	 */
 	| (FieldBase & {
 			type: 'richtext'
 			/**
-			 * Lines of content the control is sized for, exactly as `textarea`
-			 * reads it. Two fields that swap for one another — Email Template's
-			 * HTML body and its rich one — declare the same number, which is what
-			 * makes the swap move nothing below them.
+			 * Lines of content the control is sized for, exactly as `textarea` reads
+			 * it. Two fields that swap for one another declare the same number, which
+			 * is what makes the swap move nothing below them.
 			 */
 			rows?: number
 	  })
@@ -135,7 +105,7 @@ export type SettingsField =
 			type: 'upload'
 			/**
 			 * Opt in to a world-readable file. Everything else keeps frappe's private
-			 * default — gateway KYC documents and merchant QR codes reach these pages.
+			 * default; gateway KYC documents and QR codes reach these pages.
 			 */
 			public?: boolean
 			size?: 'lg'
@@ -149,9 +119,8 @@ export interface FieldsSection {
 }
 
 /**
- * Which document a page reads and writes. Not every panel writes LMS Settings:
- * Zoom and Google Meet have their own doctypes, and a detail page's record comes
- * from the URL.
+ * Which document a page reads and writes. Zoom and Google Meet have their own
+ * doctypes, and a detail page's record comes from the URL.
  */
 export type SettingsSource =
 	| { doc: 'LMS Settings' }
@@ -174,21 +143,14 @@ export interface FieldsPage {
 	meta?: () => Promise<FieldMeta>
 	/**
 	 * Hoists a toggle for this fieldname into the page header. It lives here
-	 * rather than on DetailPage because the panel that renders a fields page owns
-	 * the header, and it is typed `page: FieldsPage` — a detail-only key would be
-	 * unreachable from there without a cast.
+	 * rather than on DetailPage because the panel rendering a fields page owns the
+	 * header and is typed `page: FieldsPage`.
 	 */
 	enabledField?: string
 	/**
-	 * The fieldname whose value IS the document's name — 'account_name' for Zoom
-	 * and Google Meet, whose doctypes autoname from it, and 'name' itself for an
-	 * Email Template.
-	 *
-	 * Editing it renames the record: `rename_doc` first, then the remaining
-	 * fields. Nothing else moves a document's name, so without this the field
-	 * accepts an edit that is silently dropped and the record keeps the name it
-	 * was created with — which is exactly what happened when the three forms
-	 * that used to do this by hand became config.
+	 * The fieldname whose value IS the document's name. Editing it renames the
+	 * record, `rename_doc` first and the remaining fields after. Without this the
+	 * field accepts an edit that is silently dropped.
 	 */
 	renameField?: string
 }
@@ -200,20 +162,16 @@ export interface SettingsListSource {
 	orderBy?: string
 	/**
 	 * Which columns the search box matches, as `like` orFilters. Without it the
-	 * box renders and filters nothing — `useSettingsListResource` builds the
-	 * search from this list alone. It cannot be derived from `fields`: that
+	 * box renders and filters nothing. It cannot be derived from `fields`, which
 	 * would `like`-match check and int columns too.
 	 */
 	searchFields?: string[]
 	/** A whitelisted method returning rows, for catalogues with no doctype behind them. */
 	method?: string
 	/**
-	 * The page size the rows arrive in, when it is not the panel's own.
-	 *
-	 * Load More is offered while a page comes back full, so a method that
-	 * answers with a whole catalogue in one call must declare a size no
-	 * catalogue will reach — otherwise the fourteenth row makes the list offer
-	 * a page that does not exist, and fetching it appends the same rows again.
+	 * The page size the rows arrive in, when it is not the panel's own. Load More
+	 * is offered while a page comes back full, so a method that answers with a
+	 * whole catalogue must declare a size no catalogue will reach.
 	 */
 	pageLength?: number
 	/** Defaults to 'name'; catalogues keyed by something else say so. */
@@ -221,11 +179,9 @@ export interface SettingsListSource {
 }
 
 /**
- * A record page behind a list row, reached by the back-button header.
- *
- * `title` is called with an empty row for a create form, and for a deep link to
- * a record the list has not fetched yet — every implementation has to tolerate
- * that rather than assume a loaded row.
+ * A record page behind a list row, reached by the back-button header. `title` is
+ * called with an empty row for a create form and for a deep link to a record the
+ * list has not fetched, so every implementation has to tolerate that.
  */
 export type DetailPage =
 	| (FieldsPage & { title: (row: SettingsListRow) => string })
@@ -250,15 +206,13 @@ export type SettingsPage = FieldsPage | ListPage | CustomPage
 
 /**
  * The slice of an item the URL layer needs. `useSettingsHash` resolves a hash to
- * a slug and back; it has no business knowing what a page renders, and taking
- * the narrow type is what lets its tests declare two-line fixtures.
+ * a slug and back, and has no business knowing what a page renders.
  */
 export interface SettingsRoutableItem {
 	label: string
 	/**
-	 * The URL segment. Declared, never derived from the label: 'Payment >
-	 * Configuration' and 'Communication > Templates' both slugify badly, and
-	 * renaming a label would silently break every bookmark.
+	 * The URL segment, declared rather than derived from the label. Several
+	 * labels slugify badly, and renaming one would break every bookmark.
 	 */
 	slug: string
 	/**
