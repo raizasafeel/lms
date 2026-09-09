@@ -156,22 +156,38 @@ export function useSettingsListResource<TRow = Record<string, any>>(
 		return fetchFirstPage()
 	}
 
+	// The offset moves before the request goes out, so a failed fetch has to put
+	// it back: `list.onSuccess` never runs, the rows and hasNextPage are
+	// untouched, and leaving `start` advanced makes the NEXT Load More ask for
+	// the page after the one that failed -- silently skipping it. The rejection
+	// is contained here too; `@load-more="list.loadMore()"` binds no handler, so
+	// rethrowing only produced an unhandled rejection nobody saw.
 	const loadMore = () =>
-		enqueue(() => {
-			resource.start = resource.start + resource.pageLength
-			return resource.list.fetch()
+		enqueue(async () => {
+			const loaded = resource.start
+			resource.start = loaded + resource.pageLength
+			try {
+				return await resource.list.fetch()
+			} catch (error) {
+				resource.start = loaded
+				return undefined
+			}
 		})
 
-	// frappe-ui's own delete handler refetches with `fetch()`, which keeps the
-	// current start; past page one that concatenates onto the rows already shown
-	// and the deleted row stays on screen. The list has to go back to page one.
+	// frappe-ui's own delete handler refetches with `fetch()` from its own
+	// onSuccess, before this one runs, and that fetch keeps the current start;
+	// past page one it concatenates onto the rows already shown and the deleted
+	// row stays. Rewinding afterwards is too late: `list.onSuccess` reads `start`
+	// when the response LANDS, so the in-flight page-two request then takes the
+	// replace branch and renders rows 14-26 as page one. Rewind first, so the
+	// refetch frappe-ui starts is itself a page-one request.
 	const remove: SettingsListSource<TRow>['remove'] = (name, callbacks = {}) =>
 		enqueue(
 			() =>
 				new Promise((resolve) => {
+					resource.start = 0
 					resource.delete.submit(name, {
 						onSuccess: () => {
-							resource.start = 0
 							resolve(resource.reload())
 							callbacks.onSuccess?.()
 						},
