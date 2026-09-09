@@ -4,6 +4,7 @@ import { call, toast } from 'frappe-ui'
 import { createDialog } from '@/utils/dialogs'
 import EmailTemplates from '@/components/Settings/EmailTemplate/EmailTemplates.vue'
 import { reloadSettingsLists } from '@/composables/useSettingsListResource'
+import { deleteRow } from '@/components/Settings/rowActions'
 import { cleanError } from '@/utils'
 import type { CustomPage } from '@/types/settingsSchema'
 import type { SettingsListColumn, SettingsListRow } from '@/types'
@@ -28,18 +29,11 @@ export const TEMPLATE_SEARCH_FIELDS = ['name', 'subject']
 
 export const TEMPLATE_ORDER_BY = 'modified desc'
 
-const removeTemplate = async (row: SettingsListRow) => {
-	try {
-		await call('frappe.client.delete', { doctype: DOCTYPE, name: row.name })
-		toast.success(__('Email Template deleted successfully'))
-		await reloadSettingsLists(DOCTYPE)
-	} catch (err: any) {
-		toast.error(
-			cleanError(err.messages?.[0] || err) ||
-				__('Error deleting email template')
-		)
-	}
-}
+const removeTemplate = deleteRow(
+	DOCTYPE,
+	'Email Template deleted successfully',
+	'Error deleting email template'
+)
 
 const confirmDeletion = (row: SettingsListRow) => {
 	createDialog({

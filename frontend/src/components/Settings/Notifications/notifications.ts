@@ -1,5 +1,6 @@
 import { defineAsyncComponent, markRaw } from 'vue'
 import { call, toast } from 'frappe-ui'
+import { toggleRowField } from '@/components/Settings/rowActions'
 import { cleanError } from '@/utils'
 import type { DetailPage, ListPage, SelectOption } from '@/types/settingsSchema'
 import type { SettingsListColumn, SettingsListRow } from '@/types'
@@ -54,16 +55,10 @@ export const channelLabel = (row: SettingsListRow): string => {
  * The Enabled switch's write. Optimistic, with a rollback: the row flips under
  * the pointer and a refused write puts it back to what the server still holds.
  */
-const toggleEnabled = async (row: SettingsListRow, value: boolean) => {
-	const previous = row.enabled
-	row.enabled = value ? 1 : 0
-	try {
-		await call(METHOD.set, { name: row.name, enabled: row.enabled })
-	} catch (err: any) {
-		row.enabled = previous
-		toast.error(cleanError(err.messages?.[0] || err) || __('Could not save'))
-	}
-}
+const toggleEnabled = toggleRowField(
+	(row, value) => call(METHOD.set, { name: row.name, enabled: value }),
+	'Could not save'
+)
 
 const columns: SettingsListColumn[] = [
 	{
