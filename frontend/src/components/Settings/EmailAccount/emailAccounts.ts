@@ -20,16 +20,9 @@ import type {
 } from '@/types'
 
 /**
- * Email accounts, as data — everything except the provider picker.
- *
- * The picker is why this panel keeps a component at all. It comes before any
- * field, it decides which fields there are, and until it has been answered
- * there is nothing to draw. What follows it is ordinary: the field sets below
- * are what the form renders from, and the two payload builders are what the
- * create and update paths send.
- *
- * Every translated string is produced inside a function or a getter — `__` is
- * installed on window only after the settings tree has finished importing.
+ * Email accounts, as data, everything except the provider picker. The picker is
+ * why this panel keeps a component: it comes before any field and decides which
+ * fields there are.
  */
 
 declare global {
@@ -47,13 +40,8 @@ export const DOCTYPE = 'Email Account'
 
 /**
  * The endpoints this page reads and writes through, rather than the generic
- * `frappe.client.*` calls it used to.
- *
- * Core Email Account grants a DocPerm to System Manager and to Inbox User and
- * to nobody else, and settings is Moderator-gated — so every one of those
- * generic calls was refused and the page rendered empty over a table that was
- * not. Each of these checks `Moderator` itself, the same shape as Settings >
- * Users, which `lms.lms.api.get_members` fronts for the same reason.
+ * `frappe.client.*` calls it used to. Core Email Account grants no DocPerm to
+ * Moderator, so those calls were refused over a table that was not empty.
  */
 const METHOD = {
 	list: 'lms.lms.email_account.get_email_accounts',
@@ -69,9 +57,8 @@ export { METHOD as EMAIL_ACCOUNT_METHODS }
 
 /**
  * The page size the list arrives in. Load More is offered while a page comes
- * back full, so this has to be what the endpoint pages at —
- * `EMAIL_ACCOUNTS_PAGE_LENGTH` in lms/lms/email_account.py, which is this same
- * 13.
+ * back full, so this has to match `EMAIL_ACCOUNTS_PAGE_LENGTH` in
+ * lms/lms/email_account.py.
  */
 export const EMAIL_ACCOUNTS_PAGE_LENGTH = 13
 
@@ -80,21 +67,15 @@ export const FRAPPE_MAIL = 'Frappe Mail'
 
 /**
  * A server with no preset, whose host, port and encryption the user types.
- *
- * Email Account's own `service` Select has no such option — a hand-entered
- * server is stored with no service at all — so this name lives on the client
- * and on the endpoint, and the blank is what reaches the document.
+ * Email Account's own `service` Select has no such option, so this name lives on
+ * the client and on the endpoint, and a blank reaches the document.
  */
 export const CUSTOM_SERVICE = 'Custom'
 
 /**
- * What the endpoints hand back. `name` is the id; it equals the account name.
- *
- * The three credentials are absent, and the server's own allowlist is what
- * enforces that: `password` and `api_secret` are Password fields whose column
- * holds a mask the length of the secret, and `api_key` is a credential stored
- * in the clear. An existing account's credential is only ever replaced here,
- * never shown, so the form has no use for any of them.
+ * What the endpoints hand back. `name` is the id, and equals the account name.
+ * The three credentials are absent, because an existing account's credential is
+ * only ever replaced here, never shown.
  */
 export const ACCOUNT_FIELDS = [
 	'name',
@@ -227,11 +208,9 @@ export const frappeMailFields: RenderField[] = [
 ]
 
 /**
- * The hosts and ports a preset would otherwise have supplied.
- *
- * Ports are `text` rather than a number control on purpose: they reach the
- * endpoint as strings either way, and a spinner on a value nobody increments
- * one at a time is a control that invites the wrong gesture.
+ * The hosts and ports a preset would otherwise have supplied. Ports are `text`
+ * rather than a number control: they reach the endpoint as strings either way,
+ * and a spinner invites the wrong gesture on a value nobody increments.
  */
 export const customServerFields: RenderField[] = [
 	{
@@ -291,8 +270,8 @@ export const customServerSwitches: RenderField[] = [
 
 /**
  * Names match the Email Account `service` field options exactly so the backend
- * can map each to its host/port presets — except Custom, which has none and is
- * stored as a blank service.
+ * can map each to its host and port presets. Custom has none and is stored as a
+ * blank service.
  */
 export const services: EmailService[] = [
 	{
@@ -385,11 +364,9 @@ type EmailAccountFormState = {
 }
 
 /**
- * `allowMissingCredentials` is what an existing account is read under: the
- * endpoints hand back no password, API key or API secret, so a blank one is the
- * form never having been given the stored value rather than the user
- * withholding it. The update endpoint reads a blank the same way and leaves the
- * stored credential alone.
+ * `allowMissingCredentials` is what an existing account is read under. The
+ * endpoints hand back no password, API key or API secret, so a blank one is a
+ * value the form was never given rather than one the user withheld.
  */
 export function validateInputs(
 	state: EmailAccountFormState,
@@ -436,11 +413,9 @@ export function defaultsBadgeLabel(account: {
 	enable_incoming?: boolean | number
 	enable_outgoing?: boolean | number
 }): string {
-	// Each default counts only for a direction the account is enabled for, which
-	// is the same reading the row menu takes: frappe resolves a default inbox as
-	// `enable_incoming` AND `default_incoming`, so the flag on a disabled
-	// direction is one nothing consults. Reporting it anyway advertised a "Default
-	// Inbox" whose "Clear default inbox" entry the menu had already withdrawn.
+	// Each default counts only for a direction the account is enabled for. Frappe
+	// resolves a default inbox as `enable_incoming` and `default_incoming`, so the
+	// flag on a disabled direction is one nothing consults.
 	const inbox = Boolean(account.default_incoming && account.enable_incoming)
 	const sending = Boolean(account.default_outgoing && account.enable_outgoing)
 
@@ -512,14 +487,9 @@ export const buildCreatePayload = (state: EmailAccountState) => {
 }
 
 /**
- * What update_email_account is sent. The account name is absent on purpose: it
- * is the document id, so changing it is a rename rather than a write.
- *
- * This one goes straight at the document, so unlike the create payload it
- * writes the document's own field names: no `service` for a custom server, and
- * the login split across the two fields Email Account keeps it in. A credential
- * that goes over blank is left as it is — the endpoint never handed one back
- * for the form to show.
+ * What update_email_account is sent. The account name is absent because it is
+ * the document id, so changing it is a rename. A credential that goes over
+ * blank is left alone; the endpoint never handed one back for the form to show.
  */
 export const buildUpdatePayload = (state: EmailAccountState) => {
 	if (state.service === FRAPPE_MAIL)
@@ -583,14 +553,9 @@ const confirmDeletion = (row: SettingsListRow) => {
 }
 
 /**
- * Move one of the two site-wide defaults onto this account, or off it.
- *
- * Not the optimistic write with a rollback that Zoom's `enabled` switch does,
- * and not a switch column either. Both defaults are singletons: setting one
- * here clears it on whichever account held it before, so the write changes a
- * row that is not the one under the pointer, and no per-row rollback can put
- * that row back. The list refetches instead, which is what Delete does and for
- * the same reason.
+ * Move one of the two site-wide defaults onto this account, or off it. Both
+ * defaults are singletons, so setting one here clears it on whichever account
+ * held it before, and the list refetches rather than rolling a row back.
  */
 const setDefault = async (
 	row: SettingsListRow,
@@ -617,8 +582,8 @@ const setDefault = async (
 
 /**
  * The row menu's two default entries, present only for a direction the account
- * is enabled for: Frappe reads a default inbox as `enable_incoming` AND
- * `default_incoming`, so the flag on a disabled account is one nothing consults.
+ * is enabled for. Frappe reads a default inbox as `enable_incoming` and
+ * `default_incoming`, so the flag on a disabled account is never consulted.
  */
 const defaultOptions = (row: SettingsListRow) => {
 	const entries = []
@@ -682,10 +647,9 @@ const columns: SettingsListColumn[] = [
 	},
 ]
 
-// Loaded on demand, and that is what keeps the two files apart rather than a
-// preference: the form reads its field sets and payload builders from here, so
-// naming it with a static import would close a cycle — whichever of the two was
-// entered first would reach this line with the other still half-evaluated.
+// Loaded on demand to keep the two files apart. The form reads its field sets
+// and payload builders from here, so a static import would close a cycle and
+// leave whichever file was entered first half-evaluated.
 const form = markRaw(
 	defineAsyncComponent(() => import('./EmailAccountForm.vue'))
 )
@@ -694,12 +658,9 @@ export const emailAccountsPage: ListPage = {
 	kind: 'list',
 	resource: {
 		doctype: DOCTYPE,
-		// Read by the endpoint, not by a get_list call — it applies its own
-		// search, its own page length and its own scope. The doctype above is
-		// carried anyway, as the key `reloadSettingsLists` refetches this list
-		// by; the fields, so the row shape a column reaches for is written down
-		// in one place. The accounts frappe ships as examples are hidden by the
-		// endpoint, which is the only place a method-backed list can hide them.
+		// Read by the endpoint, not by a get_list call. It applies its own search,
+		// page length and scope, and hides the accounts frappe ships as examples.
+		// The doctype above is still the key `reloadSettingsLists` refetches by.
 		method: METHOD.list,
 		fields: ACCOUNT_FIELDS,
 		pageLength: EMAIL_ACCOUNTS_PAGE_LENGTH,

@@ -38,17 +38,12 @@ import { cleanError } from '@/utils'
 
 /**
  * Copies an Email Template's Subject and Message onto the notification record
- * behind it, mirroring frappe/email/doctype/notification/notification.js's
- * own `fetch_email_template` (lines 168-200): pick a body from `use_html`
- * with the other column as a fallback, and — the part this exists for — warn
- * before overwriting content the admin already wrote rather than doing it
- * silently.
- *
- * The confirmation is a second step of THIS dialog rather than a nested
- * `createDialog`, one modal at a time, and 'Choose a template' / 'Replace
- * this?' as one small state machine rather than two dialogs stacked on top of
- * each other.
+ * behind it, mirroring core's own `fetch_email_template`, and warns before
+ * overwriting content the admin already wrote rather than doing it silently.
  */
+
+// The confirmation is a second step of this dialog rather than a nested
+// `createDialog`, so there is one modal at a time.
 
 const props = defineProps<{
 	currentSubject?: string | null
@@ -68,15 +63,15 @@ const selected = ref('')
 const error = ref('')
 const loading = ref(false)
 
-// Fetched once, on the first press of "Use template" — held here so pressing
-// Replace on the confirm step does not fetch the same template a second time.
+// Fetched once, on the first press of "Use template", and held here so pressing
+// Replace on the confirm step does not fetch the same template again.
 const pending = ref<{ subject: string; message: string } | null>(null)
 
 watch(show, (open) => {
 	if (open) return
-	// Cleared on close, not on open: the dialog closes itself the instant a
-	// template is applied (see `apply` below), and clearing on open would wipe
-	// that same tick's own state before the parent ever reads `pending`.
+	// Cleared on close, not on open. The dialog closes itself the instant a
+	// template is applied, and clearing on open would wipe that same tick's state
+	// before the parent ever reads `pending`.
 	step.value = 'pick'
 	selected.value = ''
 	error.value = ''
@@ -112,12 +107,9 @@ const fetchAndApply = async () => {
 			return
 		}
 		pending.value = { subject: template.subject || '', message: body }
-		// authored: the record already carries content this would overwrite —
-		// EITHER field, not just the Message. notification.js's own version
-		// checks a field against Notification's docfield default per field; this
-		// dialog checks both of the two fields it actually overwrites, so an
-		// admin who wrote only a Subject (message still blank) is warned too,
-		// not just one who wrote a Message.
+		// authored: the record already carries content this would overwrite, in
+		// either field. Checking both is what warns an admin who wrote only a
+		// Subject, not just one who wrote a Message.
 		const authored =
 			Boolean((props.currentSubject || '').trim()) ||
 			Boolean((props.currentMessage || '').trim())

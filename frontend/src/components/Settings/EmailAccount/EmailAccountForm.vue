@@ -152,19 +152,13 @@ import type { EmailService } from '@/types'
 
 /**
  * The one part of Settings > Communication > Email Accounts that is not config:
- * pick a provider, then fill in the fields that provider has.
- *
- * emailAccounts.ts owns the field sets, the validation and the payload shapes.
- * What is left here is the four things they cannot express: a choice that comes
- * before any field and decides which fields exist, a create that goes through a
- * whitelisted endpoint rather than an insert, an update that is two calls
- * because the account name is the document id, and a custom server whose host
- * and port only exist when no preset supplies them.
- *
- * Every call here names an LMS endpoint. Core Email Account grants no DocPerm
- * to Moderator, so the generic frappe.client.* calls this used to make were all
- * refused for the role the settings surface is gated on.
+ * pick a provider, then fill in the fields that provider has. emailAccounts.ts
+ * owns the field sets, the validation and the payload shapes.
  */
+
+// Every call here names an LMS endpoint. Core Email Account grants no DocPerm
+// to Moderator, so the generic frappe.client.* calls this used to make were all
+// refused for the role the settings pages are gated on.
 
 // The record the panel opened, or the id it reserves for one that does not
 // exist yet.
@@ -226,12 +220,9 @@ const credentialFields = computed(() =>
 )
 
 /**
- * Every field the update writes, which is what dirtiness is measured over.
- *
- * The custom-server set counts only while it is on screen, so switching
- * provider does not leave a hidden host reading as an unsaved change. The
- * account name is absent for the opposite reason: it is the document id, and a
- * rename is not a field write.
+ * Every field the update writes, which is what dirtiness is measured over. The
+ * custom-server set counts only while it is on screen. The account name is
+ * absent for the opposite reason: it is the document id, not a field.
  */
 const editable = computed(() =>
 	[
@@ -257,11 +248,9 @@ const selectService = (service: EmailService) => {
 }
 
 /**
- * The four direction flags and the custom-server switches come back as 0/1 and
- * are compared against booleans here, so they are converted once, on arrival.
- *
- * A hand-entered server is stored with no service at all, so the blank is read
- * back as Custom — otherwise the form has no provider and draws no field.
+ * The direction flags and the custom-server switches come back as 0/1 and are
+ * compared against booleans here, so they are converted once, on arrival. A
+ * hand-entered server is stored with no service, so the blank reads back Custom.
  */
 const seed = (account: Record<string, any>) => {
 	Object.assign(state, {
@@ -325,11 +314,9 @@ const updateAccount = async () => {
 			name: loaded.value.email_account_name,
 			new_name: state.email_account_name,
 		})
-		// Record it the moment it commits. The field write below can still fail
-		// on its own -- update_email_account calls doc.save(), which revalidates
-		// the credentials against the live server, so a wrong password is
-		// rejected there -- and a retry would otherwise rename from a name the
-		// server has already forgotten, which `_require_account` throws on.
+		// Record it the moment it commits. The field write below can still fail on
+		// its own, and a retry would otherwise rename from a name the server has
+		// already forgotten, which `_require_account` throws on.
 		loaded.value.email_account_name = state.email_account_name
 	}
 	if (fieldsDirty.value)
@@ -349,7 +336,7 @@ const submit = () => {
 	const creating = isNew.value
 	return runSave(saveState, {
 		// An existing account holds its password as the mask the server returns,
-		// so a blank one is not the user withholding it — allowMissingPassword.
+		// so a blank one is not the user withholding it.
 		validate: () =>
 			validateInputs(asFormState(state), state.service, !creating) ?? '',
 		run: () => (creating ? createAccount() : updateAccount()),

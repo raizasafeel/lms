@@ -40,32 +40,16 @@
 </template>
 
 <script setup lang="ts">
-// One provider field rendered as a control: whichever of the row's three cells
-// or its wrapped continuation lines is showing it. Shared so a `MultiSelect`
-// gets a `MultiLink` and a `Select` gets a `Select` in exactly one place, rather
-// than the value cell and the extra fields each carrying their own copy of the
-// same fieldtype branch.
-//
-// A frozen field (the row's own frozen state, handed down by the caller) reads
-// as text regardless of its fieldtype, for the same reason the row's other
-// cells do: a disabled control is skipped by a screen reader's forms mode and
-// exempt from the contrast minimum. A fieldtype this file has no control for
-// reads as that same text rather than as a defect notice: a value nobody can
-// edit is still a value the reader needs, and naming the fieldtype instead
-// dropped it.
-//
-// A declared `description` is NOT rendered. A condition row is one line of a
-// sentence the reader is composing, and a paragraph hanging under one cell
-// pushes the cells beside it apart and re-flows the row as the cascade changes.
-// Whatever a field needs to say has to fit its label or its options. The key
-// stays on RuleField because a declaration may still carry it; this screen is
-// what ignores it.
-//
-// Select-all is opted into here and nowhere else. A condition names a set the
-// reader is deliberately widening. "Every course we currently list" is a real
-// answer to "which courses?". The forms that pick instructors or related
-// courses are naming a few specific records, and an all-of button beside them
-// would only be a way to get it wrong in one click.
+// One provider field rendered as a control, shared so a `MultiSelect` gets a
+// `MultiLink` and a `Select` gets a `Select` in exactly one place.
+
+// A frozen field reads as text whatever its fieldtype, because a disabled
+// control is skipped by a screen reader's forms mode and exempt from the
+// contrast minimum. An unknown fieldtype reads as that same text.
+
+// A declared `description` is not rendered, and select-all is opted into here
+// and nowhere else: a condition names a set the reader is widening, where the
+// forms that pick instructors name a few specific records.
 import { computed } from 'vue'
 import { MultiSelect, Select } from 'frappe-ui'
 import MultiLink from '@/components/Controls/MultiLink.vue'
@@ -123,9 +107,8 @@ const selectOptions = computed<Option[]>(() => {
 const staticOptions = computed<Option[]>(() => selectOptions.value)
 
 // A declared default stands in for an absent value only where the backend does
-// the same, on an optional field. A `reqd` field the rule does not carry
-// matches nobody, so it reads empty and the row's validation has something to
-// act on.
+// the same, on an optional field. A `reqd` field the rule does not carry matches
+// nobody, so it reads empty and the row's validation has something to act on.
 const selectValue = computed<string>(() => {
 	if (typeof props.modelValue === 'string') return props.modelValue
 	return props.field.reqd ? '' : props.field.default ?? ''

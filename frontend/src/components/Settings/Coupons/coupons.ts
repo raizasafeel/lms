@@ -9,12 +9,8 @@ import type { SelectOption } from '@/types/settingsSchema'
 import type { SettingsListColumn, SettingsListRow } from '@/types'
 
 /**
- * Settings > Coupons, as config. Coupons.vue draws the list and the form; what
- * a coupon is — which doctype, which columns, which choices — is here.
- *
- * Every translated string is produced inside a function or a getter: `__` is
- * installed on window by translationPlugin, which runs after this module has
- * been evaluated, so a `__()` at module scope would call an undefined global.
+ * Settings > Coupons, as config. Coupons.vue draws the list and the form; which
+ * doctype, which columns and which choices are here.
  */
 
 export const COUPON_DOCTYPE = 'LMS Coupon'
@@ -40,7 +36,7 @@ export const discountTypeOptions = (): SelectOption[] => [
 	{ label: __('Fixed Amount'), value: 'Fixed Amount' },
 ]
 
-/** What an applicable item can point at — the child table's own Select. */
+/** What an applicable item can point at, from the child table's own Select. */
 export const applicableDoctypeOptions = (): SelectOption[] => [
 	{ label: __('Course'), value: 'LMS Course' },
 	{ label: __('Batch'), value: 'LMS Batch' },
@@ -49,8 +45,7 @@ export const applicableDoctypeOptions = (): SelectOption[] => [
 /**
  * A new coupon before it exists. `enabled` is seeded rather than left to the
  * doctype default so the header switch says what will be saved, and the child
- * table starts empty because a row with nothing chosen is not an applicable
- * item — the form drops those on save either way.
+ * table starts empty because the form drops empty rows on save either way.
  */
 export const newCoupon = (): SettingsListRow => ({
 	enabled: 1,
@@ -65,8 +60,8 @@ export const discountLabel = (row: SettingsListRow): string => {
 	return ''
 }
 
-// A coupon with no expiry never expires, and dayjs(null) is an Invalid Date —
-// so the cell is left blank rather than filled with one.
+// A coupon with no expiry never expires, and dayjs(null) is an Invalid Date, so
+// the cell is left blank rather than filled with one.
 const expiryLabel = (row: SettingsListRow): string =>
 	row.expires_on ? dayjs(row.expires_on).format('DD MMM YYYY') : ''
 
@@ -79,9 +74,8 @@ const redeemedLabel = (row: SettingsListRow): string => {
 
 /**
  * Optimistic, with a rollback. The row flips under the pointer and the write
- * follows it; a rejected write puts the row back. Nothing reloads the list
- * here, so without the rollback the row would keep showing a state the server
- * refused.
+ * follows it. Nothing reloads the list here, so without the rollback the row
+ * would keep showing a state the server refused.
  */
 const toggleEnabled = async (row: SettingsListRow, value: boolean) => {
 	const previous = row.enabled
@@ -172,9 +166,9 @@ export const couponColumns: SettingsListColumn[] = [
 		value: redeemedLabel,
 	},
 	{
-		// A switch, not a status badge: whether a code still works is a thing to
+		// A switch, not a status badge. Whether a code still works is a thing to
 		// change from the list, and a badge only reported it. Same column shape
-		// Badges and Zoom accounts use, optimistic write and all.
+		// Badges and Zoom accounts use.
 		key: 'enabled',
 		get label() {
 			return __('Enabled')

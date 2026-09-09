@@ -133,15 +133,9 @@ import { cleanError } from '@/utils'
 import type { SettingsListRow } from '@/types'
 
 /**
- * One badge, behind both New and a row.
- *
- * Hand-rolled rather than routed through SettingsFields, after CRM's
- * `Settings/Telephony/TwilioSettings.vue`: a `space-y-4` body, text fields in a
- * two-column grid, and a rule between sections.
- *
- * Handed the open record's name and reporting only that it is finished, the
- * same contract ZoomAccountForm.vue has. `row` comes with it so the header can
- * name the badge before its document lands.
+ * One badge, behind both New and a row. Hand-rolled rather than routed through
+ * SettingsFields, after CRM's TwilioSettings.vue: a `space-y-4` body, text
+ * fields in a two-column grid, and a rule between sections.
  */
 
 const props = defineProps<{
@@ -157,8 +151,8 @@ const error = state.error
 
 const record = computed(() => props.name ?? null)
 
-// A draft is dirty against the defaults it opened on, not against emptiness:
-// the source's own answer for a new record is "holds anything at all", and a
+// A draft is dirty against the defaults it opened on, not against emptiness.
+// The source's own answer for a new record is "holds anything at all", and a
 // badge opens holding an event and a user field already.
 const pristine = ref('')
 
@@ -215,7 +209,7 @@ const validate = (): string => {
 }
 
 // cleanError() calls String.replace on what it is handed, so an error carrying
-// only `message` — a network failure, say — throws inside the handler unless
+// only `message`, such as a network failure, throws inside the handler unless
 // the lookup settles on a string first.
 const failureMessage = (err: any, fallback: string): string => {
 	const message = err?.messages?.[0] || err?.message

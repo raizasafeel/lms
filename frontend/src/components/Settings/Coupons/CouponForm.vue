@@ -160,11 +160,8 @@ import {
 import type { SettingsListRow } from '@/types'
 
 /**
- * One coupon, drawn by hand rather than by SettingsFields: a coupon is a code
- * and a discount and the rows it applies to, not a column of labelled controls.
- *
- * Handed the open record's name and reporting only that it is finished, the
- * same contract ZoomAccountForm.vue has — 'new' is a record name like any
+ * One coupon, drawn by hand rather than by SettingsFields, because a coupon is a
+ * code and a discount and the rows it applies to. 'new' is a record name like any
  * other, so New and an existing coupon are one component.
  */
 
@@ -181,11 +178,8 @@ const error = state.error
 const record = computed(() => props.name ?? null)
 
 // A draft is dirty against the defaults it opened on, not against emptiness.
-// newCoupon() seeds an enabled flag, a discount type and an empty item table,
-// and useSettingsSource's draftIsDirty calls a draft holding anything at all
-// dirty -- so New Coupon opened already reading "Not saved", with Save enabled
-// and Back or Escape raising the discard prompt over values nobody typed.
-// BadgeForm carries the same snapshot for the same reason.
+// newCoupon() seeds three values and draftIsDirty calls a draft holding anything
+// at all dirty, so New Coupon opened already reading "Not saved".
 const pristine = ref('')
 
 const snapshot = (value: SettingsListRow | null) =>
@@ -198,10 +192,8 @@ const { source, doc, isNew, isDirty, enabled } = useSettingsRecord({
 })
 
 // `immediate` because the form mounts with the record already chosen, so
-// `isNew` never transitions — it is true from setup. useSettingsSource's own
-// `isNew` watcher is not immediate either, so the draft built at setup is the
-// one that stays and there is nothing waiting to overwrite this. `flush: post`
-// still covers a later transition.
+// `isNew` never transitions. useSettingsSource's own `isNew` watcher is not
+// immediate either, so the draft built at setup is the one that stays.
 watch(
 	() => source.isNew,
 	(seeding) => {
@@ -255,8 +247,8 @@ const filledItems = (): SettingsListRow[] =>
 	items.value.filter((item) => item.reference_name)
 
 // Four of these are reqd on the doctype, so the server would reject an
-// incomplete coupon anyway — one field per round trip. Naming the first gap
-// here is additive: everything past it still has to survive the server.
+// incomplete coupon one field per round trip. Naming the first gap here is
+// additive: everything past it still has to survive the server.
 const validate = (): string => {
 	const current = doc.value
 	if (!current?.code) return __('Coupon Code is required')

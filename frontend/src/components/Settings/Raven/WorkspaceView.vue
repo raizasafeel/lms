@@ -104,35 +104,13 @@
 </template>
 
 <script setup lang="ts">
-// The unsaved marker sits beside the title, not beside the button, following
-// CRM's SettingsPage.
-// Workspace detail: CRM's Settings/Sla/SlaPolicyView shell (back arrow + title on
-// the left, Save on the right) around the General / Channels / Members tab set
-// Raven's own settings/Workspaces/ViewWorkspace.tsx uses for the same record.
-//
-// A record that does not exist yet is the same page, which is SlaPolicyView's
-// shape too: it titles an unsaved policy "New SLA Policy" and its one action is
-// labelled Save whether the record exists or not (SlaPolicyView.vue:9, :34). So
-// there is no Create button here, the button never changes under the user, and
-// the page it sits on never changes shape either.
-//
-// Name and Visibility sit above the tab strip, as SlaPolicyView puts a policy's
-// own name above its tabs: they describe the record itself, so they are not one
-// of the things it contains. That also puts them on screen wherever you are,
-// which is why the "Not Saved" badge and Save no longer come and go with the
-// tab. Both are marked required so the asterisk is frappe-ui's own indicator,
-// which carries "(required)" for a screen reader rather than being colour and
-// punctuation alone.
-//
-// The draft lives in useWorkspaceGeneral, owned here, so the header can read
-// `dirty` without reaching into a tab.
-//
-// The header holds only what acts on the record as a whole, Save. A workspace
-// mapping has no on/off of its own: the channels under it carry that, and it is
-// their sync that Enabled ever governed. "Open in Raven", and everything else
-// done *to* a mapping rather than inside it, lives on the mapping's row in the
-// list that led here, so there is one place to look for it whichever page you
-// are on.
+// Workspace detail: CRM's SlaPolicyView shell around the tab set Raven's own
+// ViewWorkspace.tsx uses. A record that does not exist yet is the same page, so
+// the button never changes under the user and there is no Create.
+
+// Name and Visibility sit above the tab strip because they describe the record
+// rather than something it contains, which keeps the unsaved marker and Save on
+// screen wherever you are. The draft lives in useWorkspaceGeneral.
 import {
 	Badge,
 	Button,
@@ -191,10 +169,8 @@ const tabs = [
 ]
 
 // Three states, not two: in flight, loaded, and failed. onError only toasts, so
-// a failed fetch leaves `data` null with `loading` false, the same shape as "not
-// loaded yet". A spinner gated on the data alone therefore spins for as long as
-// the tab is open, with nothing on the page to retry from. ChannelView gates its
-// own on `loading` for this reason.
+// a failed fetch leaves `data` null with `loading` false, and a spinner gated on
+// the data alone would spin for as long as the tab is open.
 const resource = createResource<WorkspaceDetail>({
 	url: 'raven_integration.api.get_workspace',
 	onError(err: { messages?: string[] }) {

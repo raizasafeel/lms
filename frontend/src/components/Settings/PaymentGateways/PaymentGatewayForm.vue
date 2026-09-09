@@ -129,18 +129,9 @@ import type { SettingsDocumentResource } from '@/composables/useSettingsSource'
 import type { SettingsListRow } from '@/types'
 
 /**
- * One payment gateway, behind both New and a row.
- *
- * The form is not a fields panel. A gateway declares its own credentials —
- * `lms.lms.api.get_new_gateway_fields` reads them off whichever <Provider>
- * Settings doctype the payments app ships — so what is drawn is decided per
- * provider, but how it is drawn is fixed here: credentials in a two-column grid
- * of FormControls, and anything that is a state rather than a value (a sandbox
- * switch, a header image) as its own row beneath a divider. That is CRM's
- * Telephony > Twilio form, which is the same shape.
- *
- * Handed the open gateway's name and reporting only that it is finished, the
- * same contract ZoomAccountForm.vue has. NEW_GATEWAY is a name like any other.
+ * One payment gateway, behind both New and a row. A gateway declares its own
+ * credentials, so what is drawn is decided per provider while how it is drawn is
+ * fixed here, following CRM's Telephony > Twilio form.
  */
 
 const props = defineProps<{ name?: string | null }>()
@@ -188,12 +179,8 @@ const draft = reactive<SettingsListRow>({})
 
 /**
  * The credentials document itself, entered only once the server has said which
- * doctype and record hold it.
- *
- * It carries its own `isDirty` and a `save` that sends the changed fields and
- * nothing else — the same resource useSettingsSource wraps. This page cannot
- * use that composable: it fixes the doctype at setup, and here the doctype is
- * not known until get_payment_gateway_details answers.
+ * doctype and record hold it. useSettingsSource cannot be used here, because it
+ * fixes the doctype at setup and this one is not known until the answer arrives.
  */
 const settings = shallowRef<SettingsDocumentResource | null>(null)
 
@@ -217,14 +204,9 @@ const reportError = (err: any, fallback: string) =>
 	toast.error(cleanError(err?.messages?.[0] || err) || fallback)
 
 /**
- * A configured gateway's fields and the document behind them.
- *
- * The metadata comes from the whitelisted method because only the server knows
- * where a gateway keeps its credentials: `gateway_controller` names the record
- * when there is one, and a Single keeps them under the doctype's own name. The
- * values then come from the document itself rather than from the method's copy
- * of them, which is what makes the save a set_value of the fields that changed
- * instead of a rewrite of every field on the form.
+ * A configured gateway's fields and the document behind them. Only the server
+ * knows where a gateway keeps its credentials. The values come from the document
+ * rather than the method's copy, so the save writes only what changed.
  */
 const loadGateway = async (gateway: string) => {
 	fetching.value = true
@@ -239,9 +221,8 @@ const loadGateway = async (gateway: string) => {
 			name: details.docname,
 			auto: true,
 			// The try/catch above covers get_payment_gateway_details only. This
-			// resource fetches on its own, and frappe-ui nulls `doc` on a failed
-			// get -- which `loading` reads as "still loading", so a deleted or
-			// unreadable credentials record left the panel spinning forever.
+			// resource fetches on its own, and frappe-ui nulls `doc` on a failed get,
+			// which `loading` reads as still loading and spins forever.
 			onError: (err: any) => {
 				reportError(err, __('Error loading payment gateway'))
 				emit('back')
@@ -256,16 +237,9 @@ const loadGateway = async (gateway: string) => {
 }
 
 /**
- * The providers that can still be added.
- *
- * Only `<Provider> Settings` doctypes: the payments app keeps other things in
- * the same module (GoCardless Mandate), and a doctype matched on its first word
- * alone would offer one of those as a provider.
- *
- * Which gateways already exist has to come from its own unfiltered, unpaged
- * query. Reading it off the list on screen meant a search term or the 13-row
- * page hid a configured gateway, and offering it again overwrites its
- * credentials.
+ * The providers that can still be added, matched on the full `<Provider>
+ * Settings` name. Which gateways exist needs its own unfiltered query, or the
+ * 13-row page hides one and offering it again overwrites its credentials.
  */
 const loadProviders = async () => {
 	fetching.value = true
@@ -408,10 +382,9 @@ const fileName = (value: unknown) =>
 	typeof value === 'string' ? value.split('/').pop() : ''
 
 /**
- * A draft is dirty once a field holds something the provider did not put there
- * itself, compared field by field against the defaults it was seeded from — so
- * picking a provider whose sandbox box is checked by default does not on its
- * own count as an edit waiting to be saved.
+ * A draft is dirty once a field holds something the provider did not put there,
+ * compared field by field against the defaults it was seeded from. Picking a
+ * provider whose sandbox box is checked by default is not an edit.
  */
 const draftIsDirty = () =>
 	fields.value.some(
@@ -433,12 +406,9 @@ useDirtyGuard(
 )
 
 /**
- * A gateway that does not exist yet.
- *
- * A Single has nowhere to insert, so its credentials are written onto the
- * doctype's own record; anything else is a new document. Either way the
- * provider's own `on_update` is what creates the Payment Gateway the list
- * shows, which is why the list is refetched rather than added to.
+ * A gateway that does not exist yet. A Single has nowhere to insert, so its
+ * credentials go onto the doctype's own record. Either way the provider's
+ * `on_update` creates the Payment Gateway the list shows, hence the refetch.
  */
 const createGateway = async () => {
 	const chosen = chosenProvider.value
@@ -479,7 +449,7 @@ const save = () => {
 }
 
 // The form mounts on the gateway the list opened, so this is where the load
-// runs. Placed last because both loaders are consts — calling either from
+// runs. Placed last because both loaders are consts, and calling either from
 // higher up would reach them before their initialiser has run.
 if (isNew.value) loadProviders()
 else if (currentGateway.value) loadGateway(currentGateway.value)

@@ -110,8 +110,7 @@ interface SystemPreferences {
 }
 
 // The shape this page uses of a frappe-ui document resource. `isDirty` is the
-// resource's own doc-vs-originalDoc comparison, and `submit()` resolves with
-// the saved document or rejects — it also skips the round trip entirely when
+// resource's own comparison, and `submit()` skips the round trip entirely when
 // nothing changed, so calling it on a clean doc is free.
 interface SettingsResource {
 	doc: Record<string, any>
@@ -123,9 +122,8 @@ interface SettingsResource {
 }
 
 // `label` and `description` are the sidebar item's, handed down by Settings.vue
-// to every panel component. This page draws neither — its two sections head
-// themselves — but both stay declared: undeclared props fall through to the
-// root element, and `label="General"` on a div is not markup we want.
+// to every panel. This page draws neither, but both stay declared: undeclared
+// props fall through to the root element.
 const props = defineProps<{
 	label: string
 	description?: string
@@ -135,10 +133,9 @@ const props = defineProps<{
 const settingsStore = useSettings()
 const user = inject<User>('$user')
 
-// Settings.vue hands the LMS Settings resource down as `data`. Reaching for
-// the document here when it does not is not a second copy:
-// createDocumentResource returns the instance already cached under this
-// doctype + name.
+// Settings.vue hands the LMS Settings resource down as `data`. Reaching for the
+// document here when it does not is not a second copy, because
+// createDocumentResource returns the instance already cached under this name.
 function cachedSettings(): SettingsResource {
 	return createDocumentResource({
 		doctype: 'LMS Settings',
@@ -155,15 +152,9 @@ const canEditSystem = computed<boolean>(
 	() => user?.data?.is_system_manager === true
 )
 
-// An LMS Settings doc saved before text_direction existed comes back with the
-// field null, and a Select bound to null renders an empty "Select option".
-//
-// Resolve it for display only. Writing Auto onto the doc would be a change
-// against originalDoc, so documentResource would report the panel dirty the
-// instant it opened and the header would read "Not saved" before the user had
-// touched anything. Nothing is lost by not persisting it: resolve_text_direction
-// singles out only 'Left to Right' and 'Right to Left', so a null field and an
-// explicit Auto already mean the same thing to the server.
+// An LMS Settings doc saved before text_direction existed comes back null, and
+// a Select bound to null renders an empty "Select option". Resolved for display
+// only, because writing Auto onto the doc would report the panel dirty on open.
 const TEXT_DIRECTION_DEFAULT = 'Auto'
 
 const textDirection = computed<string>({
@@ -183,11 +174,9 @@ const systemValues: Record<SystemField, Ref<string>> = {
 	time_zone: systemTimezone,
 }
 
-// Bumped to remount the control whose clear was refused. Both controls draw a
-// frappe-ui Combobox, which keeps the text it displays in an internal `query`
-// ref and re-derives it from the value only once the popover closes — so
-// restoring a value the prop already held would leave the box looking empty
-// until then. Remounting re-derives it now.
+// Bumped to remount the control whose clear was refused. frappe-ui's Combobox
+// keeps its display text in an internal ref and re-derives it only once the
+// popover closes, so restoring a value the prop already held looks empty.
 const controlKey = reactive<Record<SystemField, number>>({
 	language: 0,
 	time_zone: 0,
@@ -201,12 +190,9 @@ const preferences = createResource({
 const savePreferences = createResource({
 	url: 'lms.lms.api.set_system_preferences',
 })
-// The permission AND the answer. `get_system_preferences` only starts fetching
-// when this panel mounts, while the panel itself renders as soon as the
-// app-start LMS Settings resource has a doc -- so both controls were live for a
-// window in which `systemDirty` reads false (no server value to compare
-// against) and the arrival watcher then overwrites whatever was picked. The
-// choice vanished with no write, no error and no "Not saved" marker.
+// The permission and the answer. `get_system_preferences` starts fetching only
+// when this panel mounts, so both controls were live for a window in which the
+// arrival watcher then overwrote whatever was picked.
 const systemEditable = computed<boolean>(
 	() => canEditSystem.value && Boolean(preferences.data)
 )
@@ -262,10 +248,9 @@ const accessSections = [
 			},
 		],
 	},
-	// Communication's own General page was dissolved into this one, so these
-	// two sections arrive whole rather than being redistributed. They write
-	// LMS Settings, which is the doc this page already autosaves, so they need
-	// no writer of their own.
+	// Communication's own General page was dissolved into this one, so these two
+	// sections arrive whole. They write LMS Settings, which this page already
+	// autosaves, so they need no writer of their own.
 	{
 		label: 'Contact Information',
 		fields: [
@@ -285,9 +270,9 @@ const accessSections = [
 			},
 		],
 	},
-	// Not a notification gate: it decides whether a booking carries a calendar
-	// invite, not whether the evaluation mail is sent, which is why it sits here
-	// with the rest of the site's contact settings.
+	// Not a notification gate. It decides whether a booking carries a calendar
+	// invite, not whether the evaluation mail is sent, which is why it sits with
+	// the rest of the site's contact settings.
 	{
 		label: 'Evaluations',
 		fields: [
@@ -302,12 +287,9 @@ const accessSections = [
 	},
 ]
 
-// Two writers, because the values on this page live in two places: the three
-// access toggles and the text direction are LMS Settings fields, while the
-// language and the timezone are System Settings and only reach the server
-// through a System Manager-gated endpoint. Committing one must not write the
-// other — a moderator changing a toggle has no business issuing a privileged
-// call, and a language change should not push an unrelated doc.
+// Two writers, because the values on this page live in two places. The toggles
+// and the text direction are LMS Settings; the language and timezone are System
+// Settings behind a gated endpoint. Committing one must not write the other.
 const docSave = useAutosave({
 	isDirty: () => Boolean(settings.isDirty),
 	write: () =>
@@ -316,7 +298,7 @@ const docSave = useAutosave({
 
 // The system pair has no document behind it, so its clean value is what the
 // endpoint last returned. Reloading that resource after a write is what takes
-// the pair out of "Not saved" — the same shape as originalDoc, one level up.
+// the pair out of "Not saved".
 const systemDirty = computed<boolean>(() => {
 	const data = preferences.data as SystemPreferences | undefined
 	if (!data) return false
@@ -341,18 +323,9 @@ const systemSave = useAutosave({
 // is not dirty, so a commit here writes only when there is something to write.
 const commitSystem = () => systemSave.commit('now')
 
-// Emptying either control is not one of the choices this pair offers. Link
-// clears to '' and Combobox to null, and the endpoint guards each field with
-// `if value:` — so a cleared value is dropped without an error: the server
-// keeps what it had, the reload hands that back, and the local ref stays
-// empty. systemDirty would then read true with nothing left to write and the
-// header would sit on "Not saved" for good. Put the last value the endpoint
-// returned back instead, and send nothing.
-//
-// Nothing needs cancelling on the way out. cancel() disarms the rest timer,
-// which only a 'typing' commit arms, and this pair always commits 'now'. A
-// write already in flight is not ours to take back either — it carries a value
-// the user did pick, and its reload refreshes both refs when it lands.
+// Emptying either control is not one of the choices this pair offers, and the
+// endpoint drops a cleared value without an error, so the header would sit on
+// "Not saved" for good. Put the last value back instead, and send nothing.
 const onSystemSelect = (field: SystemField, value: string | null) => {
 	const current = systemValues[field]
 	if (value) {

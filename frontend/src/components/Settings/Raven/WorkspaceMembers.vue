@@ -73,34 +73,12 @@
 
 <script setup lang="ts">
 // The workspace's derived membership, read-only, on the same SettingsTable the
-// Channels tab uses, it drew its own `w-*/12` strip before, which did not line
-// up with the "Members" heading above it or with its own cells.
-//
-// Whether a rule put someone here is the one thing about a member that is worth
-// filtering on: it is the difference between a row this app will take back when
-// the mapping goes and one it will never touch. So it is a column of its own
-// rather than a badge tucked beside the name, and the filter reads off it.
-//
-// The channel a person came in through is the other: workspace membership is
-// derived from it, so "who is in #announcements" is the question this list is
-// assembled to answer and the one the table cannot be sorted into. It is a
-// Combobox rather than a second Select because the option list is the
-// workspace's channels, as many as the workspace has, and a list you may have
-// to type into is what a combobox is for. Same control CRM's GroupBy picker uses
-// (`apps/crm/frontend/src/components/GroupBy.vue`: frappe-ui `Combobox`, options
-// in memory, sitting in a list's control bar); frappe-ui's `Autocomplete` is
-// deprecated in favour of it.
-//
-// Filtering is client-side because the endpoint already returns the whole
-// membership in one call, it has to, since the channel list per member is
-// assembled from every channel row in the workspace.
-//
-// Both filters are pinned to one width rather than sized to their contents. A
-// Select sizes its trigger to its widest option and a Combobox to its selection,
-// so a long channel name, or a translation longer than the English, moved the
-// pair and pushed the other control along the row. Fixed and `shrink-0`, the
-// heading row stays put whatever is picked; frappe-ui truncates inside both
-// triggers already, so an overlong name ellipses rather than overflowing.
+// Channels tab uses. Whether a rule put someone here is a column of its own
+// rather than a badge, because the filter reads off it.
+
+// Filtering is client-side, since the endpoint returns the whole membership.
+// Both filters are pinned to one width, or a long channel name moves the pair
+// and pushes the other control along the row.
 import { Button, Combobox, Select, createResource, toast } from 'frappe-ui'
 import { computed, ref, watch } from 'vue'
 import EmptyStateLayout from '@/components/Layouts/EmptyStateLayout.vue'
@@ -117,17 +95,14 @@ const props = defineProps<{ workspace: string }>()
 /** Which rows the filter is showing. `all` is every member. */
 type AddedByRuleFilter = 'all' | 'yes' | 'no'
 
-// The empty string stands for "every channel". A channel name is never empty,
-// so it cannot collide with one, a word like `all` could, since the options are
-// the workspace's own channel names. frappe-ui maps an empty option value to a
-// synthetic internal one for the popover and hands it back as `''`.
+// The empty string stands for "every channel". A channel name is never empty so
+// it cannot collide, where a word like `all` could. frappe-ui hands an empty
+// option value back as `''`.
 const ALL_CHANNELS = ''
 
-// A failed fetch settles with no data and nothing in flight, which is the shape
-// of a workspace whose channels are genuinely empty, so without this the tab
-// answered a fetch it never got with "nobody is in a channel of this workspace
-// yet". Held as its own flag rather than read off the resource because it has to
-// clear the moment another workspace is asked for.
+// A failed fetch settles with no data and nothing in flight, the same shape as a
+// workspace whose channels are genuinely empty. Its own flag rather than read off
+// the resource, because it must clear when another workspace is asked for.
 const failed = ref(false)
 
 const resource = createResource<WorkspaceMember[]>({
@@ -215,9 +190,8 @@ const paged = usePagedRows(() => matching.value)
 watch([addedByRule, channel], paged.reset)
 
 // Says which filter emptied the table, so the reader knows the workspace is not
-// the thing that is empty. The channel names the part of the workspace being
-// spoken about, since the rule filter is the only one of the two that can empty
-// the table on its own, every channel offered has someone in it.
+// the thing that is empty. The channel names the part being spoken about,
+// since every channel offered has someone in it.
 const emptyFilterHint = computed<string>(() => {
 	const where = `# ${channel.value}`
 	if (addedByRule.value === 'yes')

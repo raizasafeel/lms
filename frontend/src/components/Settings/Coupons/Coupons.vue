@@ -28,20 +28,16 @@ import {
 } from '@/components/Settings/Coupons/coupons'
 
 // The list of one settings page, and the form behind a row as its own
-// component — three files per list page: the config, this list, the form.
-//
-// CouponForm is imported statically rather than as an async component: the
-// form is what a row click reveals on the same tick, and an async one renders
-// nothing until its chunk resolves.
+// component. CouponForm is imported statically rather than as an async
+// component, because a row click reveals the form on the same tick.
 
 defineProps<{
 	label: string
 }>()
 
-// The open record, as a model rather than state of its own — the same contract
-// SettingsListPanel has, and what makes '#settings/coupons/<code>' land on that
-// coupon. Whether the form is showing is read off this and never stored beside
-// it: a second copy could disagree with the URL, and a derived one cannot.
+// The open record, as a model rather than state of its own, which is the same
+// contract SettingsListPanel has. Whether the form is showing is read off this
+// and never stored beside it, because a second copy could disagree with the URL.
 const record = defineModel<string | null>('record', { default: null })
 
 const list = useSettingsListResource(couponListOptions)

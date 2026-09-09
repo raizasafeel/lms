@@ -104,17 +104,12 @@
 </template>
 
 <script setup lang="ts">
-// Channel detail, built from CRM's Settings/Sla/SlaPolicyView shell.
-//
-// Gated on `rules.detail.value || isNew`, not on "not loading": a failed load
-// leaves data null with loading false, and the fields would render an empty Name
-// and a defaulted Visibility as if they were the channel's saved settings.
-//
-// Name and visibility are drafts inside useChannelRules, so one Save commits them
-// with the conditions. Enabled stays immediate: it is the record's state.
-//
-// The header holds only what acts on the record as a whole. Opening the mapping
-// in Raven and deleting it live on its row in the table that led here.
+// Channel detail, built from CRM's SlaPolicyView shell. Gated on
+// `rules.detail.value || isNew`, not on "not loading": a failed load leaves data
+// null with loading false, and the fields would render as saved settings.
+
+// Name and visibility are drafts inside useChannelRules, so one Save commits
+// them with the conditions. Enabled stays immediate, being the record's state.
 import {
 	Badge,
 	Button,

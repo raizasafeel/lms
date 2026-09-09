@@ -59,15 +59,10 @@
 
 <script setup lang="ts">
 // A detail page replaces the panel rather than nesting inside it, so it owns its
-// own SettingsLayout and back control. Same shape as CRM's SlaConfig, which
-// swaps SlaPolicyList for SlaPolicyView on one `step` ref.
-//
+// own SettingsLayout and back control, as CRM's SlaConfig does.
+
 // A missing app is a badge on the title and a sentence under the row, the way
-// Helpdesk marks a missing ERPNext (ERPNextIntegrationSettings.vue); the panel
-// keeps its shape either way. The one takeover left is `notPermitted`: a
-// moderator without the role has nothing to read and nothing to do, so there is
-// no row to show them. Centred with flex, because the translate-x trick CRM and
-// Helpdesk use is banned here for RTL.
+// Helpdesk marks a missing ERPNext. `notPermitted` is the one takeover left.
 import { Badge, createResource, toast } from 'frappe-ui'
 import { computed, ref } from 'vue'
 import SettingsLayout from '@/components/Layouts/settings/desktop/SettingsLayout.vue'
@@ -79,9 +74,8 @@ import type { MappingRow } from '@/composables/raven/useMappingList'
 import type { RavenSetupState } from '@/types'
 
 // Settings.vue passes a custom panel its label and nothing else, and a panel
-// titles itself from that — see Categories.vue and BrandSettings.vue.
-// `description` is not part of that contract (settingsPanelProps.test.ts), so
-// the heading here is the label alone, as on every other panel.
+// titles itself from that. `description` is not part of that contract, so the
+// heading here is the label alone.
 defineProps<{ label: string }>()
 
 // Endpoints are System Manager-only but Settings opens for any moderator. Its own
@@ -113,10 +107,9 @@ const needsSetup = computed(
 	(): boolean => !!missingApp.value || !setup.data?.enabled
 )
 
-// Set up and permitted, the panel is only its list, and the list is a
-// SettingsList, which brings its own SettingsLayout, heading and Create button,
-// exactly as the panels either side of this one do. The SettingsLayout in the
-// template is what is left: the states where there is no list to show.
+// Set up and permitted, the panel is only its list, and SettingsList brings its
+// own layout, heading and Create button. The SettingsLayout in the template is
+// what is left: the states where there is no list to show.
 const ready = computed(
 	(): boolean => !needsSetup.value && !notPermitted.value && !setup.loading
 )
@@ -161,11 +154,9 @@ function openNewWorkspace(): void {
 	screen.value = 'workspace'
 }
 
-// The three screens are branches of one v-if, so leaving a detail page builds the
-// list again from nothing. Its records resource is created with the component and
-// fetches on creation, which is what picks up a label or visibility edit made on
-// the page being left, there is no surviving instance here to reload, and asking
-// the new one would only repeat the fetch it has already made.
+// The three screens are branches of one v-if, so leaving a detail page builds
+// the list again from nothing. Its records resource fetches on creation, which
+// is what picks up an edit made on the page being left.
 function closeWorkspace(): void {
 	workspace.value = null
 	channel.value = null
@@ -193,10 +184,9 @@ function adoptChannelName(next: string): void {
 	if (channel.value) channel.value = { ...channel.value, name: next }
 }
 
-// The workspace mapping autonames the same way, and had no such adoption: a
-// rename saved, the docname moved, and the page reloaded under the name it still
-// held, which is why renaming a workspace put the old record back on screen
-// behind a "not found" toast.
+// The workspace mapping autonames the same way and had no such adoption, so a
+// rename saved, the docname moved, and the page reloaded under the name it
+// still held.
 function adoptWorkspaceName(next: string): void {
 	if (workspace.value) workspace.value = { ...workspace.value, name: next }
 }

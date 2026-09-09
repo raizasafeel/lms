@@ -46,18 +46,16 @@ import { membersRevision } from '@/stores/members'
 import type { SettingsListRow } from '@/types'
 
 // Settings > Users: the list of members, with the form behind New and behind a
-// row in MemberForm.vue. Three files per list page — the config, this list, the
-// form — and the form is imported statically so a row click reveals it on the
-// same tick.
+// row in MemberForm.vue. The form is imported statically so a row click reveals
+// it on the same tick.
 
 defineProps<{ label: string }>()
 
 const router = useRouter()
 
-// The open record, as a model rather than state of its own -- the same contract
-// SettingsListPanel has, and what makes '#settings/members/<name>' land on it.
-// Whether the form is showing is read off this and never stored beside it: a
-// second copy could disagree with the URL, and a derived one cannot.
+// The open record, as a model rather than state of its own, which is what makes
+// '#settings/members/<name>' land on it. Whether the form is showing is read off
+// this and never stored beside it.
 const record = defineModel<string | null>('record', { default: null })
 
 const role = ref('All')
@@ -76,8 +74,8 @@ const list = useSettingsMethodResource<SettingsListRow>({
 // one and none of it can be kept.
 watch(role, () => list.reload())
 
-// A member saved anywhere else — the phone's form route among them —
-// announces itself through the store.
+// A member saved anywhere else, the phone's form route among them, announces
+// itself through the store.
 watch(membersRevision, () => list.reload())
 
 const openProfile = (row: SettingsListRow) => {

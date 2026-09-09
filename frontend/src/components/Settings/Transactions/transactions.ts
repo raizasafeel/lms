@@ -21,14 +21,7 @@ import type {
 /**
  * Settings > Payment > Transactions, as data: what the LMS Payment list fetches,
  * the columns it draws, the filter above it and the labels the record page uses.
- * Transactions.vue draws all of it — the list and the record — and this module
- * is what it draws it from.
- *
- * Every translated string here is produced inside a function or a getter, never
- * as a plain property. `__` is installed on window by translationPlugin, which
- * runs after main.js has finished importing the settings tree — a `__()` call at
- * module scope would throw, and would read the translations before they have
- * loaded even if it did not.
+ * Transactions.vue draws all of it.
  */
 
 export const DOCTYPE = 'LMS Payment'
@@ -53,10 +46,8 @@ export const transactionList: SettingsListResourceOptions = {
 
 /**
  * Which fields the doctype declares mandatory, as the create form's fallback.
- *
- * The server's own answer — get_payment_field_meta — wins wherever it has one,
- * because a site is free to relax or tighten `reqd` on any of them. This is what
- * the form marks required while that answer is still in flight, or if it fails.
+ * The server's own answer wins wherever it has one, because a site is free to
+ * relax or tighten `reqd`.
  */
 export const REQUIRED_FIELDS = [
 	'member',
@@ -73,20 +64,8 @@ export const FIELD_META_METHOD = 'lms.lms.api.get_payment_field_meta'
 
 /**
  * The fields on LMS Payment the record page reads rather than offers.
- *
- * `coupon_code` is the doctype's only `read_only` field, and the only one it
- * fetches from another document: `fetch_from: coupon.code` is re-read out of
- * the linked LMS Coupon on every save, so a value typed over it would be
- * discarded on the way to the database. Everything else the doctype declares —
- * amount, currency, the gateway ids, member, address, member_consent — carries
- * neither flag and has no server-side recomputation behind it (LMSPayment
- * declares no validate, and hooks.py registers no doc_events for it), so it is
- * writable and is drawn as a control.
- *
- * `billing_name` looks fetched and is not. Its `fetch_from` names a link field
- * called `user`, which LMS Payment does not have — frappe resolves a fetch
- * against the link field the path starts at, so nothing is ever fetched into
- * it and what a moderator types there is what is saved.
+ * `coupon_code` is the doctype's only `read_only` field and its only
+ * `fetch_from`, so a value typed over it would be discarded on save.
  */
 export const READ_ONLY_FIELDS = ['coupon_code']
 
@@ -113,8 +92,7 @@ export const formatAmount = (
 
 /**
  * What a payment can be for, for the record page's picker and for naming the
- * document a payment paid for. The doctype's own Select offers exactly these
- * two.
+ * document a payment paid for. The doctype's own Select offers exactly these two.
  */
 export const documentTypeOptions = (): SelectOption[] => [
 	{ label: __('Course'), value: 'LMS Course' },
@@ -126,12 +104,9 @@ export const documentTypeLabel = (doctype: string): string =>
 	doctype
 
 /**
- * The filter above the list, restored: it was dropped when this page became a
- * ListPage, because the shared panel's filter sends its value as a request
- * parameter and a doctype list takes server-side `filters` instead.
- *
- * Same five choices the page carried before — the two the Status column draws,
- * and what the payment was for.
+ * The filter above the list, restored. It was dropped when this page became a
+ * ListPage, because the shared panel sends its value as a request parameter and
+ * a doctype list takes server-side `filters` instead.
  */
 export const STATUS_ALL = 'All'
 
@@ -159,16 +134,9 @@ export const statusFilters = (status: string): SettingsListFilters => {
 }
 
 /**
- * Where a paid-for document opens, and what the row menu calls it.
- *
- * The label is one whole string per document type. It used to be
- * `__('Open the ') + doctype`, which hands the translator a dangling fragment
- * and glues an untranslated doctype name onto it — unreadable in any language
- * that inflects the noun after "the", and untranslatable in one that puts the
- * article elsewhere.
- *
- * A payment for anything else offers nothing rather than falling through to the
- * batch route, which is what the old ternary did.
+ * Where a paid-for document opens, and what the row menu calls it. The label is
+ * one whole string per document type, because a concatenated `__('Open the ')`
+ * hands the translator a dangling fragment.
  */
 const OPENERS: Record<
 	string,
@@ -185,18 +153,14 @@ const OPENERS: Record<
 }
 
 // One handle per record, because usePermissions registers a watcher and this is
-// called from a render. The answers themselves are cached inside the composable
-// and asked for in one batched request per tick, so a page of rows costs one
-// round trip.
+// called from a render. The answers are cached inside the composable and asked
+// for in one batched request per tick.
 const handles = new Map<string, ReturnType<typeof usePermissions>>()
 
 /**
- * Whether the server says this user may delete this payment.
- *
- * The permission is the doctype's, not a role guess: LMS Payment grants delete
- * to System Manager and Moderator, and a site that has changed that is answered
- * correctly here. `can()` reads false until the answer arrives, so the option
- * appears rather than disappears.
+ * Whether the server says this user may delete this payment. The permission is
+ * the doctype's, not a role guess, so a site that has changed it is answered
+ * correctly. `can()` reads false until the answer arrives.
  */
 const canDelete = (name: string): boolean => {
 	if (!name) return false
@@ -250,8 +214,8 @@ const rowOptions = (row: SettingsListRow): DropdownOption[] => {
 		options.push({
 			label: opener.label(),
 			icon: 'lucide-external-link',
-			// Pushing a route with no hash leaves the settings hash behind, which
-			// is what closes the dialog. The record page carries no such button:
+			// Pushing a route with no hash leaves the settings hash behind, which is
+			// what closes the dialog. The record page carries no such button, because
 			// it would route out of the dialog it is drawn inside.
 			onClick: () => router.push(opener.route(row.payment_for_document)),
 		})
@@ -318,11 +282,9 @@ export const columns: SettingsListColumn[] = [
 export const transactionsPage: CustomPage = {
 	kind: 'custom',
 	/**
-	 * A getter, not `markRaw(Transactions)` on the spot: Transactions.vue imports
-	 * this module for the config above, so the two modules form a cycle and
-	 * whichever is entered second is still initialising when the other reads it.
-	 * Reading the component here is deferred to the render, by which time both
-	 * have finished.
+	 * A getter rather than `markRaw(Transactions)` on the spot. Transactions.vue
+	 * imports this module, so the two form a cycle and whichever is entered second
+	 * is still initialising when the other reads it.
 	 */
 	get component() {
 		return markRaw(Transactions)

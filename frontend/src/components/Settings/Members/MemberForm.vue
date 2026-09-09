@@ -142,22 +142,14 @@ import { sanitizeHTML } from '@/utils'
 import type { SessionUser, SettingsListRow } from '@/types'
 
 /**
- * One member, behind both New and a row.
- *
- * Hand-rolled rather than routed through SettingsFields, because a member is
- * two things saved two different ways — a User document, written through the
- * document resource, and four roles, each of which is its own `save_role` call.
- *
- * That split is also what keeps the page usable by a moderator who is not a
- * System Manager. User's only writing DocPerm is System Manager's, so the
- * profile fields need one; the roles do not. The document is written only when
- * something in it actually changed, so a moderator editing roles alone never
- * reaches for it.
- *
- * Handed the open record's name and reporting only that it is finished, the
- * same contract ZoomAccountForm.vue has. `row` comes with it so the header can
- * name the person before their document has landed.
+ * One member, behind both New and a row. Hand-rolled rather than routed through
+ * SettingsFields, because a member is two things saved two different ways: a
+ * User document, and four roles, each of which is its own `save_role` call.
  */
+
+// That split is what keeps the page usable by a moderator who is not a System
+// Manager. User's only writing DocPerm is System Manager's, and the document is
+// written only when something in it changed, so editing roles never reaches it.
 
 const props = defineProps<{
 	name?: string | null
@@ -184,11 +176,9 @@ const formTitle = computed(() => {
 	return props.row?.full_name || __('Edit Member')
 })
 
-// The settings surface is gated already (UserDropdown.vue), but this form is
-// one click away from a list that a deep link opens. `is_moderator` alone,
-// deliberately: get_members and save_role both `frappe.only_for("Moderator")`.
-//
-// UX gate, not an authorization boundary — those only_for calls are.
+// The settings pages are gated already, but this form is one click away from a
+// list a deep link opens. A UX gate, not an authorization boundary: get_members
+// and save_role both `frappe.only_for("Moderator")`.
 const refusal = computed(() => {
 	if ((window as Window & { read_only_mode?: boolean }).read_only_mode)
 		return __('This site is in read-only mode.')
@@ -206,8 +196,7 @@ const rolesDirty = computed(() =>
 
 // The User document itself. NEW_RECORD yields a draft that `save()` inserts, so
 // New and edit are the same fields over the same handle. A member is dirty for
-// two reasons — the profile fields, and the roles, which are written through
-// their own endpoint and are invisible to the document resource.
+// two reasons, and the roles are invisible to the document resource.
 const {
 	source,
 	doc: member,
@@ -219,15 +208,14 @@ const {
 })
 
 // The label is drawn by the row rather than by the switch, so it has to reach
-// the control as a <label for>: frappe-ui's Switch generates an id only when it
+// the control as a <label for>. frappe-ui's Switch generates an id only when it
 // is given none, and never hands it back out.
 const formId = useId()
 const switchId = (key: MemberRoleKey) => `${formId}-${key}`
 
-// get_member, not the list endpoint: that one hard-filters `enabled = 1` and
-// pages, so a disabled member — or one whose address is a substring of more
-// than a page of others' — never came back. It is also the only read of a
-// member's roles a moderator without System Manager can make.
+// get_member, not the list endpoint, which hard-filters `enabled = 1` and pages,
+// so a disabled member never came back. It is also the only read of a member's
+// roles a moderator without System Manager can make.
 const memberFetch = createResource({
 	url: 'lms.lms.api.get_member',
 	makeParams: () => ({ member: record.value }),
@@ -305,6 +293,6 @@ const save = () => {
 
 // The roles read ran from openForm; the form mounts on one member now, so it
 // runs at setup. Placed last because memberFetch is a const above it only by
-// declaration order — this is the first point every initialiser has run.
+// declaration order.
 if (isEdit.value && !refusal.value) memberFetch.fetch()
 </script>

@@ -48,17 +48,12 @@
 </template>
 
 <script setup lang="ts">
-// The workspace's Channels tab: the same table the workspace list is, on the
-// same SettingsTable, so a channel row reads exactly like the workspace row that
-// led here. It drew its own bordered card of flex rows before, which put a
-// second table shape on a page that already had one.
-//
-// Nothing in a row is editable but Enabled. The channel's type used to be an
-// inline Select here; it is the record's own setting and the page a row opens is
-// where a record is edited. What is left in the menu is the two things that
-// cannot be done from that page: adopting an unmanaged Raven channel, and
-// recovering or discarding a mapping whose Raven channel is gone. A stale row
-// has no page worth opening.
+// The workspace's Channels tab, on the same SettingsTable the workspace list
+// uses, so a channel row reads exactly like the workspace row that led here.
+
+// Nothing in a row is editable but Enabled, because the page a row opens is
+// where a record is edited. The menu keeps the two things that page cannot do:
+// adopting an unmanaged Raven channel, and recovering or discarding a mapping.
 import { computed } from 'vue'
 import { Button } from 'frappe-ui'
 import EmptyStateLayout from '@/components/Layouts/EmptyStateLayout.vue'
@@ -87,15 +82,9 @@ const props = defineProps<{
 // The page it opens is owned by RavenSettings, so the click travels up.
 const emit = defineEmits<{ open: [row: MappingRow]; new: [] }>()
 
-// `aria-disabled` rather than the native `disabled` attribute, on purpose: a
-// disabled button is removed from the tab order and stops firing pointer and
-// focus events, which would take the button out of the page for a keyboard user
-// AND silence the tooltip that says why it cannot be used. Marked this way it
-// stays focusable and is announced as unavailable, and reka's tooltip opens on
-// focus, so the reason is reachable by keyboard, not only on hover. The click
-// is refused in script instead of by the browser. Copy of CRM's
-// Settings/Users.vue:121, which explains an unavailable action with a Tooltip
-// around the button rather than a bare greyed-out control.
+// `aria-disabled` rather than the native `disabled` attribute: a disabled button
+// leaves the tab order and stops firing events, which would silence the tooltip
+// saying why. The click is refused in script instead, as CRM's Users.vue does.
 const unsavedHint = __('Save this workspace before adding channels to it.')
 
 function requestNew(): void {
@@ -118,10 +107,9 @@ const columns: SettingsListColumn[] = [
 		// detail beside it reads at ink-gray-6.
 		type: 'stacked',
 		width: 'minmax(0, 1.5fr)',
-		// The hash marks it as a channel, spaced off the name so the name reads as
-		// the name: Raven writes it closed up, this app does not. Whatever it is,
-		// it has to match the page this row opens, the member badges and the
-		// channel filter, which is why all four are changed together.
+		// The hash marks it as a channel, spaced off the name so the name reads as the
+		// name. It has to match the page this row opens, the member badges and the
+		// channel filter, which is why all four change together.
 		primary: (row) => `# ${row.label}`,
 	},
 	{
@@ -136,23 +124,9 @@ const columns: SettingsListColumn[] = [
 		label: __('Enabled'),
 		type: 'switch',
 		width: '6rem',
-		// Only a row that actually syncs reads as on, and only such a row can be
-		// written. Two rows fail that and used to read `!paused`, i.e. on:
-		//
-		// Unadopted: a raw Raven channel the list offers to adopt. `enabled: 1`
-		// is what list_channels synthesises for it and it syncs nobody; most
-		// visible right after Delete mapping, which leaves the channel behind as
-		// exactly such a row. Flipping it would run through `ensureMapped` and
-		// adopt the channel, and a channel is adopted through Link alone.
-		//
-		// Stale: adopted, but the Raven channel behind it is gone, which is the
-		// same "has stopped syncing" state (see RavenChannel.stale) reached from
-		// the other side. Writing it posts enabled against a mapping with no
-		// target. Every other control on the row already knows this: `open()`
-		// refuses, the row menu drops to recreate-or-delete, `rowStatus` badges it.
-		// The switch was the last one still claiming the row was live.
-		//
-		// Both are disabled rather than hidden, so the column stays one column.
+		// Only a row that actually syncs reads as on. An unadopted row syncs
+		// nobody and flipping it would adopt the channel, which Link alone does; a
+		// stale row would post against a mapping with no target. Both disabled.
 		checked: (row) => !!row.mapped && !row.stale && !row.paused,
 		disabled: (row) => !row.mapped || !!row.stale,
 		ariaLabel: (row) => __('Sync members of {0}').format(row.label),

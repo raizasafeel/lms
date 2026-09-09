@@ -8,11 +8,6 @@ import type { SettingsListColumn, SettingsListRow } from '@/types'
 /**
  * Settings > Payment Gateways, as data: what the list fetches, what a row says,
  * and what its menu can do to it.
- *
- * Every translated string is produced inside a function or a getter. `__` is
- * installed on window by translationPlugin, which runs after main.js has
- * finished importing the settings tree, so a `__()` at module scope would call
- * an undefined global.
  */
 
 export const DOCTYPE = 'Payment Gateway'
@@ -22,9 +17,8 @@ export const NEW_GATEWAY = 'new'
 
 /**
  * A Payment Gateway row names the doctype holding its credentials in
- * `gateway_settings`, and the record inside it in `gateway_controller` — both
- * null on a gateway whose settings doctype is a Single. The form reads all
- * three, which is why the list fetches them.
+ * `gateway_settings` and the record inside it in `gateway_controller`, both null
+ * when that doctype is a Single. The form reads all three.
  */
 export const gatewayList = {
 	doctype: DOCTYPE,

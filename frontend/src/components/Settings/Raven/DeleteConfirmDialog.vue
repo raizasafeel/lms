@@ -18,6 +18,7 @@
 // type-the-name-to-confirm gate.
 import { Dialog } from 'frappe-ui'
 import { computed } from 'vue'
+import { confirmActions } from '@/utils/raven/confirmDialog'
 
 const props = defineProps<{
 	/** Name of the thing being deleted, shown in the title. */
@@ -30,27 +31,9 @@ const props = defineProps<{
 const emit = defineEmits<{ confirm: [] }>()
 const open = defineModel<boolean>('open')
 
-interface DialogAction {
-	label: string
-	variant?: 'solid'
-	theme?: 'red'
-	loading?: boolean
-	onClick: (context: { close: () => void }) => void
-}
-
 const entityName = computed<string>(() => props.entity || 'workspace')
 
-const dialogActions = computed<DialogAction[]>(() => [
-	{
-		label: __('Cancel'),
-		onClick: ({ close }: { close: () => void }) => close(),
-	},
-	{
-		label: __('Delete'),
-		variant: 'solid' as const,
-		theme: 'red' as const,
-		loading: props.loading,
-		onClick: () => emit('confirm'),
-	},
-])
+const dialogActions = computed(() =>
+	confirmActions(__('Delete'), () => emit('confirm'), props.loading)
+)
 </script>

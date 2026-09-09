@@ -35,16 +35,14 @@ import { cleanError } from '@/utils'
 import type { Badge, SettingsListRow } from '@/types'
 
 // Settings > Badges: the list, with the badge behind New and behind a row in
-// BadgeForm.vue. Three files per list page — the config, this list, the form —
-// and the form is imported statically so a row click reveals it on the same
-// tick.
+// BadgeForm.vue. The form is imported statically so a row click reveals it on
+// the same tick.
 
 defineProps<{ label: string }>()
 
-// The open record, as a model rather than state of its own — the same contract
-// SettingsListPanel has, and what makes '#settings/badges/<name>' land on that
-// badge. Whether the form is showing is read off this and never stored beside
-// it: a second copy could disagree with the URL, and a derived one cannot.
+// The open record, as a model rather than state of its own, which is what makes
+// '#settings/badges/<name>' land on that badge. Whether the form is showing is
+// read off this and never stored beside it.
 const record = defineModel<string | null>('record', { default: null })
 
 const list = useSettingsListResource<Badge>({

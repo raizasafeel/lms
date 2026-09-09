@@ -8,10 +8,6 @@ import type {
 /**
  * Settings > Badges, as config: what the list shows and what the form offers.
  * Badges.vue draws both.
- *
- * Every translated string is produced inside a function. `__` is installed on
- * window after the settings tree has been imported, so a `__()` at module scope
- * would throw.
  */
 
 export const BADGE_DOCTYPE = 'LMS Badge'
@@ -49,13 +45,8 @@ const DOCTYPE_LABELS: Record<string, () => string> = {
 
 /**
  * The pill in the Awarded For column, and the one place that decides what a
- * reference doctype is called — so the same doctype cannot read one way here
- * and another elsewhere.
- *
- * It is gray, like every other pill in the list: the column separates rows by
- * what it says, not by colour, and eight tinted pills down a column read as
- * status when none of them is one. Falls back to the raw doctype, so an
- * unmapped one still reads as itself.
+ * reference doctype is called. Gray, like every other pill in the list, and it
+ * falls back to the raw doctype so an unmapped one still reads as itself.
  */
 export const awardedFor = (doctype: string): SettingsListBadge => ({
 	label: DOCTYPE_LABELS[doctype]?.() || doctype,

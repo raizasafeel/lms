@@ -44,16 +44,14 @@ import { useSettingsListResource } from '@/composables/useSettingsListResource'
 import { NEW_RECORD } from '@/composables/useSettingsSource'
 
 // Settings > Payment > Transactions: the list of payments, with the one payment
-// behind a row or behind New in TransactionForm.vue. Three files per list page
-// — the config, this list, the form — and the form is imported statically so a
-// row click reveals it on the same tick.
+// behind a row or behind New in TransactionForm.vue. The form is imported
+// statically so a row click reveals it on the same tick.
 
 defineProps<{ label: string }>()
 
-// The open record, as a model rather than state of its own -- the same contract
-// SettingsListPanel has, and what makes '#settings/transactions/<name>' land on it.
-// Whether the form is showing is read off this and never stored beside it: a
-// second copy could disagree with the URL, and a derived one cannot.
+// The open record, as a model rather than state of its own, which is what makes
+// '#settings/transactions/<name>' land on it. Whether the form is showing is read off
+// this and never stored beside it.
 const record = defineModel<string | null>('record', { default: null })
 
 const list = useSettingsListResource(transactionList)

@@ -342,23 +342,14 @@ import { cleanError } from '@/utils'
 import type { FieldMeta } from '@/types/settingsSchema'
 
 /**
- * One payment, behind both a row and New.
- *
- * A payment is a document like any other and is edited like one, in New and on
- * a record alike: one field list, two states. The only value the page reads
- * rather than offers is coupon_code, which the doctype marks read_only and
- * fetches from the coupon on every save — an input over it would be typed into
- * and then thrown away. Everything else on LMS Payment is plainly writable, so
- * everything else is a control. See READ_ONLY_FIELDS in transactions.ts.
- *
- * The body is hand-rolled rather than a fields page, following CRM's
- * Settings/Telephony/TwilioSettings.vue: a grid of FormControls, dividers
- * between groups, and anything that is not a text box drawn as a row with its
- * description under the label.
- *
- * Handed the open record's name and reporting only that it is finished, the
- * same contract ZoomAccountForm.vue has. NEW_RECORD is a name like any other.
+ * One payment, behind both a row and New. A payment is a document like any
+ * other, so it is one field list in two states. The only value the page reads
+ * rather than offers is coupon_code, which the doctype refetches on every save.
  */
+
+// The body is hand-rolled rather than a fields page, following CRM's
+// TwilioSettings.vue. Handed the open record's name and reporting only that it
+// is finished, the same contract ZoomAccountForm.vue has.
 
 const props = defineProps<{ name?: string | null }>()
 
@@ -366,8 +357,8 @@ const emit = defineEmits<{ back: [] }>()
 
 const showAddress = ref(false)
 
-// The rows that draw their own label rather than handing one to the control:
-// the label is the group's name, so the mark it carries when the field is reqd
+// The rows that draw their own label rather than handing one to the control.
+// The label is the group's name, so the mark it carries when the field is reqd
 // is announced with it.
 const labelIds = {
 	member: useId(),
@@ -384,14 +375,11 @@ const error = state.error
 
 const record = computed(() => props.name ?? null)
 
-// The guard used to be scoped by hand — the form was not a component of its
-// own, so a panel that registered at mount would hold the guard for a form that
-// was not open. It is a component now, and mounts only while the record page
-// is, so the composable registering it is the whole of it.
-//
+// The guard is registered by the composable and nothing else, because this form
+// is a component now and mounts only while the record page is.
+
 // `payment_received` is the record's own state, so it is the header switch
-// rather than the first field in the body — the same place every other settings
-// record draws Enabled, named for what a payment actually is.
+// rather than the first field in the body, named for what a payment is.
 const {
 	source,
 	doc,
@@ -412,11 +400,9 @@ const title = computed(() => {
 })
 
 /**
- * The doctype's mandatory fields, as the server reports them.
- *
- * Fetched when a record page opens, not with the panel: it is the only page
- * that marks a control required, and a site is free to relax or tighten `reqd`
- * on any of them.
+ * The doctype's mandatory fields, as the server reports them. Fetched when a
+ * record page opens rather than with the panel, because it is the only page that
+ * marks a control required.
  */
 const fieldMeta = createResource({
 	url: FIELD_META_METHOD,
@@ -431,8 +417,8 @@ const required = (field: string): boolean => {
 
 /**
  * GST is the doctype's own `currency == "INR"` condition, plus whatever a
- * payment already carries: hiding a recorded figure because the currency was
- * later corrected would lose it on the next save with no way to see it went.
+ * payment already carries. Hiding a recorded figure because the currency was
+ * later corrected would lose it on the next save.
  */
 const showGst = computed(
 	() => doc.value?.currency === 'INR' || Boolean(doc.value?.amount_with_gst)
@@ -483,10 +469,9 @@ const submit = () => {
 		success: wasNew
 			? __('Transaction created successfully')
 			: __('Transaction updated successfully'),
-		// A draft has no record page to stay on — it is addressed by a name the
-		// insert has only just settled — and a saved payment's row has changed
-		// under the list either way. Going back is what refetches the list on
-		// the draft's side; on this side the registry does it.
+		// A draft has no record page to stay on, and a saved payment's row has
+		// changed under the list either way. Going back is what refetches the list
+		// on the draft's side; on this side the registry does it.
 		after: async () => {
 			if (wasNew) emit('back')
 			else await reloadSettingsLists(DOCTYPE)

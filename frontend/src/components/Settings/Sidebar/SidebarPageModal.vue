@@ -55,8 +55,7 @@ const error = ref('')
 
 // Watches `open` as well as the row. `openModal(null)` assigns null over null,
 // which is not a change, so a second New reopened the dialog still holding the
-// last attempt -- and pressing Add re-submitted it, re-iconing the row that
-// attempt had already created.
+// last attempt, and pressing Add re-submitted it.
 watch(
 	[() => props.page, open],
 	([page, isOpen]) => {

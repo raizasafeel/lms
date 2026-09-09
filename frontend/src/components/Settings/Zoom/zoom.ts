@@ -7,10 +7,8 @@ import type { SettingsListColumn, SettingsListRow } from '@/types'
 
 /**
  * Zoom accounts: the list, as data, and one component for the account behind a
- * row. What was ZoomSettings.vue is gone — the list, the New affordance and the
- * swap to a form are what every settings list does, and SettingsListPanel does
- * them once. What is left here is only what was ever Zoom's: which doctype,
- * which columns, and what a row's menu can do.
+ * row. What is left here is only what was ever Zoom's: which doctype, which
+ * columns, and what a row's menu can do.
  */
 
 const DOCTYPE = 'LMS Zoom Settings'
@@ -22,9 +20,8 @@ const accountLabel = (row: SettingsListRow): string =>
 
 /**
  * Optimistic, with a rollback. The row flips under the pointer and the write
- * follows it; a rejected write puts the row back to the value it held before.
- * Nothing reloads the list here, so without the rollback the row would keep
- * showing a state the server refused.
+ * follows it. Nothing reloads the list here, so without the rollback a rejected
+ * write would leave the row showing a state the server refused.
  */
 const toggleEnabled = async (row: SettingsListRow, value: boolean) => {
 	const previous = row.enabled
@@ -44,9 +41,8 @@ const toggleEnabled = async (row: SettingsListRow, value: boolean) => {
 
 /**
  * The row menu's Delete. A config module is handed the row and nothing else, so
- * it asks every list on screen for that doctype to refetch rather than reaching
- * for the resource behind this one — which is also what keeps the list on its
- * first page, where the removed row was.
+ * it asks every list on screen for that doctype to refetch, which also keeps the
+ * list on its first page.
  */
 const removeAccount = async (row: SettingsListRow) => {
 	try {
@@ -58,12 +54,9 @@ const removeAccount = async (row: SettingsListRow) => {
 	}
 }
 
-// Every header is a getter, and that is not decoration. `__` is installed on
-// window by the translation plugin in main.js, which runs after every static
-// import has already been evaluated — so a config module that called it while
-// building this array would call an undefined global. A getter defers the
-// lookup to the moment the list renders, which is where the component this
-// replaces called it from setup().
+// Every header is a getter, because `__` is installed on window by the
+// translation plugin after every static import has been evaluated. A getter
+// defers the lookup to the moment the list renders.
 const columns: SettingsListColumn[] = [
 	{
 		key: 'account',
@@ -109,14 +102,9 @@ const columns: SettingsListColumn[] = [
 ]
 
 /**
- * One component for New and for an existing account alike: it is handed the
- * record the panel opened, and 'new' is a record name like any other.
- *
- * A `kind: 'custom'` detail rather than a fields page, because a set of
- * credentials is not a list of settings rows — see ZoomAccountForm.vue.
- *
- * Loaded on demand, the way Email Accounts loads its form: the list is what
- * opens, and the form is a component with a document resource behind it.
+ * One component for New and for an existing account alike, handed the record the
+ * panel opened. A `kind: 'custom'` detail rather than a fields page, because a
+ * set of credentials is not a list of settings rows. Loaded on demand.
  */
 const accountForm = {
 	kind: 'custom' as const,

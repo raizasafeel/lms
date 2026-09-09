@@ -198,12 +198,12 @@ const settings = createDocumentResource({
 
 // A working copy: drag reorders an array, and reordering the resource's own
 // child table in place would fight the render. Every edit is written straight
-// back — there is no Save button, so a toggle or a drag persists at once.
+// back, because there is no Save button and a toggle persists at once.
 const rows = ref<SidebarRowDraft[]>([])
 const modalOpen = ref(false)
 const editingPage = ref<LMSSidebarItem | null>(null)
 
-// An existing row keeps its own `name` as its client id — stable and already
+// An existing row keeps its own `name` as its client id, stable and already
 // unique. A row with no `name` yet (freshly added, not yet saved) gets one
 // here so two such rows in the same session never collide.
 const withClientIds = (items: LMSSidebarItem[]): SidebarRowDraft[] =>
@@ -226,23 +226,22 @@ watch(
 	{ immediate: true }
 )
 
-// `_clientId` is this component's own bookkeeping — LMS Sidebar Item has no
+// `_clientId` is this component's own bookkeeping. LMS Sidebar Item has no
 // such field, and the saved document never carries one. Stripped before it
 // reaches the payload.
 const withoutClientId = (list: SidebarRowDraft[]): LMSSidebarItem[] =>
 	list.map(({ _clientId, ...rest }) => rest)
 
-// Item / Type / Target / Visible / menu. Every column is a `minmax(0, …fr)` so
-// it can shrink below its content and let `truncate` do the rest — a fixed
-// width anywhere here is what puts a horizontal scrollbar on the panel. The
-// handle and menu columns sit outside the grid so they keep their size.
+// Item, Type, Target, Visible, menu. Every column is a `minmax(0, …fr)` so it
+// can shrink below its content and let `truncate` do the rest. A fixed width
+// anywhere here is what puts a horizontal scrollbar on the panel.
 const gridTemplateColumns =
 	'minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 0.7fr) minmax(0, 0.5fr)'
 
 const menuLabel = (row: SidebarRowDraft): string =>
 	__('Actions for {0}').format(rowName(row))
 
-// Only a web page can be edited — the modal re-icons a page, and that is all
+// Only a web page can be edited, because the modal re-icons a page and that is
 // there is to change. Every custom row can be deleted.
 const rowMenuOptions = (row: SidebarRowDraft) => {
 	const options = []
@@ -269,9 +268,8 @@ const isLocked = (row: SidebarRowDraft): boolean =>
 	LOCKED_VISIBLE.has(row.name1 ?? '')
 
 // Icons are stored by name, and the picker offers all of lucide. Resolve the
-// component the way the sidebar and the picker already do; a Tailwind class
-// built from that name only exists when the name is literal in this source,
-// which is true of the built-ins and of nothing a user picks.
+// component the way the sidebar and the picker already do, because a class built
+// from that name only exists when the name is literal in this source.
 const iconComponent = (row: SidebarRowDraft) => {
 	const name =
 		row.icon || (row.item_type === 'Built-in' && builtInIcon(row.name1 ?? ''))
@@ -380,7 +378,7 @@ const persist = async () => {
 }
 
 // The modal writes through its own endpoint and saves the parent server-side,
-// so the cached document is behind — refetch it and rebuild the table.
+// so the cached document is behind. Refetch it and rebuild the table.
 const reloadFromServer = async () => {
 	await settings.reload()
 	syncFromDoc()

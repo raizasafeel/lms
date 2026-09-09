@@ -104,9 +104,8 @@ const getFieldsToSave = () => {
 }
 
 // Website Settings behind a custom endpoint, so there is no document resource
-// and no isDirty to borrow. Keep the same shape one level up: clone what the
-// server last gave us and compare against it, which is exactly what
-// documentResource does with originalDoc.
+// and no isDirty to borrow. Clone what the server last gave us and compare
+// against it, which is what documentResource does with originalDoc.
 const savedFields = ref(null)
 
 watch(

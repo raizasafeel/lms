@@ -9,23 +9,13 @@ import type { SettingsListColumn, SettingsListRow } from '@/types'
 
 /**
  * Settings > Users, as config: what the list shows, what a row offers, and the
- * roles the form can grant. Members.vue draws all of it.
- *
- * The list is not a doctype list. `lms.lms.api.get_members` filters, pages and
- * looks up each row's roles itself, so the rows arrive from a method and the
- * paging is done against `start` (see useSettingsMethodResource).
- *
- * Every translated string is produced inside a function, never as a plain
- * property. `__` is installed on window by translationPlugin, which runs after
- * main.js has finished importing the settings tree — a `__()` call at module
- * scope would throw.
- *
- * This module and Members.vue import each other, so neither may read anything
- * of the other's while it is still evaluating: everything Members.vue takes
- * from here it reads inside its setup, and the component reference below is
- * behind a getter for the same reason. Do not turn either into a module-scope
- * read.
+ * roles the form can grant. The rows arrive from `get_members` rather than a
+ * doctype list, so the paging is done against `start`.
  */
+
+// This module and Members.vue import each other, so neither may read the
+// other's bindings while it is still evaluating. Everything Members.vue takes
+// from here it reads inside its setup, and the component below is a getter.
 
 export const MEMBERS_METHOD = 'lms.lms.api.get_members'
 
@@ -34,8 +24,8 @@ export const MEMBERS_METHOD = 'lms.lms.api.get_members'
 export const MEMBERS_DOCTYPE = 'User'
 
 // The raw role names get_members returns, and what a badge calls them. Only
-// these four are shown: member_roles() returns LMS_ROLES, and a role outside
-// this map is not one of them.
+// these four are shown, because member_roles() returns LMS_ROLES and a role
+// outside this map is not one of them.
 const ROLE_LABELS: Record<string, () => string> = {
 	'LMS Student': () => __('Student'),
 	'Course Creator': () => __('Instructor'),
@@ -52,12 +42,9 @@ export const roleOptions = (): SelectOption[] => [
 ]
 
 /**
- * The four roles the form grants, in the order they are drawn.
- *
- * `role` is the server's name, which `lms.lms.api.save_role` takes; `label` is
- * what the row reads. Course Creator keeps its own name here rather than the
- * badge's "Instructor" — the form grants a role, and a role is named by what
- * the server calls it.
+ * The four roles the form grants, in the order they are drawn. `role` is the
+ * server's name and `label` is what the row reads. Course Creator keeps the
+ * server's name rather than the badge's "Instructor".
  */
 export const ROLE_ROWS = [
 	{ key: 'lms_student', role: 'LMS Student', label: () => __('Student') },
@@ -168,9 +155,9 @@ const removeMember = (
 			console.error(error)
 		})
 
-// Same confirmation the other settings lists put a delete behind (Categories,
-// Transactions): a red solid Delete in a dialog that says what is lost. A user
-// account is the most destructive row in settings, so it keeps one.
+// Same confirmation the other settings lists put a delete behind: a red solid
+// Delete in a dialog that says what is lost. A user account is the most
+// destructive row in settings.
 export const confirmMemberDeletion = (
 	row: SettingsListRow,
 	onDeleted: () => void
@@ -194,11 +181,9 @@ export const confirmMemberDeletion = (
 	})
 }
 
-// A getter, not a property: this module and Members.vue import each other, so
-// whichever of the two is loaded first finds the other's bindings still
-// uninitialized. Reading the component when the panel is rendered — rather than
-// while this module is still evaluating — is what makes the pair safe to enter
-// from either side.
+// A getter, not a property. This module and Members.vue import each other, so
+// whichever loads first finds the other's bindings uninitialized. Reading the
+// component at render time is what makes the pair safe to enter from either side.
 export const membersSettingsPage: CustomPage = {
 	kind: 'custom',
 	get component() {

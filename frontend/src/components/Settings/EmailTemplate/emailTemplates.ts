@@ -9,13 +9,8 @@ import type { CustomPage } from '@/types/settingsSchema'
 import type { SettingsListColumn, SettingsListRow } from '@/types'
 
 /**
- * Email templates, as config: what the list fetches, what it shows, and what
- * its row menu does. EmailTemplates.vue draws the list and the record alike.
- *
- * Every translated string here is produced inside a function or a getter. `__`
- * is installed on window by translationPlugin, which runs after main.js has
- * finished importing the settings tree, so a `__()` at module scope would call
- * an undefined global.
+ * Email templates, as config: what the list fetches, what it shows, and what its
+ * row menu does. EmailTemplates.vue draws the list and the record alike.
  */
 
 export const DOCTYPE = 'Email Template'
@@ -67,15 +62,13 @@ const confirmDeletion = (row: SettingsListRow) => {
 }
 
 /**
- * Duplicate, as a write rather than a prefilled form.
- *
- * The record page is opened by name, and a name only exists once the record
- * does, so there is nothing to hand a copy to. The copy is inserted straight
- * away under the same "… - Copy" name and is edited by opening it.
- *
- * `__newname` is what carries the name: Email Template autonames by Prompt, and
- * that is the key Document.set_new_name() reads it from.
+ * Duplicate, as a write rather than a prefilled form. The record page is opened
+ * by name, and a name only exists once the record does, so the copy is inserted
+ * straight away and edited by opening it.
  */
+
+// `__newname` is what carries the name. Email Template autonames by Prompt, and
+// that is the key Document.set_new_name() reads it from.
 const duplicateTemplate = async (row: SettingsListRow) => {
 	try {
 		await call('frappe.client.insert', {
@@ -128,17 +121,13 @@ export const templateColumns: SettingsListColumn[] = [
 ]
 
 /**
- * The whole page — list and record — is one component, so the settings tree
+ * The whole page, list and record alike, is one component, so the settings tree
  * mounts it rather than assembling a list panel around a detail.
- *
- * `component` is a GETTER, and has to stay one. This module and the component
- * import each other: the component reads the doctype, the fields and the
- * columns from here, and the tree reaches the component through here. Whichever
- * of the two is entered second sees the other half-evaluated, so a plain
- * `component: markRaw(EmailTemplates)` evaluates `markRaw(undefined)` and
- * throws — on one import order only, which is what makes it pass locally and
- * die in a lazily loaded chunk. A getter is not read until something renders.
  */
+
+// `component` is a getter and has to stay one. This module and the component
+// import each other, so a plain `markRaw(EmailTemplates)` evaluates
+// `markRaw(undefined)` on one import order and dies in a lazily loaded chunk.
 export const emailTemplatesPage: CustomPage = {
 	kind: 'custom',
 	get component() {

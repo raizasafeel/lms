@@ -7,10 +7,8 @@ import { emailAccountsPage } from '@/components/Settings/EmailAccount/emailAccou
 import { notificationsPage } from '@/components/Settings/Notifications/notifications'
 import { sidebarSettingsPage } from '@/components/Settings/Sidebar/sidebar'
 // BrandSettings.vue is still `<script setup>` with no `lang="ts"`, so a TS
-// importer gets TS7016. Only settingsStructure.js reached it before, and a .js
-// module is not type-checked. The suppression clears itself the day the
-// component is converted.
-// @ts-expect-error TS7016: untyped SFC
+// importer gets TS7016. The suppression clears itself the day the component is
+// converted.
 import BrandSettings from '@/components/Settings/BrandSettings.vue'
 import PaymentGateways from '@/components/Settings/PaymentGateways/PaymentGateways.vue'
 import Coupons from '@/components/Settings/Coupons/Coupons.vue'
@@ -25,13 +23,9 @@ import RavenSettings from '@/components/Settings/Raven/RavenSettings.vue'
 import Preferences from '@/components/Settings/Preferences.vue'
 
 /**
- * The settings tree, as data. Ported from settingsStructure.js: the two-column
- * layout is gone (every column held at most one field, so it only ever encoded
- * a wrapping hint), page descriptions are gone, and every item carries a
- * declared slug so a renamed label cannot break a bookmark.
- *
- * Panels still rendered by a component are `kind: 'custom'` until each is
- * ported to a `fields` or `list` page.
+ * The settings tree, as data. Ported from settingsStructure.js, without the
+ * two-column layout or the page descriptions, and every item carries a declared
+ * slug so a renamed label cannot break a bookmark.
  */
 export const settingsTree: SettingsGroup[] = [
 	{
@@ -225,13 +219,9 @@ export const settingsTree: SettingsGroup[] = [
 									doctype: 'Currency',
 									description:
 										'Default currency used for course and batch pricing.',
-									// Shown, never written by being shown. Nothing on the
-									// server resolves a blank default_currency — LMS Course's
-									// desk form copies this single value into a new course's
-									// currency and copies the blank too — so the page has to
-									// answer for itself. USD is the currency this app already
-									// treats as the reference: check_multicurrency converts
-									// into it and short-circuits on it.
+									// Shown, never written by being shown. Nothing on the server
+									// resolves a blank default_currency, so the page answers for
+									// itself. USD is the currency check_multicurrency converts into.
 									displayFallback: 'USD',
 								},
 								{

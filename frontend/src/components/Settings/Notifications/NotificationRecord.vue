@@ -39,7 +39,7 @@
 			>
 				{{
 					__(
-						'Only a System Manager can edit the Subject and Message — writing a rule’s wording can change what a Jinja template reads on this site.'
+						"Only a System Manager can edit the Subject and Message. A rule's wording can change what a Jinja template reads on this site."
 					)
 				}}
 			</p>
@@ -125,19 +125,14 @@ import { cleanError } from '@/utils'
 import type { User } from '@/types/settings'
 
 /**
- * One Notification rule, behind a row on Settings > Notifications.
- *
- * Hand-rolled, after EmailAccountForm.vue: this reads and writes through
- * lms.lms.api.get_notification_rules / set_notification_rule rather than a
- * document resource, because core Notification grants DocPerms to System
- * Manager only and this page is reachable by Moderators too. There is no
- * get-one endpoint, so the record is found in the same search-scoped list the
- * page itself reads — searching by the rule's own name always matches it.
- *
- * Recipients, Condition, Document Type and Send Alert On are deliberately not
- * shown — this page edits wording and channel only, not who a rule
- * addresses or what fires it.
+ * One Notification rule, behind a row on Settings > Notifications. Read and
+ * written through the two gated LMS endpoints rather than a document resource.
+ * There is no get-one endpoint, so the record is found in the search-scoped list.
  */
+
+// Recipients, Condition, Document Type and Send Alert On are deliberately not
+// shown. This page edits wording and channel only, not who a rule addresses or
+// what fires it.
 
 interface NotificationRuleRow {
 	name: string
@@ -155,21 +150,15 @@ const emit = defineEmits<{ back: [] }>()
 const CONTENT_ROWS = 10
 const CONTENT_HEIGHT = `calc(${CONTENT_ROWS} * 1.5rem + 1.25rem)`
 
-// A function, not a module-scope constant: a plain `const __(...)` freezes the
-// string against a runtime locale change, and it is exactly the pattern this
-// file's own sibling module (notifications.ts) documents against. `doc.` is
-// deliberate too — a rule renders against `doc` (see notifications.py's own
-// Jinja placeholders), not a bare `member_name`, so a copy-pasted placeholder
-// without it would 500 at send time rather than merely rendering blank.
+// A function, not a module-scope constant, because a plain `const __(...)`
+// freezes the string against a runtime locale change. `doc.` is deliberate too:
+// a rule renders against `doc`, so a placeholder without it would 500 at send.
 const richPlaceholder = () =>
 	__('Dear {{ doc.member_name }},\n\n…\n\nThanks,\nFrappe Learning')
 
-// `set_notification_rule` requires System Manager for `subject`/`message`
-// specifically (see the endpoint's own docstring: a rule's message renders as
-// Jinja with an unchecked frappe.db.sql/get_all/get_value in scope, so writing
-// it is a read-anything primitive core reserves to System Manager). The same
-// injected `$user` resource Preferences.vue and half a dozen forms already
-// gate desk-only actions on — not a new mechanism.
+// `set_notification_rule` requires System Manager for `subject` and `message`,
+// because a rule's message renders as Jinja with an unchecked read-anything
+// namespace. The same injected `$user` other forms gate desk-only actions on.
 const user = inject<User>('$user')
 const canWriteWording = computed(() => user?.data?.is_system_manager === true)
 
@@ -181,15 +170,14 @@ const loading = ref(true)
 
 // Set from the editor's native `input`, which fires on the keystroke itself,
 // ahead of the `change` that carries the value onto `doc.message`. Without it a
-// Save disabled at the moment of the click swallows that click, and the edit
-// that was mid-flight is never sent.
+// disabled Save swallows the click and the mid-flight edit is never sent.
 const codeTouched = ref(false)
 
 const showTemplateDialog = ref(false)
 
 const saveState = useSaveState()
 const saving = saveState.saving
-// Rendered outside the `v-if="doc"` block: a rule that fails to load leaves
+// Rendered outside the `v-if="doc"` block. A rule that fails to load leaves
 // `doc` null and `loading` already false, so an ErrorMessage inside the form
 // would mount nowhere and the panel would draw as an empty title bar.
 const error = saveState.error
@@ -275,10 +263,9 @@ useDirtyGuard(
 )
 
 /**
- * Only the fields that changed, over the record's name — never the whole
- * document. `set_notification_rule` writes only what it is given, and sending
- * every field regardless of whether it moved would defeat the point of that
- * guarantee from the one caller that could actually rely on it.
+ * Only the fields that changed, over the record's name, never the whole document.
+ * `set_notification_rule` writes only what it is given, and sending every field
+ * would defeat that guarantee from its one caller.
  */
 const buildPayload = (): Record<string, unknown> | null => {
 	const current = doc.value

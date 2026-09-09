@@ -74,8 +74,8 @@ const error = ref('')
 const saving = ref(false)
 const deleting = ref(false)
 
-// A save the dialog has already moved on from — reopened on another row, or on
-// New — must not close what is open now or write its error under it. Only the
+// A save the dialog has already moved on from, reopened on another row or on
+// New, must not close what is open now or write its error under it. Only the
 // newest one is still allowed to land.
 let saveToken = 0
 
@@ -110,7 +110,7 @@ const actions = computed(() => [
 	},
 ])
 
-// The dialog is one form in two states, so opening it is what loads it — from
+// The dialog is one form in two states, so opening it is what loads it: from
 // the row for an edit, from nothing for a create.
 const openForm = (row?: SettingsListRow) => {
 	saveToken++
@@ -127,7 +127,7 @@ const messageOf = (err: any, fallback: string): string => {
 	return (typeof message === 'string' && cleanError(message)) || fallback
 }
 
-// A refused write keeps the dialog — and what was typed — where it is, and puts
+// A refused write keeps the dialog, and what was typed, where it is, and puts
 // the server's message under the field.
 const onSaveError = (err: any, fallback: string) => {
 	saving.value = false

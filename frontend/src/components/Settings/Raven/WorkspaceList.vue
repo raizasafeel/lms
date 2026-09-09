@@ -43,22 +43,12 @@
 </template>
 
 <script setup lang="ts">
-// The workspace list, on the same SettingsList every other settings panel uses.
-// It listed through its own header strip and row component before, and the two
-// were separate flex containers agreeing on `w-*/12` fractions by hand, so the
-// column labels never quite sat over their cells, and the whole table was inset
-// from the page title by its own padding. SettingsList puts the header and the
-// rows in one grid at one inset, which is what lines them up here and with the
-// panels either side of this one.
-//
-// Nothing in a row is editable. Visibility reads as text: it is the record's own
-// setting, and the page a row opens is where a record is edited.
-//
-// Everything that happens *to* a mapping rather than inside it is in the row
-// menu: adopting an unmanaged Raven workspace, recovering one whose Raven side
-// was deleted, and deleting the mapping. Delete used to be a section at the
-// bottom of a General tab, which put the page's most destructive action behind a
-// tab you had to already be on to know it existed.
+// The workspace list, on the same SettingsList every other settings panel uses,
+// which puts the header and the rows in one grid at one inset.
+
+// Nothing in a row is editable, because the page a row opens is where a record
+// is edited. Everything that happens to a mapping rather than inside it is in
+// the row menu, including Delete, which used to hide at the foot of a tab.
 import { computed, ref, watch } from 'vue'
 import { Select } from 'frappe-ui'
 import SettingsList from '@/components/Layouts/settings/desktop/SettingsList.vue'
@@ -81,22 +71,14 @@ const emit = defineEmits<{ open: [row: MappingRow]; new: [] }>()
 
 const list = useMappingList({ entity: 'workspace' })
 
-// Searched and filtered here rather than by the server, for the same reason
-// paging is: the endpoint takes no search argument, because it merges our
-// mappings with the unmanaged Raven workspaces that have no row to filter on.
-// The box and its no-results state are still SettingsList's, so the panel reads
-// like the ones either side of it.
+// Searched and filtered here rather than by the server, because the endpoint
+// takes no search argument: it merges our mappings with unmanaged Raven
+// workspaces that have no row to filter on.
 const search = ref('')
 
-// The three states a row can be in, as the list itself distinguishes them. They
-// are not a partition: a stale mapping can also be unadopted, and picking Stale
-// should still find it, so each is asked as its own question rather than
-// derived from one ordered classification.
-//
-// There is no Disabled here because a workspace mapping has no on/off any more:
-// the channels under it carry that. `paused` still reaches the muting below,
-// since a mapping switched off before the control was withdrawn genuinely is not
-// syncing and the list should not draw it as though it were.
+// The three states a row can be in. Not a partition: a stale mapping can also be
+// unadopted, so each is its own question. No Disabled, because a workspace
+// mapping has no on/off, though `paused` still reaches the muting below.
 type State = 'all' | 'active' | 'stale' | 'unlinked'
 
 const state = ref<State>('all')
@@ -142,9 +124,8 @@ const columns: SettingsListColumn[] = [
 		key: 'workspace',
 		label: __('Workspace'),
 		// `stacked`, not `text`: the row's name is the thing you came to read, and
-		// stacked is what the other panels put a name in, it draws at ink-gray-8
-		// against text's ink-gray-6, which is what makes Coupons' Code column read
-		// as the row and its neighbours as detail.
+		// stacked draws at ink-gray-8 against text's ink-gray-6, which is what makes
+		// a name read as the row and its neighbours as detail.
 		type: 'stacked',
 		width: 'minmax(0, 1.5fr)',
 		primary: (row) => row.label,
@@ -172,9 +153,8 @@ const columns: SettingsListColumn[] = [
 		options: (row) => {
 			const mapping = row as MappingRow
 			// Offered on any row whose Raven workspace is actually there, adopted or
-			// not: an unmanaged workspace is one you may well want to go and look at.
-			// Empty on a stale row, whose Raven side is gone, Recreate is the useful
-			// action there, and the composable already supplies it.
+			// not. Empty on a stale row, where Recreate is the useful action and the
+			// composable already supplies it.
 			const open = openInRavenOptions({
 				ravenWorkspace: mapping.ravenId,
 				stale: mapping.stale,

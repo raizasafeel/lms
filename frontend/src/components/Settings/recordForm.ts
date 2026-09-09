@@ -7,18 +7,14 @@ import type {
 } from '@/types/settingsSchema'
 
 /**
- * One record form, serving both the New page and the row a list opens.
- *
- * A list's create form and its edit form are the same form: the same fields, the
- * same save mode, the same header toggle. Only two things differ, and both are
- * mechanical — where the document comes from (an id reserved for an insert, or
- * the one named in the URL) and what the header is called. Declaring the form
- * twice invites the two to drift, which is how a field ends up on the edit page
- * and not on New.
- *
- * So a panel declares it once and calls `forNew()` / `forRecord()` for the two
- * placements.
+ * One record form, serving both the New page and the row a list opens. A list's
+ * create form and its edit form are the same fields, the same save mode and the
+ * same header toggle, so a panel declares it once.
  */
+
+// Only the document's origin and the header's wording differ. Declaring the
+// form twice invites the two to drift, which is how a field ends up on the
+// edit page and not on New.
 export interface RecordForm {
 	/** The page as it opens on a record the list already has. */
 	forRecord: () => DetailPage
@@ -40,8 +36,8 @@ export interface RecordFormOptions {
 	/** Header for the New page. */
 	newTitle: () => string
 	/**
-	 * Header for an existing record. Called with an empty row for a deep link to
-	 * a record the list has not fetched yet, so it has to tolerate one.
+	 * Header for an existing record. Called with an empty row for a deep link to a
+	 * record the list has not fetched yet, so it has to tolerate one.
 	 */
 	recordTitle: (row: SettingsListRow) => string
 }

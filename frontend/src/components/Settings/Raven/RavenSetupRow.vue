@@ -41,15 +41,12 @@
 </template>
 
 <script setup lang="ts">
-// The integration as one row, whatever state it is in. Helpdesk's
-// ERPNextIntegrationSettings.vue, where a missing app is a badge beside the
-// panel title and a sentence under this row rather than a coloured strip or a
-// page of its own. Nothing here moves between the states; only the sentence
-// comes and goes, so the control never changes place under the reader.
-//
-// Enable is one-way (raven_integration.api.enable_integration), so the control
-// is a Button where Helpdesk has a Switch: a Switch would draw an off position
-// that no endpoint can reach.
+// The integration as one row, whatever state it is in, after Helpdesk's
+// ERPNextIntegrationSettings.vue. Nothing here moves between the states, so the
+// control never changes place under the reader.
+
+// Enable is one-way, so the control is a Button where Helpdesk has a Switch,
+// which would draw an off position no endpoint can reach.
 import { Button } from 'frappe-ui'
 import { computed } from 'vue'
 
@@ -67,9 +64,8 @@ const emit = defineEmits<{ enable: [] }>()
 const MARKETPLACE_URL = 'https://cloud.frappe.io/marketplace/apps/raven'
 
 // One string with a placeholder, split around the app name at render time. Three
-// separate __() calls could not be reordered by a translator, gave the fragments
-// no context in the POT file, and fixed an English word order into the DOM, which
-// is also what an RTL locale has to undo.
+// separate __() calls could not be reordered by a translator and fixed an
+// English word order into the DOM.
 const sentence = computed<string[]>(() =>
 	__('Install the {0} app to enable this integration.').split('{0}')
 )

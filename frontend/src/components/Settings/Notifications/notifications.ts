@@ -5,32 +5,23 @@ import type { DetailPage, ListPage, SelectOption } from '@/types/settingsSchema'
 import type { SettingsListColumn, SettingsListRow } from '@/types'
 
 /**
- * Settings > Notifications, as config: every mail Frappe Learning sends, as
- * the Notification rules that send them (see lms/lms/notifications.py).
- *
- * Read through two gated LMS endpoints rather than a doctype resource: core
- * Notification grants DocPerms to System Manager only, and this page is
- * reachable by Moderators too (lms.lms.api.get_notification_rules /
- * set_notification_rule). Both endpoints require NOTIFICATION_ROLES
- * (Moderator or System Manager), but set_notification_rule additionally
- * requires System Manager to write `subject` or `message` -- a rule's
- * message renders as Jinja with an unchecked read-anything namespace, so
- * Moderators are limited to enabled/channel/send_system_notification.
- *
- * Every translated string is produced inside a function or a getter — `__` is
- * installed on window by the translation plugin, which runs after main.js has
- * finished importing the settings tree, so a `__()` at module scope would call
- * an undefined global.
+ * Settings > Notifications, as config: every mail Frappe Learning sends, as the
+ * Notification rules that send them. Read through two gated LMS endpoints,
+ * because core Notification grants DocPerms to System Manager only.
  */
+
+// Writing `subject` or `message` needs System Manager on top of that. A rule's
+// message renders as Jinja with an unchecked read-anything namespace, so a
+// Moderator is limited to enabled, channel and send_system_notification.
 
 export const METHOD = {
 	list: 'lms.lms.api.get_notification_rules',
 	set: 'lms.lms.api.set_notification_rule',
 } as const
 
-// Not a real doctype resource — this is the key `reloadSettingsLists`
-// refetches the list by, the same way Email Accounts carries `Email Account`
-// alongside its own `method`.
+// Not a real doctype resource. This is the key `reloadSettingsLists` refetches
+// the list by, the same way Email Accounts carries `Email Account` alongside
+// its own `method`.
 export const NOTIFICATIONS_DOCTYPE = 'Notification'
 
 export const NOTIFICATION_RULE_FIELDS = [
@@ -43,10 +34,9 @@ export const NOTIFICATION_RULE_FIELDS = [
 ]
 
 /**
- * The only two channels LMS can honour. Notification.channel also offers
- * Slack and SMS, but nothing in this app ever delivers either — no send path
- * exists for them — so the picker never offers them and the endpoint refuses
- * a write naming one.
+ * The only two channels LMS can honour. Notification.channel also offers Slack
+ * and SMS, but no send path exists for either, so the picker never offers them
+ * and the endpoint refuses a write naming one.
  */
 export const channelOptions = (): SelectOption[] => [
 	{ label: __('Email'), value: 'Email' },
@@ -62,9 +52,7 @@ export const channelLabel = (row: SettingsListRow): string => {
 
 /**
  * The Enabled switch's write. Optimistic, with a rollback: the row flips under
- * the pointer and the write follows it, and a refused write puts it back to
- * what the server still holds — the same shape Zoom's own `enabled` switch
- * uses, over `set_notification_rule` instead of a plain `frappe.client.set_value`.
+ * the pointer and a refused write puts it back to what the server still holds.
  */
 const toggleEnabled = async (row: SettingsListRow, value: boolean) => {
 	const previous = row.enabled
@@ -109,9 +97,9 @@ const columns: SettingsListColumn[] = [
 	},
 ]
 
-// Loaded on demand, and kept apart from the list for the reason every other
-// record page in Settings is: naming it with a static import would close an
-// import cycle the moment the record itself needs anything from here.
+// Loaded on demand and kept apart from the list, the way every other record
+// page in Settings is. A static import would close a cycle the moment the
+// record needs anything from here.
 const record: DetailPage = {
 	kind: 'custom',
 	component: markRaw(
@@ -125,12 +113,9 @@ export const notificationsPage: ListPage = {
 	kind: 'list',
 	resource: {
 		doctype: NOTIFICATIONS_DOCTYPE,
-		// Read by the endpoint, not by a get_list call — it applies its own
-		// role gate and its own `module = "LMS"` scope, which a doctype
-		// resource has no way to express. All twelve rules come back in one
-		// answer, so the page length is set well past the catalogue this (or
-		// any near-future) LMS release will ever seed, which is what keeps
-		// Load More from re-fetching and re-appending the same rows.
+		// Read by the endpoint, not by a get_list call, because it applies its own
+		// role gate and `module = "LMS"` scope. All twelve rules come back at once,
+		// so the page length is set past anything the catalogue will reach.
 		method: METHOD.list,
 		fields: NOTIFICATION_RULE_FIELDS,
 		pageLength: 100,

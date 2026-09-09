@@ -108,17 +108,12 @@ import {
 } from '@/utils/raven/ruleAdapter'
 import type { RuleGroup, RulePath } from '@/types'
 
-// A `#condition` row spans the builder's three leaf tracks, and all three default
-// to `minmax(0, max-content)`, so the row was as wide as whatever sat inside it
-// and the cascade took about a third of the card. The rest went to the actions
-// track, which frappe-ui declares `minmax(max-content, 1fr)` to push the row menu
-// onto the end edge.
-//
-// This asks for the free width rather than for a size. The fraction is large
-// enough that the actions track keeps only its `max-content` floor, the menu
-// button itself: the menu stays on the end edge and everything before it belongs
-// to the cascade. `minmax(0, …)` so a long option elides inside its cell rather
-// than widening the row past the card.
+// A `#condition` row spans the builder's three leaf tracks, all defaulting to
+// `minmax(0, max-content)`, so the cascade took about a third of the card.
+
+// This asks for the free width rather than a size, large enough that the actions
+// track keeps only its `max-content` floor. `minmax(0, …)` so a long option
+// elides inside its cell rather than widening the row past the card.
 const CONDITION_COLUMNS = {
 	field: 'minmax(0, 100fr)',
 	operator: 'minmax(0, 100fr)',
@@ -180,11 +175,8 @@ const sectionErrors = computed<string[]>(() => {
 })
 
 // `#empty` fills the component's own button rather than replacing it, so
-// guarding `#add-condition` alone left "Add a condition" live with no
-// declarations loaded. `readonly` is what turns that button into plain text, and
-// an empty tree is the one state where freezing the rows costs nothing.
-// `noConditionTypes`, not `declarationsUnavailable`: the latter waits for the
-// request to settle, which left the window open for the whole fetch.
+// guarding `#add-condition` alone left it live with nothing declared.
+// `noConditionTypes`, not the form that waits for the request to settle.
 const nothingToAdd = computed<boolean>(
 	() =>
 		props.rules.noConditionTypes.value &&

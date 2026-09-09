@@ -107,16 +107,9 @@ import { runSave, useSaveState } from '@/composables/useSettingsSave'
 import { cleanError } from '@/utils'
 
 /**
- * One email template, behind both New and a row.
- *
- * Hand-rolled rather than routed through SettingsFields, after CRM's
- * Settings/Telephony/TwilioSettings.vue: a `space-y-4` body, text fields in a
- * two-column grid, and a rule between sections. New and edit are the same state
- * machine — they only ever differed in which key the name is written to and
- * whether the save is an insert.
- *
- * Handed the open record's name and reporting only that it is finished, the
- * same contract ZoomAccountForm.vue has.
+ * One email template, behind both New and a row. Hand-rolled after CRM's
+ * TwilioSettings.vue: a `space-y-4` body, text fields in a two-column grid, and
+ * a rule between sections. New and edit are the same state machine.
  */
 const props = defineProps<{ name?: string | null }>()
 
@@ -125,19 +118,13 @@ const emit = defineEmits<{ back: [] }>()
 const contentLabelId = useId()
 
 /**
- * The body slot, as one definite height that both editors fill exactly.
- *
- * A reserved height only the code editor filled is what left a gap under the
- * rich one: `min-height` on the slot plus a `max-h` on the editor inside it
- * capped the content well short of the reservation, and the remainder showed as
- * dead space above the hint. So the slot is a flex column of a fixed height and
- * each control is told to fill it — Ace by being handed this height outright,
- * the rich editor by growing into it — which is also what keeps the hint and
- * everything under it from moving when Use HTML is flipped.
- *
- * The number is the schema renderer's own row arithmetic: 1.5rem a line plus
- * its padding.
+ * The body slot, as one definite height that both editors fill exactly. A
+ * reserved height only the code editor filled is what left a gap under the rich
+ * one, so the slot is a flex column and each control is told to fill it.
  */
+
+// The number is the schema renderer's own row arithmetic: 1.5rem a line plus
+// its padding.
 const CONTENT_ROWS = 10
 const CONTENT_HEIGHT = `calc(${CONTENT_ROWS} * 1.5rem + 1.25rem)`
 
@@ -148,17 +135,13 @@ const RICH_PLACEHOLDER = __(
 const record = computed(() => props.name ?? null)
 
 // Ace hands its value over on blur, not per keystroke, so an edit to the HTML
-// body is not in the document yet when the pointer reaches Save — and a Save
-// still disabled swallows the click that would have blurred it. This says the
-// editor is holding something; the value itself lands on the blur that the now
-// enabled button's focus causes, before the click runs.
+// body is not in the document yet when the pointer reaches Save, and a disabled
+// Save swallows the click that would have blurred it.
 const codeTouched = ref(false)
 
-// `renameField: 'name'` is the whole rename: a template autonames by Prompt, so
-// its name IS its id and a set_value on it is dropped. The composable sends the
-// rename_doc first and then settles both copies of the document, which is what
-// keeps a name-only edit from reading unsaved for good — getChangedFields()
-// strips `name` from the payload, so the rename is the only write there is.
+// `renameField: 'name'` is the whole rename. A template autonames by Prompt, so
+// its name is its id and a set_value on it is dropped. The composable sends
+// rename_doc first and then settles both copies of the document.
 const { source, doc, isNew, isDirty, loading } = useSettingsRecord({
 	doctype: DOCTYPE,
 	record,
@@ -171,11 +154,9 @@ const title = computed(() =>
 )
 
 /**
- * The name box, over the two keys a template's name is written to.
- *
- * `__newname` before the record exists — Document.set_new_name() reads the id
- * from it, and it is what the old create form sent — and `name` after, where
- * an edit is a rename rather than a field write.
+ * The name box, over the two keys a template's name is written to. `__newname`
+ * before the record exists, which is where Document.set_new_name() reads the id
+ * from, and `name` after, where an edit is a rename rather than a field write.
  */
 const templateName = computed<string>({
 	get: () => {
@@ -190,8 +171,8 @@ const templateName = computed<string>({
 	},
 })
 
-// frappe-ui's Checkbox writes a boolean, and `use_html` is a 0/1 check field:
-// the dirty diff and the save payload both compare against the document the
+// frappe-ui's Checkbox writes a boolean and `use_html` is a 0/1 check field.
+// The dirty diff and the save payload both compare against the document the
 // server sent, so the number is what has to go back into it.
 const useHtml = computed<boolean>({
 	get: () => Boolean(doc.value?.use_html),
@@ -235,9 +216,9 @@ const submit = () => {
 		success: wasNew
 			? __('Email Template created successfully')
 			: __('Email Template updated successfully'),
-		// A draft has no record page to stay on — the record is opened by name,
-		// and the name is only settled by the insert. Going back is also what
-		// refetches the list, which the list itself does on close.
+		// A draft has no record page to stay on, because the record is opened by
+		// name and the name is only settled by the insert. Going back is also what
+		// refetches the list.
 		after: () => {
 			if (wasNew) emit('back')
 		},

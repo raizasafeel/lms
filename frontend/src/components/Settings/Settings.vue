@@ -86,9 +86,8 @@ const doctype = ref('LMS Settings')
 const settingsStore = useSettings()
 
 // The dirty guard, installed once for every settings form at once. Each form
-// registers its own dirty check from its setup; this is the single router hook
-// that consults them, and it has to be removed again or a remount would stack a
-// second one and prompt twice for the same decision.
+// registers its own dirty check, and this hook has to be removed again or a
+// remount would stack a second one and prompt twice.
 const router = useRouter()
 let removeDirtyGuard = null
 
@@ -105,9 +104,9 @@ onBeforeUnmount(() => {
 	removeDirtyGuard = null
 })
 
-// The panel area is not gated on this document. Only some pages write it —
-// a list of Zoom accounts does not — and the ones that do already wait for
-// their own source to load, so gating here only blanked the rest.
+// The panel area is not gated on this document. Only some pages write it, and
+// the ones that do already wait for their own source to load, so gating here
+// only blanked the rest.
 const data = createDocumentResource({
 	doctype: doctype.value,
 	name: doctype.value,
@@ -116,9 +115,9 @@ const data = createDocumentResource({
 	auto: true,
 })
 
-// Handed down so a page over this document does not enter it a second time.
-// A page over any other doctype gets nothing: passing it would hand a Zoom
-// account form the wrong document to write.
+// Handed down so a page over this document does not enter it a second time. A
+// page over any other doctype gets nothing, because passing it would hand a
+// Zoom account form the wrong document to write.
 const sharedDocument = (page) =>
 	'doc' in page.source && page.source.doc === doctype.value ? data : undefined
 
@@ -153,18 +152,13 @@ const show = computed({
 	},
 })
 
-// Dismissing on a backdrop click, which frappe-ui's dialog stack loses:
-// reka-ui reads an outside click off a document-level `pointerdown`, and that
-// same handler is the only thing that clears its pointer-went-down-inside flag
-// — which frappe-ui's `@pointerdown.stop` on the dialog content sets and then
-// keeps it from ever reaching. One click in the panel and reka swallows the
-// next backdrop click instead of dismissing, so the backdrop reads as dead.
-//
-// The overlay is the exact surface for this: a panel click is stopped before it
+// Dismissing on a backdrop click, which frappe-ui's dialog stack loses. reka-ui
+// reads an outside click off a document-level `pointerdown`, and frappe-ui's
+// `@pointerdown.stop` keeps that handler from ever clearing its own flag.
+
+// The overlay is the right node to watch. A panel click is stopped before it
 // gets here, and the containment check keeps that true if the `.stop` ever
-// goes. stopPropagation leaves this the only dismissal raised for the click.
-// Both nodes are reached from our own element because frappe-ui owns the
-// chrome around it.
+// goes. Both nodes are reached from our own element.
 const content = ref(null)
 const dialogContent = computed(
 	() => content.value?.$el?.closest('[data-dismissable-layer]') ?? null
@@ -197,10 +191,8 @@ const activeSlug = computed({
 })
 
 // The hash owns the open record too, so a panel's model reads and writes it.
-// `activeRecord` belongs to whichever tab the hash names, so each panel is
-// handed its own tab's record and nobody else's: unmounting a hidden panel is
-// a default of the tabs component rather than a guarantee, and a panel that is
-// still mounted must not adopt — or overwrite — another tab's record.
+// Each panel is handed its own tab's record and nobody else's, because
+// unmounting a hidden panel is a default rather than a guarantee.
 const recordFor = (item) =>
 	activeTab.value?.slug === item.slug ? activeRecord.value : null
 
@@ -210,11 +202,8 @@ const openRecord = (item, record) => {
 }
 
 // A custom page that owns records gets the same pair a list panel does: the
-// record it is on, and a way to say it moved. Bound only where the item says
-// it takes records — the rest would get a null record they never read and an
-// update listener they never emit, and a listener a component does not declare
-// falls through as an attribute, which Vue warns about on the ones that render
-// a fragment.
+// record it is on, and a way to say it moved. Bound only where the item says it
+// takes records, because an undeclared listener falls through as an attribute.
 const recordModel = (item) =>
 	item.records
 		? {
@@ -224,9 +213,8 @@ const recordModel = (item) =>
 		: {}
 
 // A renamed record is the same record under a new name, so the hash it already
-// has is rewritten rather than a second one pushed: history depth is unchanged
-// and Back still lands on the list. Without this the hash keeps naming a
-// document the server has forgotten, and a refresh deep-links to nothing.
+// has is rewritten rather than a second one pushed. History depth is unchanged
+// and Back still lands on the list.
 const renameRecord = (item, name) => {
 	if (activeTab.value?.slug !== item.slug) return
 	replaceRecord(name)
