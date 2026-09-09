@@ -54,7 +54,9 @@ const ensureLayerRule = (layer: number) => {
 }
 
 // Open order, which DOM order does not give us. A WeakMap so a closed dialog's
-// entry goes away with its node.
+// entry goes away with its node. The counter only ever climbs: it orders the
+// open set rather than naming a layer, so restarting it would let an overlay
+// that outlived its dialog take the same number as one opened later.
 const openedAt = new WeakMap<HTMLElement, number>()
 let opened = 0
 
@@ -74,11 +76,9 @@ const poppers = () => bodyChildren().filter((el) => el.matches(POPPER))
 const restack = () => {
 	const open = overlays()
 
-	// Nothing left, so start the next stack from 1 rather than let the counter
-	// climb for the life of the page. A popper with no dialog under it is back in
-	// the root stacking context and is handed back its own `auto`.
+	// A popper with no dialog under it is back in the root stacking context and is
+	// handed back its own `auto`.
 	if (!open.length) {
-		opened = 0
 		for (const popper of poppers()) {
 			popper.removeAttribute(LAYER_ATTR)
 			popper.style.zIndex = ''
@@ -87,16 +87,21 @@ const restack = () => {
 	}
 
 	for (const overlay of open) {
-		if (!openedAt.has(overlay)) {
-			openedAt.set(overlay, ++opened)
-			overlay.style.zIndex = String(layerOf(opened))
-		}
+		if (!openedAt.has(overlay)) openedAt.set(overlay, ++opened)
 	}
 
-	// Only the newest dialog is interactive; everything under it is inert.
-	const top = open.reduce((a, b) =>
-		(openedAt.get(a) ?? 0) > (openedAt.get(b) ?? 0) ? a : b
+	// Layers come from the rank inside the open set, not from the open number
+	// itself, so an overlay left behind by a dialog that has gone cannot tie with
+	// a dialog opened after it and win the tie on document order.
+	const ordered = [...open].sort(
+		(a, b) => (openedAt.get(a) ?? 0) - (openedAt.get(b) ?? 0)
 	)
+	ordered.forEach((overlay, rank) => {
+		overlay.style.zIndex = String(layerOf(rank + 1))
+	})
+
+	// Only the newest dialog is interactive; everything under it is inert.
+	const top = ordered[ordered.length - 1]
 	for (const overlay of open) overlay.inert = overlay !== top
 
 	// An open menu turns the dialog holding it off along with everything else
@@ -112,7 +117,7 @@ const restack = () => {
 	// Fixed when the popper first appears, exactly as a dialog's own layer is. A
 	// popper belongs to the dialog it was opened from, so re-reading the current
 	// top would keep lifting the menu over whichever dialog replaced it.
-	const ceiling = layerOf(openedAt.get(top) ?? 0)
+	const ceiling = layerOf(ordered.length)
 	for (const popper of poppers()) {
 		if (openedAt.has(popper)) continue
 		openedAt.set(popper, opened)
