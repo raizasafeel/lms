@@ -34,9 +34,8 @@ vi.mock('frappe-ui', () => ({
 
 const push = vi.fn()
 // currentRoute and options.history are part of the stub because openFormRoute
-// reads both: it stamps the location it is leaving into history.state so
-// App.vue can keep that page rendered under the form's dialog. The palette is
-// driven from '/courses' here — any mounted page would do.
+// reads both. It stamps the location it is leaving into history.state so App.vue
+// can keep that page rendered under the form's dialog.
 vi.mock('vue-router', () => ({
 	useRouter: () => ({
 		push,
@@ -47,7 +46,7 @@ vi.mock('vue-router', () => ({
 }))
 
 // The palette reads roles to decide which category rows to show, which page a
-// program hit opens, and — with the settings store — whether Settings can act.
+// program hit opens, and, with the settings store, whether Settings can act.
 const user = { data: {} as Record<string, unknown> }
 vi.mock('@/stores/user', () => ({ usersStore: () => ({ userResource: user }) }))
 vi.mock('@/utils', () => ({
@@ -153,7 +152,7 @@ beforeEach(() => {
 	user.data = { is_moderator: true }
 	push.mockClear()
 	// The outage case swaps submit() for one that throws, and never puts it
-	// back — every later search in the file inherited the failure.
+	// back, so every later search in the file inherited the failure.
 	resource.submit = vi.fn(async (params: any) => {
 		resource.params = params
 		return resource.next
@@ -328,9 +327,8 @@ describe('command palette search', () => {
 
 /**
  * Where a program hit lands depends on who is searching. Programs.vue renders a
- * student the read-only ProgramDetail page, but gives a moderator or instructor
- * a list whose cards open the ProgramForm modal — so sending everyone to
- * ProgramDetail dropped an author onto the page they cannot edit from.
+ * student the read-only ProgramDetail page but gives an author a list whose
+ * cards open the ProgramForm modal, so sending everyone to one dropped the other.
  */
 describe('command palette program routing', () => {
 	const PROGRAM = {
@@ -406,7 +404,7 @@ describe('command palette form routes', () => {
 	})
 
 	// QuizForm is a top-level route, and the quiz list reaches it with a plain
-	// row link — there is no modal to keep on the stack.
+	// row link, so there is no modal to keep on the stack.
 	it('leaves a quiz hit as an ordinary push', async () => {
 		const wrapper = build()
 		await search(wrapper, 'week', [
@@ -426,8 +424,8 @@ describe('command palette form routes', () => {
 })
 
 /**
- * The keys were bound to the `<input>`, so tabbing to a result button — the
- * only other thing in the dialog that takes focus — killed the arrows and
+ * The keys were bound to the `<input>`, so tabbing to a result button, the only
+ * other thing in the dialog that takes focus, killed the arrows and
  * Enter. They belong to the panel, above both.
  */
 describe('command palette keyboard scope', () => {
@@ -528,13 +526,9 @@ describe('command palette outage reporting', () => {
 })
 
 /**
- * Results the visible query no longer matches.
- *
- * Going from one valid query to another leaves `isSearching` true, so the query
- * watcher's clear branch never runs and the previous rows stay on screen for the
- * debounce plus the replacement request. That is deliberate — clearing them per
- * keystroke is the blink 5af4bf830 fixed — but they must not stay *selectable*,
- * or Enter opens a row belonging to a query the user has already replaced.
+ * Results the visible query no longer matches. Going from one valid query to
+ * another leaves the previous rows on screen, which is deliberate, but they must
+ * not stay selectable or Enter opens a row from a query already replaced.
  */
 describe('command palette stale results', () => {
 	const KUBE = { title: 'Courses', items: [COURSE] }

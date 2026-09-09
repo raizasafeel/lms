@@ -1,14 +1,7 @@
 /**
- * The badge form: what it loads, what it lets you change, and when it saves.
- *
- * The masthead this replaces drew the Title and the Description as bare
- * borderless inputs — `border-0 bg-transparent p-0 focus:outline-none
- * focus:ring-0`, with the placeholder as their only label. On an existing badge
- * the placeholder never shows, so both read as a heading and a paragraph: no
- * box, no border, and no focus ring even once the caret is in them. There was
- * nothing on screen to say either one could be typed into, which is the
- * "we can't even edit the top part" report. They are ordinary labelled
- * FormControls now, and the first describe below is what keeps them that way.
+ * The badge form: what it loads, what it lets you change, and when it saves. The
+ * masthead this replaces drew Title and Description as borderless inputs, so on
+ * an existing badge nothing said either could be typed into.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
@@ -156,9 +149,9 @@ vi.mock('@/composables/useSettingsListResource', () => ({
 	}),
 }))
 
-// A stand-in for the document resource: it loads the row the page asks for,
+// A stand-in for the document resource. It loads the row the page asks for,
 // keeps the copy the server last sent, and calls itself dirty when the two
-// differ — which is exactly what frappe-ui's own isDirty compares.
+// differ, which is what frappe-ui's own isDirty compares.
 vi.mock('@/composables/useSettingsSource', async () => {
 	const { computed, reactive, ref, watch } = await import('vue')
 	return {
@@ -249,9 +242,9 @@ const openNew = async (wrapper: Wrapper) => {
 	return wrapper
 }
 
-// Either control: Description is a textarea (the doctype's Small Text), the
-// rest are inputs. Both halves are scoped to the testid — a bare `, textarea`
-// would match any textarea on the page.
+// Either control: Description is a textarea and the rest are inputs. Both
+// halves are scoped to the testid, because a bare `, textarea` would match any
+// textarea on the page.
 const control = (testid: string) =>
 	`[data-testid="${testid}"] input, [data-testid="${testid}"] textarea`
 
@@ -288,8 +281,8 @@ describe('the top of the badge form is editable', () => {
 	})
 
 	// The bug was that neither said it was a field. Both are drawn by a control
-	// that renders its own <label for> — not a placeholder standing in for one —
-	// so the box is named on screen and by a screen reader alike.
+	// that renders its own <label for>, so the box is named on screen and by a
+	// screen reader alike.
 	it('labels both of them on screen, pointing at the box', () => {
 		const wrapper = mountPage()
 		return openBadge(wrapper).then(() => {
@@ -308,9 +301,9 @@ describe('the top of the badge form is editable', () => {
 		})
 	})
 
-	// A control with its focus ring taken away and nothing put back is a control
-	// a keyboard user cannot find (WCAG 2.4.7). The old masthead did exactly
-	// that, on both boxes.
+	// A control with its focus ring taken away and nothing put back is a control a
+	// keyboard user cannot find (WCAG 2.4.7). The old masthead did exactly that,
+	// on both boxes.
 	it('leaves every field its focus indicator', async () => {
 		const wrapper = await openBadge(mountPage())
 
@@ -426,9 +419,9 @@ describe('save is offered only for something to save', () => {
 		).toBeUndefined()
 	})
 
-	// Save is the only header action a form has, on an existing badge and on a
-	// new one alike. Discarding is leaving: Back asks, and the unsaved badge in
-	// the header is what says there is something to lose.
+	// Save is the only header action a form has, on an existing badge and a new
+	// one alike. Discarding is leaving: Back asks, and the unsaved badge in the
+	// header is what says there is something to lose.
 	it('offers Save and nothing else, dirty or not, new or not', async () => {
 		for (const wrapper of [
 			await openBadge(mountPage()),

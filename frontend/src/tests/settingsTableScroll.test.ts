@@ -1,10 +1,7 @@
 /**
  * The settings table's scrolling window, and what is deliberately outside it.
- *
- * Three things here are geometry that jsdom cannot compute, so each is pinned
- * by the declaration that produces it rather than by a measurement: the row
- * window `visibleRows` opens, the fact that Load More is not inside it, and the
- * two class-level fixes that only show up under a pointer or a keyboard.
+ * Three things here are geometry jsdom cannot compute, so each is pinned by the
+ * declaration that produces it rather than by a measurement.
  */
 import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
@@ -65,29 +62,25 @@ const scroller = (wrapper: ReturnType<typeof build>) =>
 
 describe('SettingsTable: the scrolling window', () => {
 	it('opens a window of exactly the rows asked for, plus the header', () => {
-		// The header shares the scroll box, so it has to be paid for or the
-		// window comes up a row short of what the caller asked for. `2rem` is
-		// frappe-ui's own ListHeader height (`h-8`).
+		// The header shares the scroll box, so it has to be paid for or the window
+		// comes up a row short of what the caller asked for. `2rem` is frappe-ui's
+		// own ListHeader height.
 		expect(scroller(build({ visibleRows: 9 })).style.maxHeight).toBe(
 			'calc(var(--list-row-height) * 9 + 2rem)'
 		)
 	})
 
 	it('caps nothing unless a page asks it to', () => {
-		// A ceiling is a statement about one page's shape. Every settings screen
-		// that is its own page must keep using the room it has, an earlier pass
-		// put this in the shared table and quietly resized all of them.
+		// A ceiling is a statement about one page's shape. Every settings screen that
+		// is its own page must keep using the room it has, and an earlier pass put
+		// this in the shared table and quietly resized all of them.
 		expect(scroller(build()).style.maxHeight).toBe('')
 	})
 
 	it('keeps Load More inside the window but outside the table', () => {
-		// Inside the window, because it is the row after the last row: pinned
-		// under a capped scroller it would advertise more rows while the rows it
-		// belongs to are still above the fold. Outside the table, because `List`
-		// is a `role="table"`, which owns only rows and rowgroups — a
-		// `role="presentation"` wrapper does not launder a button placed inside
-		// one, it re-parents it onto the table. The scroller being the outer
-		// element is what allows both at once.
+		// Inside the window, because it is the row after the last row. Outside the
+		// table, because `List` is a `role="table"` that owns only rows and
+		// rowgroups. The scroller being the outer element allows both at once.
 		const wrapper = build({ visibleRows: 9, hasNextPage: true })
 		const button = '[data-testid="load-more"]'
 
@@ -95,9 +88,7 @@ describe('SettingsTable: the scrolling window', () => {
 		expect(wrapper.get('[data-testid="list"]').find(button).exists()).toBe(
 			false
 		)
-		expect(
-			scroller(wrapper).contains(wrapper.get(button).element)
-		).toBe(true)
+		expect(scroller(wrapper).contains(wrapper.get(button).element)).toBe(true)
 	})
 
 	it('emits loadMore from there all the same', async () => {
@@ -114,20 +105,18 @@ describe('SettingsTable: the scrolling window', () => {
 
 describe('SettingsTable: row states the scroller would otherwise eat', () => {
 	it('pulls the focus ring inside the row', () => {
-		// `overflow-y: auto` on the scroller computes `overflow-x` to `auto` too,
-		// and a row is exactly as wide as the scroller's content box, so a ring
-		// at the default offset loses its left and right strokes. Outlines are
-		// not scrollable overflow, so nothing scrolls to bring them back.
+		// `overflow-y: auto` computes `overflow-x` to `auto` too, and a row is
+		// exactly as wide as the scroller's content box, so a ring at the default
+		// offset loses its side strokes. Outlines are not scrollable overflow.
 		expect(build().get('[data-testid="row"]').classes()).toContain(
 			'[outline-offset:-3px]'
 		)
 	})
 
 	it('re-tones the hover wash for dark mode', () => {
-		// frappe-ui washes a row to `surface-gray-1`, which in dark mode is the
-		// same value as the dialog surface it is drawn on (both darkMode/gray/900),
-		// so pointing at a row did nothing at all. The class is asserted rather
-		// than the colour because jsdom resolves no custom properties.
+		// frappe-ui washes a row to `surface-gray-1`, which in dark mode is the same
+		// value as the dialog surface it is drawn on, so pointing at a row did
+		// nothing. The class is asserted because jsdom resolves no custom properties.
 		expect(build().get('[data-testid="row"]').classes()).toContain(
 			'dark:sm:hover:bg-surface-gray-2'
 		)

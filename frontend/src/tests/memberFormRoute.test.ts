@@ -75,10 +75,8 @@ vi.mock('frappe-ui', () => ({
 		</label>`,
 	},
 	// Mirrors the real Switch: the control is a `role="switch"` button carrying
-	// the id, and a `label` prop draws its own <label for>. A looser stub — a
-	// name written on the wrapper — reads fine to a text query while leaving the
-	// button itself unnamed, so the accessible-name assertions below would pass
-	// against an implementation no assistive technology can use.
+	// the id, and a `label` prop draws its own <label for>. A looser stub would
+	// leave the button unnamed while still passing a text query.
 	Switch: {
 		props: ['modelValue', 'label', 'size', 'id'],
 		emits: ['update:modelValue'],
@@ -168,9 +166,8 @@ const save = (wrapper: ReturnType<typeof mount>) =>
 	wrapper.find('[data-testid="member-save"]')
 
 /**
- * A switch, found through the association that names it rather than by
- * position: the visible role name is a <label for> pointing at the control's
- * id. If the pairing is wrong, or the name is written somewhere an assistive
+ * A switch, found through the association that names it rather than by position.
+ * If the pairing is wrong, or the name is written somewhere an assistive
  * technology never reads, this throws.
  */
 const switchNamed = (wrapper: ReturnType<typeof mount>, name: string) => {
@@ -418,9 +415,8 @@ describe('the member form route', () => {
 	})
 
 	// The four roles read as a list of rows, the same shape the settings form
-	// draws them in: name at the start, its own control at the end. The 2x2 grid
-	// this replaced put each label nearer the next role's switch than its own —
-	// worst of all on the phone, which is the surface this route serves.
+	// draws them in. The 2x2 grid this replaced put each label nearer the next
+	// role's switch than its own.
 	describe('the roles block', () => {
 		const mountAdd = async () => {
 			const router = makeRouter()
@@ -455,9 +451,9 @@ describe('the member form route', () => {
 				expect(switchNamed(wrapper, role).attributes('role')).toBe('switch')
 		})
 
-		// One column at every width, phone included: a row is a label and a
-		// control on one line, so there is no wider arrangement to fall back to
-		// and no breakpoint that could reintroduce the two-up grid.
+		// One column at every width, phone included. A row is a label and a
+		// control on one line, so there is no breakpoint that could reintroduce
+		// the two-up grid.
 		it('holds at a phone width, with no breakpoint to fall back to', async () => {
 			Object.defineProperty(window, 'innerWidth', {
 				value: 320,

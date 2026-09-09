@@ -1,21 +1,12 @@
 /**
- * The You page, as data.
- *
- * The bottom bar is five fixed routes with no More sheet, so this page is the
- * only way to reach anything that is not one of them. The things worth pinning
- * are the ones a merge could quietly undo: a destination must never sit on the
- * bar *and* in this list, an unrecognised destination must land somewhere rather
- * than be dropped, and the theme control must be the same row the shared builder
- * draws rather than a second one that can disagree.
- *
- * The icon check earns its place. Nav links name a lucide *component*
- * (`BookOpen`); a settings row wants a lucide *utility class*
- * (`lucide-book-open`). Hand SettingsRow the wrong one and it puts `BookOpen`
- * in a class attribute, which compiles to nothing and renders an invisible
- * icon — no error, no warning, same failure mode deadDesignTokens.test.ts
- * exists for. So the emitted classes are checked against the SVGs that
- * frappe-ui's lucideIconsPlugin actually reads.
+ * The You page, as data. The bottom bar is five fixed routes with no More
+ * sheet, so this page is the only way to reach anything else. A destination
+ * must never sit on the bar and in this list at once.
  */
+
+// The icon check earns its place. Nav links name a lucide component
+// (`BookOpen`); a settings row wants a utility class (`lucide-book-open`).
+// The wrong one compiles to nothing and renders an invisible icon.
 import { describe, expect, it } from 'vitest'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -59,8 +50,7 @@ const OTHER = [
 const PRIMARY = ['Home', 'Courses', 'Certifications', 'You']
 
 // Every fixture above names a real route, so the default answer is yes. A test
-// that cares about the other shapes — an admin's URL, a page Frappe serves —
-// passes its own.
+// that cares about the other shapes passes its own.
 const build = (overrides: Partial<Parameters<typeof buildYouRows>[0]> = {}) =>
 	buildYouRows({
 		sidebarLinks: SIDEBAR,
@@ -96,8 +86,8 @@ describe('destinations', () => {
 
 	it('keeps the section order inside the one group', () => {
 		// The heading is gone, the clustering is not: LEARN, then DISCOVER, then
-		// MORE. Arrival order would read Programs, Batches, Jobs, Statistics,
-		// Quizzes — course content split around the discovery links.
+		// MORE. Arrival order would split the course content around the discovery
+		// links.
 		expect(
 			labelsIn(
 				build({
@@ -132,10 +122,9 @@ describe('destinations', () => {
 	})
 
 	it('keeps an unrecognised destination rather than dropping it', () => {
-		// Contact Us is a real sidebar link that no SECTION_MAP entry names. It
-		// falls through to MORE, which is last in the sort rather than a heading of
-		// its own; without that fallback, adding a sidebar link would silently make
-		// it unreachable on a phone.
+		// Contact Us is a real sidebar link that no SECTION_MAP entry names. It falls
+		// through to MORE, which is last in the sort. Without that fallback, adding a
+		// sidebar link would silently make it unreachable on a phone.
 		const rows = build({
 			sidebarLinks: [...SIDEBAR, link('Contact Us', 'Mail', 'ContactUs')],
 		})
@@ -240,8 +229,8 @@ describe('iconClass', () => {
 
 describe('every icon the page can draw', () => {
 	// frappe-ui's lucideIconsPlugin turns `lucide-<name>` into a mask-image only
-	// when node_modules/lucide-static/icons/<name>.svg exists; when it does not,
-	// the class is emitted with no rule behind it and the span renders empty.
+	// when node_modules/lucide-static/icons/<name>.svg exists. Without it the class
+	// is emitted with no rule behind it and the span renders empty.
 	const ICONS_DIR = resolve(process.cwd(), 'node_modules/lucide-static/icons')
 
 	const emitted = allRows(

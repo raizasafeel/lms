@@ -1,10 +1,7 @@
 /**
- * Tests for the settings <-> URL hash sync.
- *
- * The hash is the source of truth: /courses#settings/branding opens the settings
- * dialog on the Branding tab. These pin which tab a hash resolves to, that tab
- * switches push history, and that closing pops every entry we pushed — however
- * many tabs the user visited — without ejecting someone who deep-linked in.
+ * Tests for the settings and URL hash sync. The hash is the source of truth, so
+ * these pin which tab a hash resolves to, that tab switches push history, and
+ * that closing pops every entry we pushed without ejecting a deep link.
  */
 import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest'
 import {
@@ -97,8 +94,8 @@ describe('useSettingsHash', () => {
 		expect(store.isSettingsOpen).toBe(false)
 	})
 
-	// A bare '#settings' is the batch/course detail pages' own Settings tab —
-	// those pages address their tabs as '#<label>'. It must not open the modal.
+	// A bare '#settings' is the batch and course detail pages' own Settings tab,
+	// because those pages address their tabs as '#<label>'.
 	it('ignores a bare #settings, which belongs to a page tab', async () => {
 		const { router, api } = await setup('/courses#settings')
 		expect(api.isOpen.value).toBe(false)
@@ -125,10 +122,9 @@ describe('useSettingsHash', () => {
 	})
 
 	/*
-	 * The real tab list is built from an async document resource and filtered by
-	 * permission conditions, so on a deep link it is still empty when the hash
-	 * first arrives. A slug can only be judged unknown once there are tabs to
-	 * judge it against — the fallback has to wait for them, not give up.
+	 * The real tab list is built from an async document resource, so on a deep
+	 * link it is still empty when the hash first arrives. A slug can only be
+	 * judged unknown once there are tabs to judge it against.
 	 */
 	it('falls back once the tabs arrive, when they load after the hash', async () => {
 		const loaded = ref(false)
@@ -283,22 +279,16 @@ describe('useSettingsHash', () => {
 	})
 
 	/*
-	 * A settingsDepth can outlive the settings entry that stamped it: in a real
-	 * browser replace() merges history.state, so a page's own filter sync carries
-	 * the depth onto an entry that is no longer a settings entry. (This harness
-	 * uses createMemoryHistory, whose replace() drops state rather than merging,
-	 * so the stale depth is seeded with a push instead — memory-history stores an
-	 * explicit push state verbatim. The bug it reproduces is the production one.)
-	 *
-	 * Trusting a depth found there makes the next close() over-pop and eject the
-	 * user out of the app entirely.
+	 * A settingsDepth can outlive the settings entry that stamped it, because a
+	 * real browser's replace() merges history.state. Trusting a depth found there
+	 * makes the next close() over-pop and eject the user out of the app.
 	 */
 	it('ignores a settingsDepth left behind on a non-settings entry', async () => {
 		const { router, api } = await setup('/courses')
 
-		// A non-settings entry that nonetheless carries a depth — what the page's
-		// own filter sync leaves behind. It must differ from the current location,
-		// or the navigation is a duplicate and the state never lands.
+		// A non-settings entry that nonetheless carries a depth, which is what the
+		// page's own filter sync leaves behind. It must differ from the current
+		// location, or the navigation is a duplicate and the state never lands.
 		await router.push({
 			path: '/courses',
 			query: { title: 'vue' },
@@ -308,7 +298,7 @@ describe('useSettingsHash', () => {
 		expect(router.currentRoute.value.hash).toBe('')
 		expect(router.options.history.state.settingsDepth).toBe(4)
 
-		// Opening must stamp depth 1 — there is exactly one entry to pop — not 5.
+		// Opening must stamp depth 1, not 5. There is exactly one entry to pop.
 		pushSettingsHash(router, 'branding')
 		await flushPromises()
 		expect(router.options.history.state.settingsDepth).toBe(1)
@@ -332,20 +322,9 @@ describe('useSettingsHash', () => {
 	})
 
 	/*
-	 * The query-restore on close is the one replace() that has a page hash to lose.
-	 * Reaching it needs all three: settings entered by a push (so there is a depth
-	 * to pop and `closing` is set), a query that changed while settings was open
-	 * (so the restore is not skipped as a no-op), and a page that owns a hash of
-	 * its own — the batch and course detail pages address their tabs as '#<label>'.
-	 *
-	 * Without an explicit `hash`, vue-router defaults it to '' and the restore eats
-	 * '#students', dumping the user off the tab they were on.
-	 *
-	 * The filter change is made with an explicit state here because this harness is
-	 * createMemoryHistory, whose replace() stores the state it is handed rather than
-	 * merging it; a real browser's replace() merges, so settingsDepth survives the
-	 * page's own filter sync there without help. Passing it keeps the depth the
-	 * production values, which is what puts close() on the pop path being tested.
+	 * The query-restore on close is the one replace() that has a page hash to
+	 * lose. Without an explicit `hash`, vue-router defaults it to '' and the
+	 * restore eats '#students', dumping the user off the tab they were on.
 	 */
 	it("keeps the page's own tab hash when the restore fires on close", async () => {
 		const { router, api } = await setup('/courses?title=vue#students')
@@ -365,7 +344,7 @@ describe('useSettingsHash', () => {
 		api.close()
 		await flushPromises()
 		expect(api.isOpen.value).toBe(false)
-		// The entry we popped to predates the filter, so the restore fires — and it
+		// The entry we popped to predates the filter, so the restore fires, and it
 		// must not take the page's tab hash down with it.
 		expect(router.currentRoute.value.query.title).toBe('react')
 		expect(router.currentRoute.value.hash).toBe('#students')
@@ -431,9 +410,9 @@ describe('useSettingsHash records', () => {
 		expect(router.currentRoute.value.query).toEqual({ title: 'vue' })
 	})
 
-	// The bad-id fallback: the detail view could not load the record, so it drops
-	// back to the list. replace(), not push() — a dead id must not sit in history
-	// waiting for Back to land on it again.
+	// The bad-id fallback. The detail view could not load the record, so it drops
+	// back to the list with replace() rather than push(), because a dead id must
+	// not sit in history waiting for Back.
 	it('drops an unloadable record without leaving a history entry', async () => {
 		const { router, api } = await setup('/courses')
 
@@ -452,11 +431,9 @@ describe('useSettingsHash records', () => {
 	})
 
 	/*
-	 * go() is async: until the pop lands, route.hash and the history state still
-	 * describe the entry we are leaving. A second drop arriving in the same tick
-	 * would read the same depth and pop again — past the list entry and off the
-	 * settings stack entirely. Plausible now that the caller is an async load-error
-	 * handler: a stale error landing after the user has moved on would do it.
+	 * go() is async, so until the pop lands the history state still describes the
+	 * entry being left. A second drop in the same tick would read the same depth
+	 * and pop past the list entry.
 	 */
 	it('drops a record once when two drops race in the same tick', async () => {
 		const { router, api } = await setup('/courses')
@@ -478,11 +455,9 @@ describe('useSettingsHash records', () => {
 	})
 
 	/*
-	 * A drop can be refused: the unsaved-changes guard aborts a navigation the user
-	 * cancels. vue-router restores the history position, so route.hash never
-	 * changes — and a `dropping` flag cleared only by the hash watcher would stay
-	 * set for the rest of the dialog session, killing the drop path for good. It is
-	 * cleared when the navigation settles instead, aborted or not.
+	 * A drop can be refused by the unsaved-changes guard. vue-router restores the
+	 * history position, so the hash never changes, and a flag cleared only by the
+	 * hash watcher would stay set. It is cleared when the navigation settles.
 	 */
 	it('can still drop a record after a drop was aborted by a guard', async () => {
 		const { router, api } = await setup('/courses')
@@ -526,10 +501,9 @@ describe('useSettingsHash records', () => {
 	})
 
 	/*
-	 * A rename keeps the record open but changes its docname. replaceRecord() rehashes
-	 * the CURRENT entry in place: the hash points at the new name, but settingsDepth is
-	 * preserved (it's a replace, not a push), so Back still lands on the list — not on a
-	 * now-dead old-name entry.
+	 * A rename keeps the record open but changes its docname. replaceRecord()
+	 * rehashes the current entry in place, so the hash points at the new name
+	 * while settingsDepth is preserved and Back still lands on the list.
 	 */
 	it('rehashes the current record in place on rename, keeping depth and Back', async () => {
 		const { router, api } = await setup('/courses')
@@ -545,7 +519,7 @@ describe('useSettingsHash records', () => {
 		await flushPromises()
 		// (a) the hash names the new docname
 		expect(router.currentRoute.value.hash).toBe('#settings/badges/NEW')
-		// (b) depth is unchanged — a replace, not a push
+		// (b) depth is unchanged, because this is a replace and not a push
 		expect(router.options.history.state.settingsDepth).toBe(2)
 
 		// (c) Back still returns to the list, one entry down
@@ -558,13 +532,9 @@ describe('useSettingsHash records', () => {
 
 describe('useSettingsHash: dismissing twice', () => {
 	/**
-	 * `close()` had no re-entrancy guard, unlike `selectRecord`'s `dropping`.
-	 * `show` in Settings.vue is a computed whose getter is `isOpen`, and
-	 * `router.go()` is async, so the dialog is still visibly open when a second
-	 * dismiss arrives: `depthOf(router)` still reads the same value and the pop
-	 * runs again. Escape twice in quick succession, or a backdrop click landing
-	 * just after an Escape, went back four entries instead of two and left the
-	 * user two pages before the one they started on.
+	 * `close()` had no re-entrancy guard. `router.go()` is async, so a second
+	 * dismiss read the same depth and popped again, going back four entries
+	 * instead of two.
 	 */
 	it('pops once when two dismisses arrive before the first lands', async () => {
 		const { router, api } = await setup('/courses')
@@ -576,10 +546,9 @@ describe('useSettingsHash: dismissing twice', () => {
 		expect(router.currentRoute.value.hash).toBe('#settings/badges/badge-1')
 		expect(router.options.history.state.settingsDepth).toBe(2)
 
-		// createMemoryHistory applies go() synchronously, so the real browser's
-		// window -- where history.go() is async and the dialog is still visibly
-		// open when the second dismiss arrives -- only exists here if the pop is
-		// held. Stubbing it models exactly that: the hash has not moved yet.
+		// createMemoryHistory applies go() synchronously, so the browser case where
+		// the dialog is still open when a second dismiss arrives only exists here if
+		// the pop is held. Stubbing it models that.
 		const go = vi.spyOn(router, 'go').mockImplementation(() => {})
 		api.close()
 		api.close()
@@ -591,14 +560,9 @@ describe('useSettingsHash: dismissing twice', () => {
 
 describe('useSettingsHash: a dismiss the guard refuses', () => {
 	/**
-	 * The re-entrancy flag has to be cleared on aborts too. `closing` is nulled
-	 * only by the `route.hash` watcher, and a navigation the dirty guard refuses
-	 * never changes the hash -- so using it as the guard left `close()` dead for
-	 * the rest of the session. Open Settings, edit a manual-save record until
-	 * dirty, press Escape, choose "Keep editing": X, Escape and the backdrop all
-	 * stop working from then on, even after saving. `dropping` already avoids
-	 * this by clearing in router.afterEach, which vue-router fires for aborted
-	 * navigations as well.
+	 * The re-entrancy flag has to be cleared on aborts too. A navigation the dirty
+	 * guard refuses never changes the hash, so a flag nulled only by the hash
+	 * watcher left `close()` dead for the rest of the session.
 	 */
 	it('still closes after an earlier dismiss was refused', async () => {
 		const { router, api } = await setup('/courses')
@@ -622,4 +586,3 @@ describe('useSettingsHash: a dismiss the guard refuses', () => {
 		expect(router.currentRoute.value.hash).toBe('')
 	})
 })
-

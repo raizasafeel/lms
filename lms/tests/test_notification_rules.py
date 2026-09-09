@@ -17,16 +17,8 @@ from lms.lms.utils import convert_from_system_timezone, format_timezone
 
 def reseed(*names):
 	"""Rebuild these rules from the catalogue before exercising them.
-
-	`seed_notifications` deliberately never rewrites a rule the site already has,
-	so on a site that was seeded before a catalogue edit -- which the shared
-	lms-audit.localhost always is -- the row under test is the stale one and the
-	test passes against code it never touched. Deleting first is what makes these
-	tests read the current catalogue.
-
-	No cache clearing needed alongside it: `Notification.on_trash` and
-	`Notification.validate` both call `clear_notification_cache()`, which drops
-	every `notifications::<doctype>` key `Document.run_notifications` reads.
+	`seed_notifications` never rewrites a rule the site already has, so on a site
+	seeded before a catalogue edit the row under test would be the stale one.
 	"""
 	for name in names:
 		if frappe.db.exists("Notification", name):
@@ -36,9 +28,8 @@ def reseed(*names):
 
 def set_enabled(name, value):
 	"""Flip a seeded rule's Enabled switch the way the settings page does.
-
-	`frappe.db.set_value` writes under the document layer, so it does not clear
-	the enabled-rules cache `Document.run_notifications` reads; do it by hand.
+	`frappe.db.set_value` writes under the document layer, so the enabled-rules
+	cache has to be cleared by hand.
 	"""
 	frappe.db.set_value("Notification", name, "enabled", value)
 	frappe.client_cache.delete_keys("notifications::")
@@ -75,10 +66,9 @@ class TestSeeding(IntegrationTestCase):
 		self.assertEqual(len(LMS_NOTIFICATIONS), 12)
 
 	def test_the_two_publish_rules_seed_disabled(self):
-		# On develop each publish mail was gated by an LMS Settings Select with a
-		# blank first option and no default, so a stock site sent neither. Seeded
-		# enabled, the first publish after an upgrade would mass-mail every
-		# enabled User.
+		# Develop gated both publish mails behind an LMS Settings Select that
+		# defaulted to blank, so a stock site sent neither. Seeded enabled, the
+		# first publish after an upgrade would mass-mail every enabled User.
 		for name in ("LMS New Course Published", "LMS New Batch Published"):
 			with self.subTest(rule=name):
 				reseed(name)
@@ -95,12 +85,9 @@ class TestSeeding(IntegrationTestCase):
 class TestBatchConfirmation(IntegrationTestCase):
 	def setUp(self):
 		reseed("LMS Batch Enrollment Confirmation")
-		# The enabled-rules list Document.run_notifications caches under this key
-		# lives in redis, outside the per-test SQL rollback. A prior test that
-		# disabled the rule (and cleared the cache to see that) leaves the *next*
-		# read to repopulate the cache from disabled state, and that empty-rule
-		# cache entry survives this test's own rollback. Clear it here too so
-		# every test starts from the DB's real (rolled-back) enabled state.
+		# The enabled-rules cache lives in redis, outside the per-test SQL
+		# rollback, so a prior test that disabled this rule leaves an empty entry
+		# behind. Clear it so every test starts from the rolled-back DB state.
 		frappe.client_cache.delete_value("notifications::LMS Batch Enrollment")
 
 		hash_ = frappe.generate_hash(length=6)
@@ -218,11 +205,9 @@ class TestBatchConfirmation(IntegrationTestCase):
 		self.assertEqual(sendmail.call_args.kwargs["subject"], "Custom Enrollment Confirmation")
 
 	def test_a_disabled_rule_sends_nothing(self):
-		# IntegrationTestCase only rolls back at class teardown, not per test (see
-		# frappe/tests/classes/integration_test_case.py: addClassCleanup(_rollback_db)
-		# runs once, not per setUp/tearDown). Left alone, this write to the shared
-		# seeded rule would still read as disabled in every test that runs after
-		# this one in the same suite invocation, so restore it explicitly.
+		# IntegrationTestCase rolls back at class teardown, not per test, so this
+		# write to the shared seeded rule would read as disabled in every test
+		# that runs after this one. Restore it explicitly.
 		self.addCleanup(
 			lambda: frappe.db.set_value("Notification", "LMS Batch Enrollment Confirmation", "enabled", 1)
 		)
@@ -399,11 +384,9 @@ class TestEvaluationBooking(IntegrationTestCase):
 		self.assertIn(self.evaluator, addressed)
 
 	def test_booking_an_evaluation_renders_the_batch_display_timezone(self):
-		# System timezone on this site is Asia/Kolkata (UTC+5:30). A batch in
-		# America/Los_Angeles is >12 hours behind, so a 09:00 IST slot both
-		# shows a different clock time AND rolls back to the previous day --
-		# proving the message renders the *converted* pair, not doc.date /
-		# doc.start_time verbatim.
+		# System timezone here is Asia/Kolkata. A batch in America/Los_Angeles is
+		# over 12 hours behind, so a 09:00 IST slot changes both the clock time
+		# and the date, proving the message renders the converted pair.
 		hash_ = frappe.generate_hash(length=6)
 		batch = frappe.get_doc(
 			{
@@ -462,10 +445,9 @@ class TestPublishBroadcasts(IntegrationTestCase):
 		frappe.client_cache.delete_value("notifications::LMS Course")
 		frappe.client_cache.delete_value("notifications::LMS Batch")
 
-		# Both publish rules seed disabled (see their catalogue entries), so the
-		# broadcast tests below have to switch them on the way an admin would.
-		# Restored afterwards: this class's writes are only rolled back at class
-		# teardown, and TestReminders watches LMS Batch too.
+		# Both publish rules seed disabled, so the broadcast tests below switch
+		# them on the way an admin would. Restored afterwards, because this
+		# class rolls back only at teardown and TestReminders watches LMS Batch.
 		for name in ("LMS New Course Published", "LMS New Batch Published"):
 			self.addCleanup(set_enabled, name, 0)
 			set_enabled(name, 1)
@@ -549,9 +531,7 @@ class TestPublishBroadcasts(IntegrationTestCase):
 
 	def upcoming_course(self):
 		"""A published course still flagged Upcoming.
-
-		The availability rule fires on `upcoming` going falsy, not on `published`
-		(develop: `if not self.upcoming and self.has_value_changed("upcoming")`),
+		The availability rule fires on `upcoming` going falsy, not on `published`,
 		so a course has to start out upcoming for there to be a transition.
 		"""
 		hash_ = frappe.generate_hash(length=6)
@@ -622,14 +602,9 @@ class TestPublishBroadcasts(IntegrationTestCase):
 		self.assertFalse(sendmail.called)
 
 	def test_republishing_a_course_sends_the_broadcast_only_once(self):
-		# test_saving_a_published_course_again_sends_nothing doesn't touch
-		# `published` at all on its second save, so frappe's own Value Change
-		# unchanged-field check (evaluated AFTER the rule's `condition`,
-		# `notification.py:852-864`) is what skips it -- that would pass even
-		# with `and not doc.notification_sent` deleted from the condition.
-		# Unpublishing and republishing flips `published` 0->1 twice, so the
-		# built-in check passes both times and only `notification_sent` can
-		# stop the second broadcast.
+		# The second-save test never touches `published`, so frappe's own
+		# unchanged-field check would skip it even without the condition guard.
+		# Republishing flips `published` twice, so only the guard can stop it.
 		course = self.draft_course()
 		with patch("frappe.sendmail") as sendmail:
 			course.published = 1
@@ -654,9 +629,8 @@ class TestPublishBroadcasts(IntegrationTestCase):
 		self.assertIn(self.interested, availability[0].kwargs["bcc"])
 
 	def test_publishing_a_course_that_is_not_upcoming_mails_no_interested_user(self):
-		# The rule watches `upcoming`, not `published` -- develop fired it from
-		# `if not self.upcoming and self.has_value_changed("upcoming")`. A publish
-		# on a course that was never upcoming changes nothing it watches.
+		# The rule watches `upcoming`, not `published`. A publish on a course that
+		# was never upcoming changes nothing it watches.
 		course = self.draft_course()
 		self.register_interest(course)
 		with patch("frappe.sendmail") as sendmail:
@@ -673,10 +647,9 @@ class TestPublishBroadcasts(IntegrationTestCase):
 		self.assertFalse(self.availability_mails(sendmail, course))
 
 	def test_marking_a_course_upcoming_again_mails_interested_users_again(self):
-		# No `notification_sent`-style guard on "LMS Course Availability" is
-		# deliberate (see the comment on its catalogue entry) -- flagging a course
-		# upcoming again and then clearing it should re-mail every currently
-		# interested user, not just the first cohort.
+		# "LMS Course Availability" carries no `notification_sent`-style guard on
+		# purpose. Flagging a course upcoming again and clearing it should
+		# re-mail every currently interested user, not just the first cohort.
 		course = self.upcoming_course()
 		self.register_interest(course)
 		course.upcoming = 0
@@ -692,12 +665,8 @@ class TestPublishBroadcasts(IntegrationTestCase):
 
 	def test_a_course_creator_clearing_upcoming_still_mails_interested_users(self):
 		# The bcc query renders in the session of whoever saved the course, and
-		# `LMS Course Interest` grants read to System Manager only. A
-		# permission-checked query raises PermissionError there --
-		# `send_notification_by_channel` swallows every exception into an Error
-		# Log, so the mail vanishes and nothing says so. Administrator, who
-		# bypasses permissions, cannot see this class of bug at all, which is why
-		# this test switches user.
+		# `LMS Course Interest` grants read to System Manager only. Administrator
+		# bypasses permissions, so this test has to switch user to see the bug.
 		course = self.upcoming_course()
 		self.register_interest(course)
 		self.addCleanup(frappe.set_user, "Administrator")
@@ -748,21 +717,9 @@ class TestPublishBroadcasts(IntegrationTestCase):
 
 class TestPublishAndAvailabilityOrdering(IntegrationTestCase):
 	"""The ordering hazard recorded above LMS_NOTIFICATIONS.
-
-	"LMS Course Availability" and "LMS New Course Published" watch different
-	fields, but one save can change both -- an admin clearing Upcoming and ticking
-	Published together. The availability mail survives that save only while it is
-	evaluated BEFORE the publish rule, which falls out of `Notification`'s
-	`sort_field: creation DESC` and therefore out of the catalogue's own order.
-	Reverse them and the mail is silenced, not duplicated: the publish rule's
-	`set_property_after_alert` re-enters `doc.save()` on the same document object,
-	the availability rule is evaluated inside that reentrant save (where
-	`get_doc_before_save()` already carries the new `upcoming`, so core's Value
-	Change check finds nothing changed and returns), and its name is appended to
-	`flags.notifications_executed` all the same -- so the outer loop skips it.
-
-	Both directions are pinned here so the comment cannot rot and the catalogue
-	cannot be reordered silently.
+	One save can change both `upcoming` and `published`, and the availability
+	mail survives it only while its rule is evaluated first. Both directions are
+	pinned here so the catalogue cannot be reordered silently.
 	"""
 
 	def setUp(self):
@@ -802,12 +759,9 @@ class TestPublishAndAvailabilityOrdering(IntegrationTestCase):
 
 	def evaluate_first(self, name):
 		"""Make `name` the rule core evaluates first.
-
-		`Document.run_notifications` reads the rules with `frappe.get_all`, which
-		takes `Notification`'s `sort_field: creation DESC` -- the newer row wins.
-		Writing `creation` directly is what makes the order deterministic; two
-		inserts a microsecond apart are not. The cached rule list is keyed by
-		doctype and holds the order too, so it has to go with them.
+		Core reads the rules newest first, so `creation` is written directly; two
+		inserts a microsecond apart are not deterministic. The cached rule list
+		holds the order too, so it goes with them.
 		"""
 		other = (
 			"LMS Course Availability" if name == "LMS New Course Published" else "LMS New Course Published"
@@ -859,7 +813,7 @@ class TestPublishAndAvailabilityOrdering(IntegrationTestCase):
 		self.assertEqual(len(broadcasts), 1)
 
 	def test_the_publish_rule_first_silences_the_availability_mail(self):
-		# Not a double-send -- a silent no-send. This is the hazard the catalogue
+		# Not a double-send but a silent no-send. This is the hazard the catalogue
 		# comment describes, pinned so nobody "fixes" it by reordering the list.
 		self.evaluate_first("LMS New Course Published")
 		availability, broadcasts = self.publish_and_clear_upcoming(self.upcoming_draft_course())
@@ -868,15 +822,9 @@ class TestPublishAndAvailabilityOrdering(IntegrationTestCase):
 
 
 class TestReminders(IntegrationTestCase):
-	"""LMS Batch Start Reminder / LMS Batch Start Reminder (Recorded) / LMS Live
-	Class Reminder -- three "Days Before" rules. `trigger_daily_alerts` is the
-	daily scheduler hook these replace; it calls `frappe.db.commit()` after
-	every document it evaluates
-	(`frappe/email/doctype/notification/notification.py:820-823`), which would
-	otherwise commit this test's fixtures to the shared site --
-	`IntegrationTestCase`'s rollback only runs once, at class teardown
-	(`addClassCleanup(_rollback_db)`,
-	`frappe/tests/classes/integration_test_case.py:72`). `trigger()` below
+	"""The three Days Before reminders.
+	`trigger_daily_alerts` commits after every document it evaluates, which
+	would write this test's fixtures to the shared site. `trigger()` below
 	patches `frappe.db.commit` for the duration of every call.
 	"""
 
@@ -923,10 +871,9 @@ class TestReminders(IntegrationTestCase):
 		).insert(ignore_permissions=True)
 
 	def live_class_on(self, batch, date):
-		# create_calendar_event throws without a configured Google Calendar --
-		# irrelevant to what this rule fires on, so skip it rather than build
-		# the Google Calendar / Google Meet Settings fixtures
-		# test_lms_live_class.py needs for its own, unrelated purposes.
+		# create_calendar_event throws without a configured Google Calendar, and it
+		# is irrelevant to what this rule fires on, so skip it rather than build
+		# the Google fixtures.
 		with patch("lms.lms.doctype.lms_live_class.lms_live_class.LMSLiveClass.create_calendar_event"):
 			hash_ = frappe.generate_hash(length=6)
 			return frappe.get_doc(
@@ -952,12 +899,9 @@ class TestReminders(IntegrationTestCase):
 			trigger_daily_alerts()
 
 	def test_a_live_batch_starting_tomorrow_reminds_its_students(self):
-		# Scoped to this batch's own (randomised) title, not a bare subject
-		# substring or reminders[0] -- lms-audit.localhost is a shared,
-		# long-lived site and already carries unrelated LMS Batch / LMS Live
-		# Class rows with real enrollments that legitimately fire the same two
-		# rules on the same run (see the report for what was found there).
-		# Scoping by title is what tells "this test's mail" apart from theirs.
+		# Scoped to this batch's own randomised title. lms-audit.localhost is a
+		# shared site carrying unrelated batches and live classes with real
+		# enrollments that fire the same two rules on the same run.
 		batch = self.batch_starting(frappe.utils.add_days(frappe.utils.nowdate(), 1), live=True)
 		self.enrol(batch, self.student)
 		with patch("frappe.sendmail") as sendmail:
@@ -987,9 +931,8 @@ class TestReminders(IntegrationTestCase):
 		self.assertFalse(matching)
 
 	def test_a_draft_live_batch_starting_tomorrow_is_not_reminded(self):
-		# Develop's `send_batch_start_reminder` selected
-		# `{"start_date": add_days(nowdate(), 1), "published": 1}` -- a batch still
-		# in draft was never reminded, however live and however soon it starts.
+		# Develop's `send_batch_start_reminder` filtered on `published`, so a batch
+		# still in draft was never reminded, however soon it starts.
 		batch = self.batch_starting(
 			frappe.utils.add_days(frappe.utils.nowdate(), 1), live=True, published=False
 		)
@@ -1045,24 +988,10 @@ class TestReminders(IntegrationTestCase):
 
 
 class TestPaymentReminder(IntegrationTestCase):
-	"""LMS Payment Reminder -- the first `Method`-event rule. The daily job
-	(`send_payment_reminder`) keeps its own selection (skipping a payment already
-	paid under a different payment id, and a now-sold-out batch) and fires this
-	rule per surviving LMS Payment via `doc.run_method("lms_notify")`.
-
-	lms-audit.localhost is shared and long-lived; confirmed on 2026-09-05 that
-	every pre-existing unpaid "LMS Course" payment on it predates
-	`add_days(nowdate(), -1)`, so `send_payment_reminder`'s own creation-date
-	filter already excludes them on this class's first test. It does NOT
-	exclude an *earlier test method's own* incomplete payment though --
-	IntegrationTestCase rolls back only at class teardown (see TestReminders'
-	docstring above), so that payment is still unpaid and freshly created when
-	a later test method calls send_payment_reminder() again. `calls_to_me`
-	below scopes every assertion to this test's own student instead of trusting
-	`sendmail.call_args` (the last call) to be about this test's own payment.
-	Also restore every Settings/Notification mutation and clear the doctype's
-	client_cache entry, the same leaked-cache risk TestBatchConfirmation guards
-	against.
+	"""LMS Payment Reminder, the first Method-event rule.
+	`send_payment_reminder` keeps its own selection and fires the rule per
+	surviving payment. `calls_to_me` below scopes every assertion to this
+	test's own student, because earlier methods leave unpaid rows behind.
 	"""
 
 	def setUp(self):
@@ -1148,13 +1077,9 @@ class TestPaymentReminder(IntegrationTestCase):
 		).insert(ignore_permissions=True)
 
 	def calls_to_me(self, sendmail):
-		# IntegrationTestCase rolls back only at class teardown (see
-		# TestReminders' own docstring above), so an earlier test method's
-		# incomplete payment is still sitting in the DB, unpaid, when a later
-		# test method's own send_payment_reminder() call runs -- and matches
-		# the same query. `sendmail.call_args` (the *last* call) can belong to
-		# that leftover payment instead of this test's own, so every assertion
-		# here is scoped to calls addressed to this test's own student.
+		# The class rolls back only at teardown, so an earlier method's incomplete
+		# payment still matches the same query. `sendmail.call_args` can belong to
+		# that leftover, so scope every assertion to this test's own student.
 		return [c for c in sendmail.call_args_list if self.student in c.kwargs["recipients"]]
 
 	def test_an_incomplete_payment_reminds_the_payer(self):
@@ -1227,12 +1152,9 @@ class TestPaymentReminder(IntegrationTestCase):
 		self.assertEqual(calls[0].kwargs["subject"], "Custom Payment Reminder")
 
 	def test_an_override_written_against_develops_args_still_renders(self):
-		# Develop rendered the override with the sender's own flat `args` dict
-		# (`send_mail` in lms_payment.py on upstream/develop: billing_name, type,
-		# title, link), so every override written before this branch names those
-		# and never `doc`. frappe's jenv uses DebugUndefined, which emits an
-		# unknown name verbatim rather than blank, so a context of `{"doc": doc}`
-		# alone mails the literal text `{{ billing_name }}`.
+		# Develop rendered an override with the sender's own flat `args`, so every
+		# override written before this branch names `billing_name`, never `doc`.
+		# DebugUndefined prints an unknown name verbatim.
 		template = frappe.get_doc(
 			{
 				"doctype": "Email Template",
@@ -1255,11 +1177,9 @@ class TestPaymentReminder(IntegrationTestCase):
 		self.assertEqual(calls[0].kwargs["subject"], "Complete your course payment")
 
 	def test_a_use_html_override_is_honoured(self):
-		# Core reads an Email Template's body through `EmailTemplate.response_`,
-		# which returns `response_html` when Use HTML is ticked and leaves
-		# `response` empty in that case. Reading the raw `response` column returns
-		# "" for such a template, the `{% if override %}` guard falls through, and
-		# the site's own wording is silently replaced by the built-in copy.
+		# A Use HTML template keeps its body in `response_html` and leaves
+		# `response` empty, so reading `response` alone returns "" and the site's
+		# own wording is silently replaced by the built-in copy.
 		template = frappe.get_doc(
 			{
 				"doctype": "Email Template",
@@ -1280,11 +1200,9 @@ class TestPaymentReminder(IntegrationTestCase):
 
 
 class TestJobMails(IntegrationTestCase):
-	"""LMS Job Application (a plain New rule) and LMS Job Post Reported (the
-	second and last Method-event rule, via report()). Job Opportunity and LMS
-	Job Application are both freshly created per test method here, so -- unlike
-	the shared fixtures in the classes above -- no cleanup/restore is needed for
-	them; only the doctype-keyed notifications cache needs clearing.
+	"""LMS Job Application and LMS Job Post Reported.
+	Both documents are created fresh per test method, so nothing needs
+	restoring afterwards except the doctype-keyed notifications cache.
 	"""
 
 	def setUp(self):
@@ -1341,11 +1259,9 @@ class TestJobMails(IntegrationTestCase):
 		self.assertIn(self.job.company_email_address, sendmail.call_args.kwargs["recipients"])
 
 	def test_the_employer_copy_carries_a_to_header(self):
-		# `send_an_email` passes `expose_recipients="header"`, and email_body.py
-		# renders `"To": ", ".join(self.recipients)`. A rule whose only recipient
-		# row is a cc leaves `recipients` empty, so the employer's copy went out
-		# with a blank To: -- a common spam-filter trigger -- and
-		# `make_communication` was called with no recipients either.
+		# A rule whose only recipient row is a cc leaves `recipients` empty, so the
+		# employer's copy went out with a blank To header and `make_communication`
+		# was called with no recipients either.
 		with patch("frappe.sendmail") as sendmail:
 			self.apply()
 		self.assertTrue(sendmail.call_args.kwargs["recipients"])
@@ -1357,13 +1273,9 @@ class TestJobMails(IntegrationTestCase):
 		self.assertIn({"file_url": "/files/job-mail-resume.pdf"}, attachments)
 
 	def test_a_missing_company_email_sends_nothing_not_the_literal_none(self):
-		# frappe.db.get_value returning None renders as the four-character
-		# string "None" in a bare `{{ }}` expression, and
-		# get_emails_from_template's filter(None, ...) drops an empty string
-		# but not that word -- so a naive JOB_EMPLOYER_CC would cc "None"
-		# instead of quietly addressing nobody. company_email_address is
-		# `reqd`, so this bypasses validation the way the field could never be
-		# emptied through the form.
+		# `get_value` returning None renders as the string "None", which
+		# `get_emails_from_template` does not drop the way it drops "". The field
+		# is `reqd`, so this write bypasses the form's own validation.
 		frappe.db.set_value("Job Opportunity", self.job.name, "company_email_address", None)
 		with patch("frappe.sendmail") as sendmail:
 			self.apply()
@@ -1383,11 +1295,9 @@ class TestJobMails(IntegrationTestCase):
 		self.assertEqual(row.reported_by, frappe.session.user)
 
 	def test_report_rejects_non_string_arguments(self):
-		# frappe's whitelist argument coercion is switched off in several run
-		# modes (see local-runner-disabled-whitelist-type-validation in
-		# MEMORY.md), so it would silently coerce a list/int into a string
-		# before the guard ever saw it -- call the unwrapped function to prove
-		# the isinstance checks themselves reject a bad argument.
+		# frappe's whitelist argument coercion is off in several run modes and
+		# would turn a bad argument into a string before the guard saw it. Call
+		# the unwrapped function so the isinstance checks are what reject it.
 		with self.assertRaises(frappe.ValidationError):
 			report.__wrapped__(job=self.job.name, reason=["not", "a", "string"])
 
@@ -1400,12 +1310,9 @@ class TestJobMails(IntegrationTestCase):
 			report.__wrapped__(job=self.job.name, reason="x" * 1001)
 
 	def test_the_poster_cannot_read_who_reported_them(self):
-		# Job Opportunity grants LMS Student read with if_owner, so a poster can
-		# fetch their own listing through frappe.client.get. Persisting the
-		# reporter on the reported document therefore handed the reporter's name
-		# to the person they reported; on develop it reached System Managers by
-		# email and went nowhere else. Both report fields are permlevel 1, which
-		# only the permlevel-1 System Manager row can read.
+		# Job Opportunity grants LMS Student read with if_owner, so persisting the
+		# reporter on the reported document handed their name to the person they
+		# reported. Both report fields are permlevel 1.
 		self.addCleanup(frappe.set_user, "Administrator")
 		frappe.set_user(self.student)
 		own_job = frappe.get_doc(
@@ -1442,12 +1349,9 @@ class TestJobMails(IntegrationTestCase):
 		self.assertEqual(seen.report_reason, "Spam listing")
 
 	def test_reported_by_is_the_session_user_not_a_caller_supplied_value(self):
-		# report()'s signature takes no reported_by argument at all -- the only
-		# way this could be spoofed is the write itself reading from the wrong
-		# place. Switching the session to a non-Administrator user before
-		# calling makes that visible: a bug that hardcoded "Administrator" (the
-		# user every other test in this class runs as) would pass every other
-		# assertion here and only this test would catch it.
+		# `report()` takes no reported_by argument, so the only way to spoof it is
+		# the write reading from the wrong place. A hardcoded "Administrator"
+		# would pass every other assertion here, hence the user switch.
 		self.addCleanup(frappe.set_user, "Administrator")
 		frappe.set_user(self.student)
 		report.__wrapped__(job=self.job.name, reason="Spam listing")
@@ -1455,29 +1359,11 @@ class TestJobMails(IntegrationTestCase):
 
 
 class TestMention(IntegrationTestCase):
-	"""A discussion-mention no longer sends a mail (notify_mentions_via_email
-	was deleted, not converted -- its recipients are parsed out of the reply
-	text, so no trigger/condition/role/field could ever address them as a
-	Notification rule). notify_mentions_on_portal, the in-app half of the
-	same handle_notifications call, stays and is the actual replacement --
-	this class proves both halves: no mail, AND the Notification Log row
-	still lands for the mentioned user. Scoped to self.student, not a bare
-	`type` filter, since Notification Log is a shared table other suites in
-	this run also write "Mention" rows into.
-
-	Frappe core's own Notification Log.after_insert (frappe/desk/doctype/
-	notification_log/notification_log.py) independently emails a "Mention"-
-	type log by default -- "Mention" is not in the notification_skip_email_types
-	hook (only "Alert" is), and every User gets a Notification Settings row at
-	after_insert seeded with every non-skipped type opted in
-	(create_notification_settings). So notify_mentions_on_portal's own
-	Notification Log insert would trigger a *second*, unrelated email --
-	Frappe's generic "new_notification" template, not the deleted
-	"mention_template" -- confounding "no mail" for a reason that has nothing
-	to do with notify_mentions_via_email. That generic per-user opt-out email
-	is deliberate, pre-existing, out-of-scope framework behaviour this task
-	does not touch, so it is switched off for this test's own student only,
-	isolating the assertion to what Task 9 actually changed.
+	"""A discussion mention sends no mail, but still files a Notification Log.
+	`notify_mentions_via_email` was deleted rather than converted, because its
+	recipients are parsed out of the reply text. Core's own generic mention
+	email is switched off for this test's student so it cannot confound the
+	assertion.
 	"""
 
 	def setUp(self):
@@ -1538,15 +1424,10 @@ class TestMention(IntegrationTestCase):
 
 
 class TestSettingsEndpoints(IntegrationTestCase):
-	"""Settings > Notifications: `get_notification_rules` and
-	`set_notification_rule`, the two gated endpoints the page reads and writes
-	through instead of a doctype resource -- core Notification grants DocPerms
-	to System Manager only, and this page is reachable by Moderators too.
-
-	Every test that needs a non-LMS Notification row creates and deletes its
-	own -- an earlier revision shared one fixed-name row across two test
-	methods relying on unittest's alphabetical ordering to leave it behind;
-	that made the refusal test fail with DoesNotExistError when run alone.
+	"""The two gated endpoints the notifications page reads and writes through.
+	Core Notification grants DocPerms to System Manager only, and this page is
+	reachable by Moderators too. Every test creates and deletes its own non-LMS
+	row rather than sharing one.
 	"""
 
 	def setUp(self):
@@ -1554,9 +1435,7 @@ class TestSettingsEndpoints(IntegrationTestCase):
 
 	def foreign_rule(self):
 		"""A Notification row that is not LMS's, for the "not ours" tests.
-
-		Created and torn down per test rather than shared -- see the class
-		docstring.
+		Created and torn down per test rather than shared.
 		"""
 		name = f"Not An LMS Rule {frappe.generate_hash(length=6)}"
 		frappe.get_doc(
@@ -1613,12 +1492,9 @@ class TestSettingsEndpoints(IntegrationTestCase):
 		self.assertEqual(frappe.db.get_value("Notification", "LMS Certification", "channel"), "Email")
 
 	def test_a_valid_channel_change_is_written(self):
-		# `channel` is `set_only_once` on core Notification (notification.json),
-		# so `doc.save()` throws CannotChangeConstantError for ANY change to it
-		# -- a supported value included. Every seeded rule already has a channel
-		# from insert_rule(), so the write has to go around the ORM entirely, and
-		# this is what proves it actually lands rather than being silently
-		# swallowed by the same exception the refusal tests above also raise.
+		# `channel` is `set_only_once`, so `doc.save()` throws for any change to it,
+		# a supported value included. The write has to go around the ORM, and this
+		# proves it lands rather than being swallowed by that same exception.
 		self.addCleanup(lambda: frappe.db.set_value("Notification", "LMS Certification", "channel", "Email"))
 		row = set_notification_rule(name="LMS Certification", channel="System Notification")
 		self.assertEqual(row["channel"], "System Notification")
@@ -1635,9 +1511,8 @@ class TestSettingsEndpoints(IntegrationTestCase):
 		self.assertEqual(row.subject, original)
 
 	def test_an_empty_subject_is_refused(self):
-		# The frontend's own FormControl `required` is not a server guarantee --
-		# a direct call (or a client that skips the form) could still send an
-		# empty or whitespace-only subject, which would mail with no subject.
+		# The frontend's `required` is not a server guarantee. A direct call could
+		# still send a whitespace-only subject, which would mail with no subject.
 		with self.assertRaises(frappe.ValidationError):
 			set_notification_rule.__wrapped__(name="LMS Certification", subject="   ")
 
@@ -1667,20 +1542,10 @@ class TestSettingsEndpoints(IntegrationTestCase):
 
 
 class TestSettingsEndpointRoleSplit(IntegrationTestCase):
-	"""`subject` and `message` require System Manager; everything else --
-	reading, `enabled`, `channel`, `send_system_notification` -- stays open to
-	a Moderator.
-
-	A rule's `message` renders as Jinja at send time under
-	`restrict_globals=True` (frappe/utils/safe_exec.py), and that restricted
-	namespace still exposes `frappe.db.sql`, `frappe.get_all` (called with
-	`ignore_permissions=True` inside safe_exec) and `frappe.db.get_value` --
-	none permission-checked. A Moderator who could write `message` could read
-	any table on the site through it, which is why core itself reserves
-	Notification writes to System Manager. The Administrator test runner
-	bypasses `frappe.only_for` entirely (`local.session.user ==
-	"Administrator"` returns before the role check even runs -- frappe/
-	__init__.py), so every test below switches to a real Moderator-only user.
+	"""`subject` and `message` require System Manager; the rest stays open.
+	A rule's `message` renders as Jinja whose restricted namespace still
+	exposes unchecked reads, so a Moderator who could write it could read any
+	table. Administrator bypasses `frappe.only_for`, so these switch user.
 	"""
 
 	def setUp(self):
@@ -1736,17 +1601,17 @@ class TestSettingsEndpointRoleSplit(IntegrationTestCase):
 		)
 
 	def test_a_moderator_writing_enabled_alongside_subject_is_still_refused(self):
-		# The gate is on the ARGUMENTS given, not on which one a caller expects
-		# to be scrutinised -- a Moderator cannot smuggle a subject change in
-		# behind an enabled toggle the endpoint would otherwise allow.
+		# The gate reads the arguments given, not the one a caller expects to be
+		# scrutinised, so a Moderator cannot smuggle a subject change in behind an
+		# enabled toggle.
 		self.addCleanup(lambda: frappe.db.set_value("Notification", "LMS Certification", "enabled", 1))
 		frappe.set_user(self.moderator)
 		with self.assertRaises(frappe.PermissionError):
 			set_notification_rule(name="LMS Certification", enabled=0, subject="Hijacked")
 
 	def test_a_system_manager_can_write_the_subject(self):
-		# The split is Moderator-vs-System-Manager, not Moderator-vs-nobody --
-		# a plain System Manager (no Moderator role) can still write wording.
+		# The split is Moderator against System Manager, not Moderator against
+		# nobody. A plain System Manager can still write wording.
 		hash_ = frappe.generate_hash(length=6)
 		system_manager = (
 			frappe.get_doc(

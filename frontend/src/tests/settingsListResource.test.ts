@@ -81,10 +81,9 @@ vi.mock('frappe-ui', () => ({
 			delete: {
 				submit(name: string, callbacks: any) {
 					out.deleted = name
-					// frappe-ui's delete resource refetches from its OWN onSuccess
-					// (listResource.js:161), before any per-call onSuccess runs. The
-					// stub left this out, which is why the overlapping request it
-					// starts went unnoticed.
+					// frappe-ui's delete resource refetches from its own onSuccess,
+					// before any per-call onSuccess runs. The stub left this out, so
+					// the overlapping request it starts went unnoticed.
 					out.list.fetch()
 					callbacks?.onSuccess?.()
 				},
@@ -248,10 +247,9 @@ describe('useSettingsListResource', () => {
 		list.remove('SAVE20')
 		await drain()
 
-		// Rewinding to page one AFTER frappe-ui's refetch has fired does not help:
-		// list.onSuccess reads `start` when the response LANDS, so the in-flight
-		// start=13 request takes the `!out.start` replace branch and renders rows
-		// 14-26 as page one, with hasNextPage derived from that page.
+		// Rewinding to page one after frappe-ui's refetch has fired does not help.
+		// list.onSuccess reads `start` when the response lands, so the in-flight
+		// start=13 request renders rows 14 to 26 as page one.
 		expect(fetches.slice(before).map((fetch: any) => fetch.start)).toEqual(
 			fetches.slice(before).map(() => 0)
 		)

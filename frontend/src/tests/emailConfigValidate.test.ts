@@ -11,7 +11,7 @@ vi.mock('@/utils', () => ({
 	validateEmail: (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e),
 }))
 // validateInputs moved into the page's config module, which also carries the
-// list's actions — so the modules those reach for are stubbed rather than
+// list's actions, so the modules those reach for are stubbed rather than
 // loaded.
 vi.mock('frappe-ui', () => ({ call: vi.fn(), toast: {} }))
 vi.mock('@/utils/dialogs', () => ({ createDialog: vi.fn() }))

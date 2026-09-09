@@ -1,10 +1,7 @@
 /**
- * defaultsBadgeLabel: the badge the Email Accounts list shows for
- * each account. The four cases are distinct because Frappe tracks the default
- * inbox and the default sender separately, and one account can hold both.
- *
- * The DB hands these fields back as 0/1 while the edit form works in booleans,
- * so both shapes have to read the same.
+ * defaultsBadgeLabel: the badge the Email Accounts list shows for each account.
+ * The four cases are distinct because Frappe tracks the default inbox and the
+ * default sender separately, and one account can hold both.
  */
 import { describe, expect, it, vi } from 'vitest'
 
@@ -13,7 +10,7 @@ vi.mock('@/utils', () => ({
 	validateEmail: (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e),
 }))
 // The badge moved into the page's config module, which also carries the list's
-// actions — so the modules those reach for are stubbed rather than loaded.
+// actions, so the modules those reach for are stubbed rather than loaded.
 vi.mock('frappe-ui', () => ({ call: vi.fn(), toast: {} }))
 vi.mock('@/utils/dialogs', () => ({ createDialog: vi.fn() }))
 vi.mock('@/composables/useSettingsListResource', () => ({
@@ -23,8 +20,8 @@ vi.mock('@/composables/useSettingsListResource', () => ({
 import { defaultsBadgeLabel } from '@/components/Settings/EmailAccount/emailAccounts'
 
 // Every fixture carries the enable flags as well as the defaults, because a
-// default counts only for a direction the account is enabled for -- the same
-// reading the row menu takes. A real row always has both halves.
+// default counts only for a direction the account is enabled for. A real row
+// always has both halves.
 describe('defaultsBadgeLabel', () => {
 	it('names both roles when the account holds both defaults', () => {
 		expect(
@@ -113,11 +110,8 @@ describe('defaultsBadgeLabel', () => {
 describe('a default flag on a direction that is switched off', () => {
 	/**
 	 * The row menu offers its two entries only for a direction the account is
-	 * enabled for, on the reasoning that frappe resolves a default inbox as
-	 * `enable_incoming` AND `default_incoming`. The badge read the flags alone,
-	 * so switching incoming off on the account holding the default inbox left it
-	 * advertising "Default Inbox" while "Clear default inbox" had already
-	 * disappeared: a claim the user could neither rely on nor withdraw.
+	 * enabled for. The badge read the flags alone, so an account could advertise
+	 * "Default Inbox" while "Clear default inbox" had already disappeared.
 	 */
 	it('does not report an inbox default the account cannot serve', () => {
 		expect(

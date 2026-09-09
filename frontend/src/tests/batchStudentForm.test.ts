@@ -444,11 +444,8 @@ describe('BatchStudentForm as a route', () => {
 	})
 
 	// Settings is mounted only in the desktop sidebar, so on a phone openSettings
-	// reports that it has nowhere to go. The form must stay exactly where it is
-	// either way — it used to close itself for a dialog that never appeared,
-	// throwing away whatever the user had typed. It no longer closes for a
-	// dialog that DOES appear either, so this pins the quieter half: a refusal
-	// navigates nowhere at all.
+	// reports that it has nowhere to go. The form used to close itself for a
+	// dialog that never appeared, throwing away whatever the user had typed.
 	it('stays put when Settings has nowhere to open', async () => {
 		openSettingsMock.mockReturnValue(false)
 		const router = makeRouter()
