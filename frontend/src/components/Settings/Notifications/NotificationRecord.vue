@@ -54,28 +54,18 @@
 			/>
 
 			<div class="min-w-0 space-y-1.5">
-				<InputLabel
-					:id="messageLabelId"
+				<TextEditor
+					data-testid="notification-message"
+					variant="email"
+					:model-value="doc.message"
 					:label="__('Message')"
 					:required="true"
-				/>
-				<div
-					data-testid="notification-message"
-					role="group"
-					class="flex min-w-0 flex-col"
-					:aria-labelledby="messageLabelId"
-					:style="{ height: CONTENT_HEIGHT }"
+					:editable="canWriteWording"
+					:placeholder="richPlaceholder()"
+					:height="CONTENT_HEIGHT"
+					@change="setMessage"
 					@input="codeTouched = true"
-				>
-					<RichTextEditor
-						:content="doc.message"
-						:editable="canWriteWording"
-						:fixed-menu="canWriteWording"
-						:placeholder="richPlaceholder()"
-						:editor-class="RICH_EDITOR_CLASS"
-						@change="setMessage"
-					/>
-				</div>
+				/>
 				<div class="flex items-start justify-between gap-4">
 					<p class="text-p-sm text-ink-gray-5">
 						{{ __('Jinja placeholders are expanded when the mail is sent.') }}
@@ -118,9 +108,8 @@ import {
 	LoadingIndicator,
 	call,
 } from 'frappe-ui'
-import { computed, inject, onMounted, ref, useId } from 'vue'
-import { InputLabel } from '@/components/Form/labeling'
-import RichTextEditor from '@/components/RichTextEditor.vue'
+import { computed, inject, onMounted, ref } from 'vue'
+import TextEditor from '@/components/Controls/TextEditor.vue'
 import Select from '@/components/Controls/Select.vue'
 import SettingsLayout from '@/components/Layouts/settings/desktop/SettingsLayout.vue'
 import UseTemplateDialog from '@/components/Settings/Notifications/UseTemplateDialog.vue'
@@ -163,16 +152,8 @@ const props = defineProps<{ name?: string | null }>()
 
 const emit = defineEmits<{ back: [] }>()
 
-const messageLabelId = useId()
-
 const CONTENT_ROWS = 10
 const CONTENT_HEIGHT = `calc(${CONTENT_ROWS} * 1.5rem + 1.25rem)`
-
-// `editorClass` lands on EditorContent, the fixed menu's sibling — see
-// EmailTemplateForm.vue's own copy of this class list for why it has to be
-// this element and not the RichTextEditor tag.
-const RICH_EDITOR_CLASS =
-	'prose-sm min-h-0 max-w-none flex-1 overflow-y-auto rounded-b-md border-x border-b border-outline-elevation-2 bg-surface-gray-2 px-2 py-1'
 
 // A function, not a module-scope constant: a plain `const __(...)` freezes the
 // string against a runtime locale change, and it is exactly the pattern this
@@ -198,11 +179,10 @@ const doc = ref<NotificationRuleRow | null>(null)
 const loaded = ref<NotificationRuleRow | null>(null)
 const loading = ref(true)
 
-// Ace/RichTextEditor hands its value over on blur, not per keystroke, so an
-// edit sitting in the editor is not on `doc.message` yet when the pointer
-// reaches Save — and a Save still disabled swallows the click that would have
-// blurred it. This says the editor is holding something typed but not yet
-// applied; the value itself lands on the change RichTextEditor emits.
+// Set from the editor's native `input`, which fires on the keystroke itself,
+// ahead of the `change` that carries the value onto `doc.message`. Without it a
+// Save disabled at the moment of the click swallows that click, and the edit
+// that was mid-flight is never sent.
 const codeTouched = ref(false)
 
 const showTemplateDialog = ref(false)

@@ -34,22 +34,14 @@
 
 			<div class="h-px border-t border-outline-elevation-2" />
 
-			<div class="flex items-center justify-between gap-8">
-				<div class="flex min-w-0 flex-col">
-					<div class="text-p-base-medium text-ink-gray-7">
-						{{ __('Use HTML') }}
-					</div>
-					<div class="text-p-sm text-ink-gray-5">
-						{{ __('Write the body as raw HTML instead of formatted text.') }}
-					</div>
-				</div>
-				<BooleanSwitch
-					v-model="doc.use_html"
-					data-testid="template-use-html"
-					size="sm"
-					:aria-label="__('Use HTML')"
-				/>
-			</div>
+			<Checkbox
+				v-model="useHtml"
+				data-testid="template-use-html"
+				:label="__('Use HTML')"
+				:description="
+					__('Write the body as raw HTML instead of formatted text.')
+				"
+			/>
 
 			<div class="min-w-0 space-y-1.5">
 				<InputLabel
@@ -73,13 +65,13 @@
 						:autofocus="false"
 						:showLineNumbers="true"
 					/>
-					<RichTextEditor
+					<TextEditor
 						v-else
-						:content="doc.response"
-						:editable="true"
-						:fixed-menu="true"
+						variant="email"
+						:model-value="doc.response"
 						:placeholder="RICH_PLACEHOLDER"
-						:editor-class="RICH_EDITOR_CLASS"
+						:height="CONTENT_HEIGHT"
+						:toolbar-label="__('Content')"
 						@change="setResponse"
 					/>
 				</div>
@@ -98,12 +90,16 @@
 </template>
 
 <script setup lang="ts">
-import { ErrorMessage, FormControl, LoadingIndicator } from 'frappe-ui'
+import {
+	Checkbox,
+	ErrorMessage,
+	FormControl,
+	LoadingIndicator,
+} from 'frappe-ui'
 import { computed, ref, useId } from 'vue'
 import { InputLabel } from '@/components/Form/labeling'
-import BooleanSwitch from '@/components/Controls/BooleanSwitch.vue'
 import CodeEditor from '@/components/Controls/CodeEditor.vue'
-import RichTextEditor from '@/components/RichTextEditor.vue'
+import TextEditor from '@/components/Controls/TextEditor.vue'
 import SettingsLayout from '@/components/Layouts/settings/desktop/SettingsLayout.vue'
 import { DOCTYPE } from '@/components/Settings/EmailTemplate/emailTemplates'
 import { useSettingsRecord } from '@/composables/useSettingsRecord'
@@ -144,14 +140,6 @@ const contentLabelId = useId()
  */
 const CONTENT_ROWS = 10
 const CONTENT_HEIGHT = `calc(${CONTENT_ROWS} * 1.5rem + 1.25rem)`
-
-// `editorClass` lands on EditorContent, the fixed menu's sibling — and Editor
-// itself is renderless, so both are children of the slot above and the pair
-// lays out as its flex column. A class on the RichTextEditor tag would not do
-// this: with the fixed menu on it has two root nodes to fall through to, which
-// is none.
-const RICH_EDITOR_CLASS =
-	'prose-sm min-h-0 max-w-none flex-1 overflow-y-auto rounded-b-md border-x border-b border-outline-elevation-2 bg-surface-gray-2 px-2 py-1'
 
 const RICH_PLACEHOLDER = __(
 	'Dear {{ member_name }},\n\nYou have been enrolled in our upcoming batch {{ batch_name }}.\n\nThanks,\nFrappe Learning'
@@ -199,6 +187,17 @@ const templateName = computed<string>({
 		const current = doc.value
 		if (!current) return
 		current[isNew.value ? '__newname' : 'name'] = value
+	},
+})
+
+// frappe-ui's Checkbox writes a boolean, and `use_html` is a 0/1 check field:
+// the dirty diff and the save payload both compare against the document the
+// server sent, so the number is what has to go back into it.
+const useHtml = computed<boolean>({
+	get: () => Boolean(doc.value?.use_html),
+	set: (value) => {
+		const current = doc.value
+		if (current) current.use_html = value ? 1 : 0
 	},
 })
 
