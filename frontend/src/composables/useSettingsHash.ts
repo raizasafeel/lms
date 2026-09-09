@@ -100,9 +100,13 @@ export function useSettingsHash(tabs: ComputedRef<SettingsRoutableGroup[]>) {
 	// never changes the hash.
 	let popping = false
 	onScopeDispose(
-		router.afterEach(() => {
+		router.afterEach((_to, _from, failure) => {
 			dropping = false
 			popping = false
+			// Only on a refusal. A completed pop still needs `closing` for the hash
+			// watcher below; a refused one never reaches it, and leaving it set
+			// force-closes the dialog on the next hash change.
+			if (failure) closing = null
 		})
 	)
 
