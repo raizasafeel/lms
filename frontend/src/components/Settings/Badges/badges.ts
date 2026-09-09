@@ -17,12 +17,12 @@ import type {
  * SettingsListPanel draws both.
  */
 
-export const BADGE_DOCTYPE = 'LMS Badge'
+const BADGE_DOCTYPE = 'LMS Badge'
 
 /** LMS Badge autonames `field:title`, so editing the title renames the record. */
-export const BADGE_RENAME_FIELD = 'title'
+const BADGE_RENAME_FIELD = 'title'
 
-export const BADGE_FIELDS = [
+const BADGE_FIELDS = [
 	'name',
 	'title',
 	'enabled',
@@ -36,7 +36,7 @@ export const BADGE_FIELDS = [
 	'field_to_check',
 ]
 
-export const BADGE_SEARCH_FIELDS = ['title', 'description']
+const BADGE_SEARCH_FIELDS = ['title', 'description']
 
 const DOCTYPE_LABELS: Record<string, () => string> = {
 	'LMS Course': () => __('Course'),
@@ -55,7 +55,7 @@ const DOCTYPE_LABELS: Record<string, () => string> = {
  * reference doctype is called. Gray, like every other pill in the list, and it
  * falls back to the raw doctype so an unmapped one still reads as itself.
  */
-export const awardedFor = (doctype: string): SettingsListBadge => ({
+const awardedFor = (doctype: string): SettingsListBadge => ({
 	label: DOCTYPE_LABELS[doctype]?.() || doctype,
 	theme: 'gray',
 })
@@ -119,7 +119,7 @@ const columns: SettingsListColumn[] = [
 	},
 ]
 
-export const referenceDoctypeOptions = (): SelectOption[] => [
+const referenceDoctypeOptions = (): SelectOption[] => [
 	{ label: __('Course'), value: 'LMS Course' },
 	{ label: __('Batch'), value: 'LMS Batch' },
 	{ label: __('User'), value: 'Member' },
@@ -133,26 +133,26 @@ export const referenceDoctypeOptions = (): SelectOption[] => [
 	{ label: __('Batch Enrollment'), value: 'LMS Batch Enrollment' },
 ]
 
-export const eventOptions = (): SelectOption[] =>
+const eventOptions = (): SelectOption[] =>
 	['New', 'Value Change', 'Manual Assignment'].map((event) => ({
 		label: __(event),
 		value: event,
 	}))
 
-export const userFieldOptions = (): SelectOption[] => [
+const userFieldOptions = (): SelectOption[] => [
 	{ label: __('Member'), value: 'member' },
 	{ label: __('Owner'), value: 'owner' },
 ]
 
 // A condition is written here rather than merely checked, so the hint carries a
 // worked example of each shape it can take.
-export const conditionHint = (): string =>
+const conditionHint = (): string =>
 	__(
 		'Manual Assignment takes JSON filters, e.g. {"published": 1}. Every other event takes an expression over `doc`, e.g. doc.progress == 100.'
 	)
 
 /** The fields a new badge opens on, before anything has been typed. */
-export const newBadge = (): Record<string, unknown> => ({
+const newBadge = (): Record<string, unknown> => ({
 	title: '',
 	enabled: 1,
 	description: '',

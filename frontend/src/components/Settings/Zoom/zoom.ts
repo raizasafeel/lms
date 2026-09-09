@@ -11,9 +11,8 @@ import type { ListPage } from '@/types/settingsSchema'
 import type { SettingsListColumn, SettingsListRow } from '@/types'
 
 /**
- * Zoom accounts: the list, as data, and one component for the account behind a
- * row. What is left here is only what was ever Zoom's: which doctype, which
- * columns, and what a row's menu can do.
+ * Settings > Zoom, as config. What lives here is only what was ever Zoom's:
+ * which doctype, which columns, and what a row's menu can do.
  */
 
 const DOCTYPE = 'LMS Zoom Settings'

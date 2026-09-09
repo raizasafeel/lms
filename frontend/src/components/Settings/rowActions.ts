@@ -4,15 +4,14 @@ import { cleanError } from '@/utils'
 import type { SettingsListRow } from '@/types'
 
 /**
- * The two things a settings list's rows do to themselves. Both were written
- * out per panel. Both take their wording untranslated, because a config module
- * is evaluated before the translation plugin installs `__` on window.
+ * The two things a settings list's rows do to themselves. Both take their
+ * wording untranslated, because a config module is evaluated before the
+ * translation plugin installs `__` on window.
  */
 
 const report = (err: any, fallback: string) =>
 	toast.error(cleanError(err?.messages?.[0] || err) || __(fallback))
 
-/** Writes one field on one row, for the toggle a list column offers. */
 export const setRowField =
 	(doctype: string, field = 'enabled') =>
 	(row: SettingsListRow, value: 0 | 1) =>

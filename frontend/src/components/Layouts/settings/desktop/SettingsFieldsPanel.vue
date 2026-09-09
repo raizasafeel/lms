@@ -127,8 +127,18 @@ watch(
 
 const saving = ref(false)
 
+const firstProblem = (): string => {
+	if (!source.doc) return ''
+	return props.page.validate?.(source.doc) ?? ''
+}
+
+const reportFailure = (error: { messages?: string[]; message?: string }) => {
+	toast.error(error?.messages?.[0] || error?.message || __('Save failed'))
+	console.error(error)
+}
+
 const save = () => {
-	const invalid = source.doc ? props.page.validate?.(source.doc) ?? '' : ''
+	const invalid = firstProblem()
 	if (invalid) {
 		toast.error(invalid)
 		return
@@ -137,19 +147,17 @@ const save = () => {
 	// Read before the write. A successful insert clears isNew, so asking
 	// afterwards reports every save as an update.
 	const created = source.isNew
+	const finish = () =>
+		props.page.onSaved?.({
+			created,
+			name: source.name,
+			back: () => emit('back'),
+		})
+
 	source
 		.save()
-		.then(() =>
-			props.page.onSaved?.({
-				created,
-				name: source.name,
-				back: () => emit('back'),
-			})
-		)
-		.catch((error: { messages?: string[]; message?: string }) => {
-			toast.error(error?.messages?.[0] || error?.message || __('Save failed'))
-			console.error(error)
-		})
+		.then(finish)
+		.catch(reportFailure)
 		.finally(() => (saving.value = false))
 }
 
