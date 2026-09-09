@@ -21,7 +21,7 @@
 							:model-value="systemLanguage"
 							doctype="Language"
 							data-test="system-language"
-							:readonly="!canEditSystem"
+							:readonly="!systemEditable"
 							:aria-label="__('System Language')"
 							class="w-48"
 							@update:model-value="(value) => onSystemSelect('language', value)"
@@ -44,7 +44,7 @@
 							:model-value="systemTimezone"
 							:options="timezoneOptions"
 							data-test="system-timezone"
-							:disabled="!canEditSystem"
+							:disabled="!systemEditable"
 							:aria-label="__('System Timezone')"
 							:placeholder="__('Search timezone')"
 							class="w-48"
@@ -201,6 +201,15 @@ const preferences = createResource({
 const savePreferences = createResource({
 	url: 'lms.lms.api.set_system_preferences',
 })
+// The permission AND the answer. `get_system_preferences` only starts fetching
+// when this panel mounts, while the panel itself renders as soon as the
+// app-start LMS Settings resource has a doc -- so both controls were live for a
+// window in which `systemDirty` reads false (no server value to compare
+// against) and the arrival watcher then overwrites whatever was picked. The
+// choice vanished with no write, no error and no "Not saved" marker.
+const systemEditable = computed<boolean>(
+	() => canEditSystem.value && Boolean(preferences.data)
+)
 
 watch(
 	() => preferences.data as SystemPreferences | undefined,
