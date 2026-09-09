@@ -21,6 +21,13 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * Superseded by `Controls/TextEditor.vue`, which carries its own label,
+ * description and error, picks a feature set by variant, and owns the chrome
+ * this one leaves to every call site as an `editorClass` string. Settings has
+ * moved; the twenty-odd remaining callers have not. Use TextEditor for new
+ * work, and move a caller across rather than adding a prop here.
+ */
 import { computed, ref, watch } from 'vue'
 import { useFileUpload } from 'frappe-ui'
 import {

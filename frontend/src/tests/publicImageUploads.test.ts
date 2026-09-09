@@ -160,16 +160,19 @@ const vueFilesUnder = (dir: string): string[] => {
 
 /**
  * Every opening uploader tag, ending at the first `>` that is NOT
- * inside an attribute value. RichTextEditor counts: it uploads pasted and
- * dragged images too (its uploadFile defaults them to private), so a lesson body
- * written in one decides privacy exactly as a FileUploader does. The app has no
- * <TextEditor — that name matched nothing at all. A naive /[^>]*>/ stops at the `>` of the first
- * `=>` in an arrow-function attribute, which makes the whole check depend on
- * the order the attributes happen to be written in.
+ * inside an attribute value. Both editors count: each uploads pasted and
+ * dragged images too (their uploadFile defaults them to private), so a lesson
+ * body written in one decides privacy exactly as a FileUploader does.
+ * Controls/TextEditor is the newer of the two and sits next to RichTextEditor
+ * here rather than at the end, because the manifest below reads its files in
+ * this list's order, not in document order. A naive /[^>]*>/ stops at the `>` of
+ * the first `=>` in an arrow-function attribute, which makes the whole check
+ * depend on the order the attributes happen to be written in.
  */
 const UPLOADER_TAGS = [
 	'<FileUploader',
 	'<RichTextEditor',
+	'<TextEditor',
 	'<ImageUploader',
 	'<ImageUploadField',
 ]
@@ -306,6 +309,9 @@ const MANIFEST: Record<string, Privacy[]> = {
 	// to be. The tile is Controls/ImageUploadField.vue now — the same row the
 	// gateway attachment above uses — so this `:is_private="false"` is the only
 	// thing separating the two, and it is here rather than in the shared row.
+	// The question body in the redesigned quiz editor, which reached this
+	// branch with the same default as Quiz.vue above.
+	'components/Quiz/QuestionEditor.vue': ['undeclared'],
 	'components/Settings/Badges/BadgeForm.vue': ['public'],
 	// The rich body of an email template. One component now holds the list and
 	// the record alike — New and an existing template included — so there is a

@@ -90,12 +90,14 @@
 							{{ __(field.label) }}
 						</div>
 						<div :style="contentBox(section, field)">
-							<RichTextEditor
-								:content="data[field.name]"
+							<TextEditor
+								variant="email"
+								:model-value="data[field.name]"
 								:editable="!field.disabled"
-								:fixed-menu="true"
 								:placeholder="field.placeholder || __(field.label)"
-								editor-class="prose-sm max-w-none border-b border-x border-outline-elevation-2 bg-surface-gray-2 rounded-b-md py-1 px-2 min-h-[7rem] max-h-[13rem] overflow-y-auto"
+								:toolbar-label="__(field.label)"
+								min-height="7rem"
+								max-height="13rem"
 								@change="(value) => onRichText(field, value)"
 							/>
 						</div>
@@ -207,7 +209,7 @@ import { watch } from 'vue'
 import Link from '@/components/Controls/Link.vue'
 import CodeEditor from '@/components/Controls/CodeEditor.vue'
 import ImageUploadField from '@/components/Controls/ImageUploadField.vue'
-import RichTextEditor from '@/components/RichTextEditor.vue'
+import TextEditor from '@/components/Controls/TextEditor.vue'
 import { seedCheckboxDefaults } from '@/components/Settings/Mobile/mobileRows'
 
 // The ImageUploadField above binds :is_private="!field.public", and it is
