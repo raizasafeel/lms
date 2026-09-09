@@ -37,7 +37,7 @@ from lms.lms.doctype.course_lesson.course_lesson import (
 	cleanup_lesson_backreferences,
 	save_progress,
 )
-from lms.lms.sidebar import LEGACY_VISIBILITY_FIELDS, get_sidebar_rows
+from lms.lms.sidebar import LEGACY_VISIBILITY_FIELDS, ROW_FIELDS, get_sidebar_rows
 from lms.lms.utils import (
 	LMS_ROLES,
 	can_modify_batch,
@@ -875,6 +875,34 @@ def update_sidebar_item(webpage: str, icon: str | None = None):
 		existing.icon = icon
 	else:
 		settings.append("sidebar_items", {"item_type": "Web Page", "web_page": webpage, "icon": icon})
+
+	settings.save()
+	return get_sidebar_settings()
+
+
+@frappe.whitelist()
+def save_sidebar_items(rows: list):
+	"""Replace the sidebar table, and nothing else on LMS Settings.
+
+	The settings page edits one cached LMS Settings document shared by every
+	panel, and a document save sends every field that is dirty on it, so saving
+	the sidebar from there also commits whatever another panel left unsaved.
+	"""
+	frappe.only_for("Moderator")
+
+	if isinstance(rows, str):
+		rows = frappe.parse_json(rows)
+	if not isinstance(rows, list):
+		frappe.throw(_("Sidebar rows must be a list."))
+
+	settings = frappe.get_single("LMS Settings")
+	settings.set("sidebar_items", [])
+	for index, row in enumerate(rows):
+		if not isinstance(row, dict):
+			frappe.throw(_("Each sidebar row must be an object."))
+		item = {field: row.get(field) for field in ROW_FIELDS}
+		item["idx"] = index + 1
+		settings.append("sidebar_items", item)
 
 	settings.save()
 	return get_sidebar_settings()

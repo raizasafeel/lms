@@ -163,6 +163,7 @@ import {
 	Button,
 	Checkbox,
 	Dropdown,
+	call,
 	createDocumentResource,
 	toast,
 } from 'frappe-ui'
@@ -355,23 +356,19 @@ const moveRow = async (row: SidebarRowDraft, delta: number) => {
 	persist()
 }
 
-// Every list edit writes straight back. `settings.doc` is the shared
-// 'LMS Settings' cache entry every other panel reads, so a rejected write must
-// leave neither it nor the working copy holding the failed change.
+// Every list edit writes straight back, through its own endpoint rather than
+// settings.save. One cached 'LMS Settings' document is shared by every panel,
+// so saving from here would commit whatever another panel left dirty on it.
 const persist = async () => {
-	const previous = settings.doc.sidebar_items
-	settings.doc.sidebar_items = withoutClientId(rows.value).map(
-		(row, index) => ({
-			...row,
-			idx: index + 1,
-		})
-	)
 	try {
-		await settings.save.submit()
+		await call('lms.lms.api.save_sidebar_items', {
+			rows: withoutClientId(rows.value),
+		})
+		// The cached document is behind after a server-side write.
+		await settings.reload()
 		syncFromDoc()
 		await loadSidebarSettings(true)
 	} catch (error: any) {
-		settings.doc.sidebar_items = previous
 		syncFromDoc()
 		toast.error(cleanError(error?.messages?.[0]) || __('Error saving sidebar'))
 	}
