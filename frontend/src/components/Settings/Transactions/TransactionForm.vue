@@ -349,7 +349,7 @@ import type { FieldMeta } from '@/types/settingsSchema'
 
 // The body is hand-rolled rather than a fields page, following CRM's
 // TwilioSettings.vue. Handed the open record's name and reporting only that it
-// is finished, the same contract ZoomAccountForm.vue has.
+// is finished, the same contract a declared record form has.
 
 const props = defineProps<{ name?: string | null }>()
 
