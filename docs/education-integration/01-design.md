@@ -1,10 +1,10 @@
 # Frappe Education × Frappe Learning — v17 Integration Design
 
-Status: proposal for discussion. Target: `version-17` of both apps (versioning aligned with the Frappe Framework). Breaking changes are accepted in this release.
+Status: proposal for discussion. Target: `version-17` of both apps (versioning aligned with the Frappe Framework). Breaking changes are accepted in this release. For Learning, v17 is the "v3" moment: the last time the role model, batch model and version scheme change in incompatible ways.
 
 ## 1. The one-sentence model
 
-**Education is the institution's system of record (who studies what, when, where, and how it was graded). Learning (LMS) is the system of record for learning content and online delivery (courses, lessons, quizzes, assignments, progress, live classes, certificates).** Each app stays installable on its own. Education knows about LMS optionally; LMS never imports Education.
+**Education is the institution's system of record (who studies what, when, where, and how it was graded). Learning (LMS) is the system of record for learning content and online delivery (courses, lessons, quizzes, assignments, progress, live classes, certificates).** Learning is a required app of Education and is installed with it. Learning stays installable on its own and never imports Education.
 
 ## 2. What exists today (facts that shaped the design)
 
@@ -25,16 +25,29 @@ Education deprecated its own LMS in December 2022 and pointed users at Frappe LM
 
 ## 3. Decisions
 
-### D1. Dependency direction and where the bridge lives
-- LMS stays standalone (no ERPNext, no Education). LMS ships a **stable integration contract**: fields, server-side flags, a Python module, and generic reference links. Nothing in LMS references an Education doctype.
-- Education owns the bridge. Code lives in `education/education/lms_integration/` and is active only when `"lms" in frappe.get_installed_apps()`. Education subscribes to LMS doc events via `doc_events` in its hooks (Frappe ignores hooks for doctypes that do not exist, so this is safe without LMS).
-- Link fields from Education doctypes to LMS doctypes are created as **Custom Fields at runtime** (`after_install` and `after_app_install` hooks), never in the doctype JSON. A Link whose target doctype is missing fails `bench migrate`.
-- Install order must not matter: Education installed first then LMS, or the reverse, both end in the same state.
+### D1. Learning is a required app of Education
+- Education 17 declares `required_apps = ["frappe/erpnext", "frappe/lms"]`. Bench and Frappe Cloud install required apps first, so LMS (and its own requirement, `frappe/payments`) is always present before Education is installed. Payments is unused by Education unless a school also sells public courses.
+- Consequences that make the bridge simpler: Education doctype JSON can carry native Link fields to LMS doctypes; no installed-app guards, no `after_app_install` hook, no install-order matrix in CI; Education may import `lms` at module level.
+- LMS stays standalone (no ERPNext, no Education) and ships a **stable integration contract**: fields, server-side flags, a Python module. Nothing in LMS references an Education doctype. Education still goes through the contract module rather than LMS internals, so LMS can refactor freely.
+- Education owns the bridge. Code lives in `education/education/lms_integration/`. Education subscribes to LMS doc events via `doc_events` in its hooks.
+- Upgrade path for existing Education sites: install LMS before migrating to Education 17. Education adds a `before_migrate` hook that stops with a clear message ("Install the Learning app first: bench get-app lms && bench --site X install-app lms") when LMS is missing. The joint upgrade guide leads with this step.
 
-### D2. Identity = `User`
+### D2. Identity = `User`, one role vocabulary
 - Student ↔ User via `Student.user` (already exists). The bridge requires a `User`; if `user_creation_skip` is on and no user exists, the bridge creates one on demand using the existing `Student.validate_user` path.
-- New users already receive `LMS Student` from an LMS hook. Education additionally grants it explicitly when linking, so the order of installation does not matter.
-- `Instructor` gets a native `user` Link field (fetched from `Employee.user_id`, editable). Instructors with a user receive `Course Creator` + `Batch Evaluator`. `Education Manager` receives `Moderator`. Guardians get nothing in v17 (see Open Questions).
+- `Instructor` gets a native `user` Link field (fetched from `Employee.user_id`, editable). Guardians get nothing in v17 (see Open Questions).
+- Learning 17 renames its roles to the plain institutional nouns, so the two apps share one vocabulary instead of mapping between two:
+
+| Learning ≤ 2.x | Learning 17 | Exists in Education today | Notes |
+|---|---|---|---|
+| `LMS Student` | `Student` | Yes (portal role, `desk_access = 0`, has Sales Invoice read/write/print for fee receipts) | Same role in both apps. Rename patch merges into the existing role. |
+| `Course Creator` | `Instructor` | Yes (desk role on 15 doctypes: attendance, schedules, assessment plans) | Same role in both apps. A teacher who can mark attendance can also author courses. |
+| `Batch Evaluator` | `Evaluator` | No | Assigned by hand or when a user is added as a `Course Evaluator`. |
+| `Moderator` | `Learning Manager` | No | Mirrors `Education Manager`. Education grants it to every `Education Manager`. |
+
+  Two rules make the shared roles safe:
+  1. **Learning never changes `desk_access` on a role that already exists.** Today `lms/install.py` force-sets `desk_access = 0` on its roles at every sync; on an Education site that would lock teachers out of the desk. Learning sets `desk_access` only when it creates the role. Education sets `Instructor.desk_access = 1` in `after_install` and in a v17 patch, because LMS installs first and creates the role with `desk_access = 0`.
+  2. **Learning stops adding the student role to every new `User`.** The current `User.before_insert` hook would, once the role is called `Student`, hand every new user on an Education site the Sales Invoice permissions that role carries. Learning 17 assigns `Student` only at LMS sign-up, at self-enrollment, and through `integration.grant_roles`. Education assigns it through the `Student` doctype as it does today.
+- `get_user_info` keeps its `is_instructor` / `is_moderator` / `is_evaluator` / `is_student` keys so the frontend contract does not change; only the role names behind them do.
 
 ### D3. Catalog: `Course` → `LMS Course` (optional, 1:1)
 - Custom field `Course.lms_course` (Link → LMS Course). Presence of the link is what "has online content" means. No `delivery_mode` at catalog level: the same subject can be taught in a classroom one year and online the next.
@@ -55,19 +68,19 @@ Self-paced access (no cohort at all) is simply an `LMS Enrollment` without a bat
 ### D5. Cohort: `Student Group` ↔ `LMS Batch` (1:1, managed)
 - Education creates the batch when `delivery_mode` is not `Classroom` and stores `Student Group.lms_batch`. Education is authoritative for: title, description, start/end date (from academic term or year, overridable on the group), delivery mode, instructors, courses (the LMS courses linked to the group's course, or to all program courses for batch-based groups), members, timetable.
 - LMS marks such a batch as **managed**: `LMS Batch.managed_by_doctype` (Link → DocType) + `managed_by_docname` (Dynamic Link). LMS locks members, courses, dates, instructors and timetable in its UI and in `validate`, unless the write carries the server-side flag `doc.flags.managed_sync = True`. Announcements, discussions, assessments, feedback, certificates stay LMS-native and editable.
-- `Student Group Student` rows drive `LMS Batch Enrollment` (add/remove; `active = 0` removes). LMS's existing behaviour then creates the per-course `LMS Enrollment` rows. `LMS Source` "Education" is created by Education and set on every bridge-created enrollment.
+- `Student Group Student` rows drive `LMS Batch Enrollment` (add/remove; `active = 0` removes). LMS's existing behaviour then creates the per-course `LMS Enrollment` rows. `LMS Source` "Education" is created by Education's `after_install` and set on every bridge-created enrollment.
 - Managed batches are never `paid_batch`, have `seat_count = 0`, `allow_self_enrollment = 0`, `published = 0` (institution-only, not on the marketplace) and `timezone` = system time zone.
 
 ### D6. Enrollment: `Program Enrollment` → self-paced `LMS Enrollment`
 - On submit, for each `Program Enrollment Course` whose `Course.lms_course` is set, the bridge creates an `LMS Enrollment` (member = student user, source = Education) with `flags.skip_eligibility_checks = True`. On cancel, the enrollment is removed only if no managed batch still includes the student for that course.
-- `Course Enrollment` gets custom fields `lms_enrollment` (Link) and `lms_progress` (Percent), the latter refreshed from `LMS Enrollment.progress` on change and nightly.
+- `Course Enrollment` gets native fields `lms_enrollment` (Link) and `lms_progress` (Percent), the latter refreshed from `LMS Enrollment.progress` on change and nightly.
 - Flags, not fields, carry the bypass. A student can set fields through the REST API; they cannot set `doc.flags`.
 
 ### D7. Scheduling and live classes
 - `Course Schedule` (any session type) → one `LMS Batch Timetable` row on the managed batch with `reference_doctype = "Course Schedule"`. LMS renders it generically, so `LMS Batch Timetable` gains denormalised `title`, `location`, `instructor_name` and `url` fields. LMS never looks up Course Schedule columns.
-- `Course Schedule` with `session_type = Online` → `LMS Live Class` via `lms.lms.integration.create_live_class(...)`. `Course Schedule.lms_live_class` (custom Link) and a fetched `join_url`. Host = `Instructor.user` (validation error if missing). Updating date/time updates the live class; deleting cancels it. `LMS Live Class` gains `reference_doctype/reference_docname` so LMS can show "Scheduled from Course Schedule X".
+- `Course Schedule` with `session_type = Online` → `LMS Live Class` via `lms.lms.integration.create_live_class(...)`. `Course Schedule.lms_live_class` (Link) and a fetched `join_url`. Host = `Instructor.user` (validation error if missing). Updating date/time updates the live class; deleting cancels it. `LMS Live Class` gains `reference_doctype/reference_docname` so LMS can show "Scheduled from Course Schedule X".
 - For managed batches the LMS UI hides "New live class" and timetable editing. One place schedules; the other displays.
-- Conferencing provider and account are chosen on the `Student Group` (custom Links to `LMS Zoom Settings` / `LMS Google Meet Settings`) with defaults in `Education Settings`.
+- Conferencing provider and account are chosen on the `Student Group` (Links to `LMS Zoom Settings` / `LMS Google Meet Settings`) with defaults in `Education Settings`.
 
 ### D8. Attendance
 - `In Person` sessions: unchanged, `Student Attendance` in Education.
@@ -75,24 +88,37 @@ Self-paced access (no cohort at all) is simply an `LMS Enrollment` without a bat
 - Self-paced enrollments have no attendance, only progress.
 
 ### D9. Assessment and grades
-- `Assessment Plan.assessment_source` (native Select): `Manual` (default), `LMS Quiz`, `LMS Assignment`. Custom Links `lms_quiz`, `lms_assignment`. Button **Fetch results from LMS** and an automatic hook on `LMS Quiz Submission` / `LMS Assignment Submission` insert.
+- `Assessment Plan.assessment_source` (Select): `Manual` (default), `LMS Quiz`, `LMS Assignment`. Links `lms_quiz`, `lms_assignment`. Button **Fetch results from LMS** and an automatic hook on `LMS Quiz Submission` / `LMS Assignment Submission` insert.
 - Score mapping: LMS percentage × `maximum_assessment_score` → one `Assessment Result Detail` row per plan criterion in proportion to the criterion's `maximum_score`. Attempt policy on the plan: `Best attempt` (default) or `Latest attempt`. Assignments: `Pass` = full marks, `Fail` = 0, `Not Graded` = skipped.
 - Results are created as drafts; teachers submit. Grades reach the Education student portal through the normal `Assessment Result` path, so no portal work is needed.
 - `LMS Certificate` is left as an LMS artifact. Education does not issue or mirror certificates in v17.
 
 ### D10. Money
-- No coupling. Institution students never pay inside LMS; managed batches and bridge enrollments bypass `paid_course` / `paid_batch` checks via flags. Fees remain in Education/ERPNext. A school can still sell public courses on the same LMS marketplace; those are ordinary LMS enrollments with `LMS Payment`.
+- No coupling for institution students. They never pay inside LMS; managed batches and bridge enrollments bypass `paid_course` / `paid_batch` checks via flags. Fees remain in Education/ERPNext. A school can still sell public courses on the same LMS marketplace; those are ordinary LMS enrollments with `LMS Payment`, invoiced through D13 when enabled.
+
+### D13. Optional ERPNext invoicing for Learning payments
+Learning gains an accounting integration that works with ERPNext alone and gets richer when Education is also installed. LMS still requires neither app.
+- **Activation.** Feature code lives in `lms/lms/accounting.py` and runs only when `"erpnext" in frappe.get_installed_apps()` and `LMS Settings.enable_invoicing` is on. Because LMS JSON cannot hold Link fields to ERPNext doctypes (they would break `bench migrate` on a standalone LMS site), the ERPNext-specific fields are **Custom Fields on LMS's own doctypes**, created by LMS in `after_install` and in an `after_app_install` hook that fires when ERPNext is installed later: `LMS Settings`: `company`, `income_account`, `cost_center`, `customer_group`, `taxes_and_charges` (Sales Taxes and Charges Template), `mode_of_payment`, `auto_submit_invoice`; `LMS Course.item` and `LMS Batch.item` (Link → Item, created on demand with `item_group` "Courses" and `is_stock_item = 0`); `LMS Payment.customer` and `LMS Payment.sales_invoice`. `enable_invoicing` itself is a native Check.
+- **Trigger.** When an `LMS Payment` becomes `payment_received = 1` (gateway callback via `on_payment_authorized` or manual), LMS enqueues `accounting.create_invoice_for_payment(payment)`. The job resolves the customer, ensures the item, inserts a `Sales Invoice` (customer, company, currency, `customer_address` from `LMS Payment.address`, one item row at `original_amount` with `discount_amount` from the coupon, `taxes_and_charges` from settings, `tax_id` on the customer from `gstin`), then a `Payment Entry` through `erpnext.accounts.doctype.payment_entry.payment_entry.get_payment_entry` with `reference_no = payment_id`. Both submit when `auto_submit_invoice` is on. `LMS Payment.sales_invoice` stores the link; a "Create Invoice" button on `LMS Payment` retries a failed job. Failures go to Error Log and never block enrollment.
+- **Customer resolution is a hook, so LMS stays Education-free.** LMS declares two hook keys in its `hooks.py` and calls them with `frappe.get_hooks`:
+  - `lms_get_customer(user) -> customer name or None`: the first resolver returning a value wins. LMS's own fallback: a `Customer` whose primary `Contact` has the user's email, else create an individual Customer + Contact in `customer_group` from settings.
+  - `lms_before_sales_invoice_insert(invoice, payment)`: lets other apps set fields before insert.
+  Education implements both: `lms_get_customer` returns `Student.customer` for the user's Student (Education already creates a Customer per Student), and `lms_before_sales_invoice_insert` sets the `student` field Education adds to Sales Invoice, so the purchase shows on the Education portal's Fees page next to fee invoices. On a site without Education, nothing registers and LMS's fallback runs. Behaviour therefore depends on Education only through the hook, never through an import.
+- **Portal.** The LMS billing page shows an "Invoice" link when `sales_invoice` is set; `lms.lms.accounting.get_invoice_pdf(payment)` checks `payment.member == session user` (or a privileged role) and renders the default Sales Invoice print format with `ignore_permissions`, so the student needs no Sales Invoice permission on LMS-only sites.
+- **Not in scope.** Backfilling invoices for past payments (offer a `bench execute` helper, off by default), credit notes for refunds (manual in ERPNext), and multi-company routing (one company in settings).
+
 
 ### D11. Portals
 - v17 keeps both frontends. Cross-links only:
-  - LMS sidebar gets `LMS Sidebar Item` rows (type `External`) for Timetable, Attendance, Fees, Grades → `/student-portal/...`, created by Education when it detects LMS. Rows are hidden for users who are not linked to a `Student`.
+  - LMS sidebar gets `LMS Sidebar Item` rows (type `External`) for Timetable, Attendance, Fees, Grades → `/student-portal/...`, created by Education's `after_install`. Rows are hidden for users who are not linked to a `Student`.
+  - Because LMS is now always present, the long-term direction is one student-facing frontend: Education's four portal pages move into the Learning frontend in v18 through a page-registration hook LMS adds then. v17 does not start that.
   - Education student portal gets a **Learning** entry → `/lms`, and online sessions on the Schedule page show the join link.
   - Desk: `Student Group` shows "Open in Learning"; `Course` shows "Create Learning course" (creates an unpublished `LMS Course` with the same title and the group's instructors).
-- Privacy: `LMS Settings.hide_member_profiles` (new) disables public `/user/:username` pages and the certified-participants page for non-privileged users. Education turns it on by default when it detects LMS, because institution students may be minors.
+- Privacy: `LMS Settings.hide_member_profiles` (new) disables public `/user/:username` pages and the certified-participants page for non-privileged users. Education turns it on in `after_install`, because institution students may be minors.
 
 ### D12. Versioning, branches, release
 - Both apps get `version-17` branches and `17.0.0` versions. LMS jumps from `2.45.x` to `17.0.0`; patches move from `lms/patches/v2_0` to `lms/patches/v17_0`.
-- Compatibility statement: Education 17 ↔ Learning 17 only. Neither app checks the other's version at runtime; the contract is the module `lms.lms.integration` and the fields listed in §4.
+- Compatibility statement: Education 17 requires Learning 17. Education pins nothing at runtime beyond the `before_migrate` presence check; the contract is the module `lms.lms.integration`, the role names in D2 and the fields listed in §4.
 
 ## 4. The contract LMS exposes (owned by the LMS team, frozen before Education starts Phase 2)
 
@@ -102,6 +128,10 @@ Fields (all native to LMS JSON):
 - `LMS Live Class`: `reference_doctype` (Link → DocType), `reference_docname` (Dynamic Link).
 - `LMS Enrollment`: `source` (Link → LMS Source).
 - `LMS Settings`: `hide_member_profiles` (Check).
+
+Roles (names are part of the contract): `Student`, `Instructor`, `Evaluator`, `Learning Manager`. `lms.lms.utils.PRIVILEGED_ROLES` becomes `{"Learning Manager", "Instructor", "Evaluator", "System Manager"}`.
+
+Hooks LMS declares for other apps (`frappe.get_hooks`): `lms_get_customer`, `lms_before_sales_invoice_insert` (see D13).
 
 Server-side flags honoured in `validate`/`before_insert` (never settable over REST):
 - `doc.flags.managed_sync` on `LMS Batch`: allows changing locked fields of a managed batch.
@@ -127,7 +157,7 @@ get_progress(member, course) -> float
 get_quiz_results(quiz, members=None, attempt="best") -> dict[member] = dict(percentage, score, score_out_of, submission)
 get_assignment_results(assignment, members=None) -> dict[member] = dict(status, submission)
 get_live_class_participation(live_class) -> dict[member] = dict(duration_seconds, joined_at, left_at)
-grant_roles(user, roles: list[str]) -> None
+grant_roles(user, roles: list[str]) -> None     # only Student, Instructor, Evaluator, Learning Manager
 ```
 Whitelisted read endpoints for portals: `get_progress`, `get_quiz_results` (own results only for non-privileged users).
 
@@ -151,12 +181,16 @@ Reconciliation job (`education.lms_integration.tasks.reconcile`, nightly): re-sy
 
 Learning (LMS) 17:
 - Version number jumps to 17.0.0.
+- Roles renamed: `LMS Student` → `Student`, `Course Creator` → `Instructor`, `Batch Evaluator` → `Evaluator`, `Moderator` → `Learning Manager`. Patches rename (and merge where the target exists) so user assignments survive; custom scripts and reports that filter on the old names break.
+- New users no longer receive the student role automatically; it is granted at sign-up and enrollment.
 - `LMS Batch.medium` → `delivery_mode`; value `Offline` → `In Person`. Email templates and the batch form use the new field.
 - Managed batches lock member/timetable/course/date/instructor edits in the UI and API.
 - `LMS Enrollment` and `LMS Batch Enrollment` honour new server flags (no behaviour change for existing callers).
 - New `hide_member_profiles` setting can hide `/user/:username` and `/certified-participants` when enabled.
+- New optional ERPNext invoicing; off by default, no behaviour change unless enabled.
 
 Education 17:
+- Learning becomes a required app. Existing sites must install it before migrating.
 - Removed doctypes: `Article`, `Topic`, `Topic Content`, `Course Topic`, `Quiz`, `Question`, `Options`, `Quiz Question`, `Quiz Activity`, `Quiz Result`, `Course Activity`, and `Course.topics`. Removed whitelisted methods: `education.education.utils.enroll_in_program`, `add_activity`, `evaluate_quiz`, `get_quiz`, plus the "LMS Utils" helpers. Data is exported before deletion.
 - `Instructor.user` added; required for instructors who host online sessions.
 - `Student Group.delivery_mode`, `Course Schedule.session_type`, `Assessment Plan.assessment_source` added with safe defaults (`Classroom`, `In Person`, `Manual`).
@@ -166,9 +200,9 @@ Education 17:
 
 | Phase | Owner | Scope | Exit criterion |
 |---|---|---|---|
-| 0 | Both | `version-17` branches, version bumps, Education dead-code removal + export patch | CI green on both, install in both orders |
-| 1 | LMS | Contract in §4: fields, flags, `integration.py`, managed-batch lock, delivery mode rename, profile privacy, UI for managed/mode badges | Contract frozen, unit + e2e tests |
-| 2 | Education | Identity, `Course.lms_course`, `Student Group ↔ LMS Batch`, membership sync, `Program Enrollment` → self-paced enrollment, roles, sidebar links | A blended group with 30 students appears in LMS with correct members and courses |
+| 0 | Both | `version-17` branches, version bumps, Education dead-code removal + export patch, `required_apps` + `before_migrate` guard | CI green on both; Education CI installs LMS |
+| 1 | LMS | Role rename, contract in §4: fields, flags, `integration.py`, managed-batch lock, delivery mode rename, profile privacy, UI for managed/mode badges; optional ERPNext invoicing (D13) with its two hooks | Contract frozen, unit + e2e tests |
+| 2 | Education | Identity, `Course.lms_course`, `Student Group ↔ LMS Batch`, membership sync, `Program Enrollment` → self-paced enrollment, roles, sidebar links, the two invoicing hooks | A blended group with 30 students appears in LMS with correct members and courses |
 | 3 | Education | `Course Schedule` → timetable rows + live classes; attendance from participation | Online session join link visible in both portals; attendance auto-marked |
 | 4 | Education | `Assessment Plan` sources from LMS quiz/assignment | Quiz results appear as draft Assessment Results and on the Grades page |
 | 5 | Both | Legacy content migration (optional), docs, Frappe Cloud compatibility notes, demo data | Docs published; upgrade guide |
@@ -181,3 +215,4 @@ Education 17:
 4. Assessment attempt policy default (best vs latest).
 5. Whether Education should create the LMS course automatically for every `Course`, or only on demand.
 6. Naming: `In Person` vs `Offline` in the LMS UI.
+7. `Moderator` → `Learning Manager` is the most expensive rename (≈55 Python files, 34 doctype JSONs, 23 frontend files). Keep `Moderator` if the room prefers; the other three renames stand regardless.
