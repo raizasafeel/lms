@@ -52,7 +52,7 @@ Education deprecated its own LMS in December 2022 and pointed users at Frappe LM
 ### D3. Catalog: `Course` → `LMS Course` (optional, 1:1)
 - Custom field `Course.lms_course` (Link → LMS Course). Presence of the link is what "has online content" means. No `delivery_mode` at catalog level: the same subject can be taught in a classroom one year and online the next.
 - `Program` does not map to `LMS Program`. `LMS Program` stays an LMS-only concept for the public marketplace.
-- Education's residual content doctypes are removed. A one-time patch exports them to JSON under `sites/<site>/private/files/education_legacy_lms/` and, if LMS is installed, offers to migrate them (one unpublished `LMS Course` per Education `Course` with topics; topics → chapters, articles → lessons, quizzes/questions → `LMS Quiz`/`LMS Question`).
+- This is how issue #1275's "link Education articles/videos to LMS lessons" is met: not by linking two content stores, but by having one. Education's residual content doctypes are removed. A one-time patch exports them to JSON under `sites/<site>/private/files/education_legacy_lms/` and, if LMS is installed, offers to migrate them (one unpublished `LMS Course` per Education `Course` with topics; topics → chapters, articles → lessons, quizzes/questions → `LMS Quiz`/`LMS Question`).
 
 ### D4. Delivery mode taxonomy (the online/offline distinction)
 Three levels. The distinction lives on the cohort and the session, not on the subject.
@@ -70,6 +70,7 @@ Self-paced access (no cohort at all) is simply an `LMS Enrollment` without a bat
 - LMS marks such a batch as **managed**: `LMS Batch.managed_by_doctype` (Link → DocType) + `managed_by_docname` (Dynamic Link). LMS locks members, courses, dates, instructors and timetable in its UI and in `validate`, unless the write carries the server-side flag `doc.flags.managed_sync = True`. Announcements, discussions, assessments, feedback, certificates stay LMS-native and editable.
 - `Student Group Student` rows drive `LMS Batch Enrollment` (add/remove; `active = 0` removes). LMS's existing behaviour then creates the per-course `LMS Enrollment` rows. `LMS Source` "Education" is created by Education's `after_install` and set on every bridge-created enrollment.
 - Managed batches are never `paid_batch`, have `seat_count = 0`, `allow_self_enrollment = 0`, `published = 0` (institution-only, not on the marketplace) and `timezone` = system time zone.
+- **Creating the batch from the LMS side too** (issue #1275 asks for "an option in Frappe LMS to select and reuse existing groups"). LMS declares a generic hook `lms_batch_sources`; a provider returns the sources it offers, searches their items, and creates a managed batch for a chosen item. The New Batch form shows "Create from {source}" for every registered source. Education registers `Student Group` as a source: choosing a `Classroom` group sets its `delivery_mode` to `Blended` and runs the normal group sync, so the result is identical to doing it from the Education desk. LMS still knows nothing about Education; it only knows there are sources.
 
 ### D6. Enrollment: `Program Enrollment` → self-paced `LMS Enrollment`
 - On submit, for each `Program Enrollment Course` whose `Course.lms_course` is set, the bridge creates an `LMS Enrollment` (member = student user, source = Education) with `flags.skip_eligibility_checks = True`. On cancel, the enrollment is removed only if no managed batch still includes the student for that course.
@@ -85,7 +86,8 @@ Self-paced access (no cohort at all) is simply an `LMS Enrollment` without a bat
 ### D8. Attendance
 - `In Person` sessions: unchanged, `Student Attendance` in Education.
 - `Online` sessions: after the session ends, a scheduled job reads `LMS Live Class Participant` rows for the linked live class and marks `Student Attendance` for every student in the group: `Present` if total duration ≥ `Education Settings.live_class_attendance_threshold` (default 75 % of the scheduled duration), else `Absent`. Records are created as drafts so a teacher can correct and submit, unless `auto_submit_live_class_attendance` is enabled. Existing `attendance_freeze_date` and holiday validations apply.
-- Self-paced enrollments have no attendance, only progress.
+- `Asynchronous` sessions (third value of `Course Schedule.session_type`, added for issue #1275's "attendance for digital activities completed within the same course"): no room, no live class. The session is a date on which students are expected to work through LMS content. The same hourly job marks attendance from LMS activity using the rule in `Education Settings.asynchronous_attendance_rule`: `Any activity on the day` (default; Present if the student has an `LMS Course Progress`, `LMS Quiz Submission` or `LMS Assignment Submission` for one of the batch's courses dated that day) or `Completed scheduled lessons` (Present only if every `LMS Batch Timetable` row referencing a `Course Lesson` on that date is complete for the student). Rows are drafts unless auto-submit is on.
+- `Student Attendance.session_type` (fetched from `course_schedule.session_type`) so reports can split in-person, online and asynchronous attendance while the record stays one doctype. Self-paced enrollments outside any group still have no attendance, only progress.
 
 ### D9. Assessment and grades
 - `Assessment Plan.assessment_source` (Select): `Manual` (default), `LMS Quiz`, `LMS Assignment`. Links `lms_quiz`, `lms_assignment`. Button **Fetch results from LMS** and an automatic hook on `LMS Quiz Submission` / `LMS Assignment Submission` insert.
@@ -95,6 +97,15 @@ Self-paced access (no cohort at all) is simply an `LMS Enrollment` without a bat
 
 ### D10. Money
 - No coupling for institution students. They never pay inside LMS; managed batches and bridge enrollments bypass `paid_course` / `paid_batch` checks via flags. Fees remain in Education/ERPNext. A school can still sell public courses on the same LMS marketplace; those are ordinary LMS enrollments with `LMS Payment`, invoiced through D13 when enabled.
+
+### D14. Permissions and access, stated once
+- **Students** hold `Student` in both apps. In LMS they see only batches they are enrolled in (managed batches are unpublished, so the existing enrolled-or-published rule hides other groups), their own progress, submissions and certificates. Public member profiles and the certified-participants page are hidden (`hide_member_profiles`). In Education they keep the portal role as today.
+- **Teachers** hold `Instructor`: desk access to attendance, schedules and assessments in Education; course authoring and instructor views of their batches in LMS. They cannot edit members, dates or timetables of a managed batch in LMS; those edits go through the Student Group.
+- **Evaluators** hold `Evaluator` only where an institution uses LMS certification evaluations.
+- **Education Managers** also hold `Learning Manager` and can do everything in LMS, including unlocking nothing: the managed-batch lock applies to every role and is bypassed only by the bridge's server-side flag.
+- **Guardians** have no LMS access in v17.
+- All bridge writes run with `ignore_permissions` inside server code triggered by Education documents the user was already allowed to change, so the bridge never widens what a user can do.
+- Whitelisted read endpoints in the contract (`get_progress`, `get_quiz_results`) return only the caller's own data for non-privileged roles.
 
 ### D13. Optional ERPNext invoicing for Learning payments
 Learning gains an accounting integration that works with ERPNext alone and gets richer when Education is also installed. LMS still requires neither app.
@@ -131,7 +142,7 @@ Fields (all native to LMS JSON):
 
 Roles (names are part of the contract): `Student`, `Instructor`, `Evaluator`, `Learning Manager`. `lms.lms.utils.PRIVILEGED_ROLES` becomes `{"Learning Manager", "Instructor", "Evaluator", "System Manager"}`.
 
-Hooks LMS declares for other apps (`frappe.get_hooks`): `lms_get_customer`, `lms_before_sales_invoice_insert` (see D13).
+Hooks LMS declares for other apps (`frappe.get_hooks`): `lms_get_customer`, `lms_before_sales_invoice_insert` (see D13), `lms_batch_sources` (see D5).
 
 Server-side flags honoured in `validate`/`before_insert` (never settable over REST):
 - `doc.flags.managed_sync` on `LMS Batch`: allows changing locked fields of a managed batch.
@@ -194,7 +205,7 @@ Education 17:
 - Removed doctypes: `Article`, `Topic`, `Topic Content`, `Course Topic`, `Quiz`, `Question`, `Options`, `Quiz Question`, `Quiz Activity`, `Quiz Result`, `Course Activity`, and `Course.topics`. Removed whitelisted methods: `education.education.utils.enroll_in_program`, `add_activity`, `evaluate_quiz`, `get_quiz`, plus the "LMS Utils" helpers. Data is exported before deletion.
 - `Instructor.user` added; required for instructors who host online sessions.
 - `Student Group.delivery_mode`, `Course Schedule.session_type`, `Assessment Plan.assessment_source` added with safe defaults (`Classroom`, `In Person`, `Manual`).
-- `Course Schedule.room` becomes optional when `session_type = Online`.
+- `Course Schedule.room` becomes optional when `session_type` is `Online` or `Asynchronous`.
 
 ## 7. Phases
 

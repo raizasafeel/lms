@@ -45,7 +45,7 @@ What the Learning side owns: the contract (§4 of the design), the role rename w
 4. **Instructors.** Is every instructor an `Employee` with a `user_id`? If not, `Instructor.user` must be set by hand before online sessions can be hosted.
 5. **Cohort mapping.** One `Student Group` = one batch. Batch-based groups (a whole class across subjects) produce a batch containing every online-enabled program course. Course-based groups produce a single-course batch. Is that the right grain, or should batch-based groups never be online?
 6. **Delivery mode defaults.** `Classroom` for groups, `In Person` for sessions. Should `Program` carry a default that new groups inherit?
-7. **Attendance policy.** Present at ≥ 75 % of scheduled duration, records created as drafts for the teacher to submit. Should auto-submit be on by default? Does `attendance_freeze_date` apply to auto-marked rows?
+7. **Attendance policy.** Online: Present at ≥ 75 % of scheduled duration. Asynchronous: "any LMS activity on the day" by default, or "completed the lessons scheduled for the day". Records created as drafts for the teacher to submit. Should auto-submit be on by default? Does `attendance_freeze_date` apply to auto-marked rows? Is an asynchronous session even something schools want to record as attendance, or should it stay progress-only?
 8. **Grades.** Best attempt or latest attempt as the default? Results as drafts (teacher submits) or auto-submitted? Do we need a criterion-level mapping UI or is proportional distribution enough for v17?
 9. **Money.** Confirm: institution students never pay in Learning; fees stay in ERPNext. A school may still sell public courses through Learning's marketplace with Learning payments; with invoicing enabled those land in ERPNext as Sales Invoice + Payment Entry against the student's Customer. Confirm the Fees page should list them alongside fee invoices, and whether Education wants a say in item, income account and taxes defaults (they live in LMS Settings).
 10. **Portals.** Two frontends in v17 with cross-links (Learning sidebar → Timetable/Attendance/Fees/Grades; Education portal → Learning). Unification is a v18 topic. Any objection?
@@ -53,6 +53,17 @@ What the Learning side owns: the contract (§4 of the design), the role rename w
 12. **Conferencing.** Zoom and Google Meet via Learning's existing settings doctypes. Accounts chosen per Student Group with defaults in Education Settings. OK to have no Education-side conferencing config at all?
 13. **Guardians.** Out of v17. Guardian read-only progress view targeted at v18. OK?
 14. **Release.** `version-17` on both, Education 17 requires Learning 17, Frappe Cloud marketplace notes (required app is auto-added), upgrade guide leads with "install Learning first". Who owns the joint upgrade guide?
+
+## How this maps to issue frappe/lms#1275
+
+| Ask in the issue | Where it lands |
+|---|---|
+| Reuse Education groups in LMS without recreating them | Student Group ↔ managed batch (design D5), creatable from either side: the Education desk, or LMS's "Create from Student Group" through the `lms_batch_sources` hook |
+| Attendance sync, in-person and digital | One `Student Attendance` record type for all three session types: In Person (marked by the teacher), Online (from live-class participation), Asynchronous (from LMS activity on the day); `session_type` on the record for reporting (D8) |
+| Grades from LMS assessments into Education | Assessment Plan sourced from an LMS quiz or assignment (D9) |
+| Link Education articles/videos to LMS lessons | One content store: Education's content doctypes are removed and migrated into LMS courses (D3) |
+| Permissions maintained in both modules | Shared role vocabulary and the access rules in D14 |
+| Native rather than manual API integration | Contract module plus hooks, no site-specific glue |
 
 ## Risks we want on the record
 
