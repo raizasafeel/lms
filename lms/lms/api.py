@@ -35,6 +35,8 @@ from frappe.utils import (
 from frappe.utils.response import Response
 from pypika import functions as fn
 
+from lms import telemetry
+from lms.demo.demo_data import DEMO_PROFILE_IMAGES
 from lms.lms.course_import_export import export_course_zip, import_course_zip
 from lms.lms.doctype.course_lesson.course_lesson import (
 	cleanup_lesson_backreferences,
@@ -2144,7 +2146,9 @@ def save_role(user: str, role: str, value: int):
 		frappe.throw(_("You do not have permission to modify this role."), frappe.PermissionError)
 
 	if role == "Batch Evaluator":
-		return save_evaluator_role(user, value)
+		saved = save_evaluator_role(user, value)
+		capture_role_change(role, value)
+		return saved
 
 	if cint(value):
 		if not frappe.db.exists("Has Role", {"parent": user, "role": role}):
@@ -2157,7 +2161,17 @@ def save_role(user: str, role: str, value: int):
 	else:
 		frappe.db.delete("Has Role", {"parent": user, "role": role})
 	frappe.clear_cache(user=user)
+	capture_role_change(role, value)
 	return True
+
+
+def capture_role_change(role: str, value: int):
+	"""Who a site hands the keys to, and when.
+
+	A site that never grants anyone else a role is a site with one person on it,
+	and that is the shape most of the ones that go quiet have.
+	"""
+	telemetry.capture("member_role_changed", {"changed_role": role, "granted": bool(cint(value))})
 
 
 def save_evaluator_role(user: str, value: int):
@@ -2205,6 +2219,13 @@ def delete_member(user: str):
 def capture_user_persona(responses: str):
 	frappe.only_for("System Manager")
 	data = frappe.parse_json(responses)
+
+	# Stored before the outbound post, not after it. The persona is what every
+	# other metric on this site is segmented by, and it used to exist only on
+	# school.frappe.io: an unreachable host meant the site's own events could
+	# never be grouped by who its owner said they were.
+	store_user_persona(data)
+
 	data = json.dumps(data)
 	response = frappe.integrations.utils.make_post_request(
 		"https://school.frappe.io/api/method/capture-persona",
@@ -2213,6 +2234,36 @@ def capture_user_persona(responses: str):
 	if response.get("message").get("name"):
 		frappe.db.set_single_value("LMS Settings", "persona_captured", True)
 	return response
+
+
+PERSONA_ANSWER_FIELDS = {
+	"usage_context": "persona_usage_context",
+	"first_milestone": "persona_first_milestone",
+	"current_tool": "persona_current_tool",
+	"discovery_source": "persona_discovery_source",
+}
+
+
+def store_user_persona(data: dict):
+	"""Keep the persona answers on LMS Settings so events can be segmented by them.
+
+	Answers arrive one screen at a time and the form can be skipped part way, so
+	only the keys actually answered are written: a later submission must not
+	blank out an answer an earlier one captured.
+	"""
+	values = {field: data.get(key) for key, field in PERSONA_ANSWER_FIELDS.items() if data.get(key)}
+
+	if not values:
+		return
+
+	# set_single_value, not a save of the whole single: LMS Settings validates
+	# unrelated configuration (signup, contact, Google) on save, and a site with
+	# one of those half-filled must not lose its persona over it.
+	frappe.db.set_single_value("LMS Settings", values)
+
+	# The persona itself rides along as standing context on every event from
+	# this site, so the event only has to mark when it was answered.
+	telemetry.capture("onboarding_persona_captured")
 
 
 @frappe.whitelist()
@@ -3106,7 +3157,25 @@ def clear_demo_data():
 		if frappe.db.exists("User", user):
 			frappe.delete_doc("User", user, ignore_permissions=True)
 
+	clear_demo_profile_images()
+
 	frappe.db.set_single_value("LMS Settings", "demo_data_present", False)
+	telemetry.capture("demo_data_cleared")
+
+
+def clear_demo_profile_images():
+	"""Take the stock demo photo back off real users.
+
+	The demo seeder promotes an existing user to instructor, and on a fresh site
+	that user is whoever signed up -- so the site owner is handed a stock
+	portrait of someone else as their profile picture. Deleting the demo users
+	never touched it, because the account is real and stays.
+
+	Only images still pointing at the seeder's own asset are cleared, so a
+	picture the user has since uploaded is left alone.
+	"""
+	for user in frappe.get_all("User", {"user_image": ("in", list(DEMO_PROFILE_IMAGES))}, pluck="name"):
+		frappe.db.set_value("User", user, "user_image", None)
 
 
 @frappe.whitelist()
@@ -3183,12 +3252,15 @@ def export_course_as_zip(course_name: str):
 		frappe.throw(_("You do not have permission to export this course."), frappe.PermissionError)
 
 	export_course_zip(course_name)
+	telemetry.capture("course_exported")
 
 
 @frappe.whitelist()
 def import_course_from_zip(zip_file_path: str):
 	frappe.only_for(["Moderator", "Course Creator"])
-	return import_course_zip(zip_file_path)
+	imported = import_course_zip(zip_file_path)
+	telemetry.capture("course_imported")
+	return imported
 
 
 @frappe.whitelist()

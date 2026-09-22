@@ -4,6 +4,8 @@ import json
 
 import frappe
 
+from lms import telemetry
+
 try:
 	from raven_integration.exceptions import ProviderDataError
 except ImportError:
@@ -207,6 +209,19 @@ def get_raven_setup() -> dict:
 		from raven_integration.api import is_setup
 
 		state.update(is_setup())
+
+	# The screen is the whole funnel for this feature: sites that open it without
+	# the apps installed are demand the install numbers cannot show, and sites
+	# that open it installed but never enabled are a setup step that is losing
+	# people. Both are invisible without this.
+	telemetry.capture(
+		"raven_settings_viewed",
+		{
+			"raven_installed": state["raven"],
+			"integration_installed": state["raven_integration"],
+			"enabled": bool(state.get("enabled")),
+		},
+	)
 	return state
 
 

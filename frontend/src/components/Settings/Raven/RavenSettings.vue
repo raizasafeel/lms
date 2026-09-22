@@ -82,6 +82,7 @@ import WorkspaceView from './WorkspaceView.vue'
 import ChannelView from './ChannelView.vue'
 import type { MappingRow } from '@/composables/raven/useMappingList'
 import type { RavenSetupState } from '@/types'
+import { captureEvent } from '@/telemetry'
 
 // Settings.vue passes every panel a label/description; declaring them keeps them out
 // of $attrs, where `description` would fall through and override SettingsLayout's.
@@ -128,6 +129,9 @@ const ready = computed(
 const enableIntegration = createResource({
 	url: 'raven_integration.api.enable_integration',
 	onSuccess() {
+		// The step that turns Raven from installed into used. It happens once per
+		// site and nothing else marks it.
+		captureEvent('raven_integration_enabled')
 		setup.reload()
 	},
 	onError(err: { messages?: string[] }) {

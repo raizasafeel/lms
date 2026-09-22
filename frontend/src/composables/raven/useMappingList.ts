@@ -3,6 +3,7 @@
 import { createResource, toast } from 'frappe-ui'
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import type { RavenChannel, RavenWorkspace } from '@/types'
+import { captureEvent } from '@/telemetry'
 
 export type MappingEntity = 'workspace' | 'channel'
 export type MappingRecord = RavenWorkspace | RavenChannel
@@ -218,6 +219,9 @@ export function useMappingList(options: MappingListOptions): MappingList {
 		linkingKey.value = row.key
 		try {
 			await ensureMapped(row)
+			// Adopting a workspace or channel is the act that puts Raven to work
+			// on this site. Enabling the integration only makes it possible.
+			captureEvent('raven_mapping_linked', { entity })
 			await records.reload()
 		} catch {
 			/* toast fired in linkRecord.onError */

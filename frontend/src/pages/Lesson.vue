@@ -445,6 +445,7 @@ import InlineLessonMenu from '@/components/Notes/InlineLessonMenu.vue'
 import { parseStoredEditorJs } from '@/utils/lessonForm'
 import { getLmsRoute } from '@/utils/basePath'
 import { provideStudentView } from '@/composables/useStudentView'
+import { captureEvent } from '@/telemetry'
 
 const router = useRouter()
 const route = useRoute()
@@ -554,6 +555,22 @@ const lesson = createResource({
 		}
 	},
 	auto: true,
+	onSuccess(data) {
+		// Opening a lesson is the smallest unit of a learner actually using the
+		// product. Completion is already captured server-side, but a learner who
+		// opens lessons and finishes none looks identical to one who never came
+		// back, and those are opposite problems.
+		//
+		// Not counted while an instructor is previewing their own course as a
+		// student: that is authoring, and it would inflate exactly the number
+		// being read as learner engagement.
+		if (isStudentView.value) return
+		captureEvent('lesson_opened', {
+			locked: !!data?.locked,
+			preview_only: !!data?.no_preview,
+			has_quiz: !!data?.quiz_id,
+		})
+	},
 })
 
 // The stored body would not parse, so there is nothing to render and nothing

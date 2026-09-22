@@ -128,6 +128,7 @@ import { runSave, useSaveState } from '@/composables/useSettingsSave'
 import { cleanError } from '@/utils'
 import type { SettingsDocumentResource } from '@/composables/useSettingsSource'
 import type { SettingsListRow } from '@/types'
+import { captureEvent } from '@/telemetry'
 
 /**
  * One payment gateway, behind both New and a row.
@@ -459,6 +460,17 @@ const save = () => {
 		// The provider's own `on_update` is what creates the Payment Gateway the
 		// list shows, so the list is refetched rather than added to.
 		after: async () => {
+			// The step between "wants to charge for a course" and "can". Which
+			// provider it is matters: a gateway that nobody finishes configuring
+			// looks the same as one nobody wants until this says otherwise.
+			captureEvent(
+				creating ? 'payment_gateway_created' : 'payment_gateway_updated',
+				{
+					provider: providerName(
+						chosenProvider.value?.value ?? currentGateway.value ?? ''
+					),
+				}
+			)
 			await reloadSettingsLists(DOCTYPE)
 			if (creating) emit('back')
 		},

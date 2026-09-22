@@ -76,7 +76,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { Button, ErrorMessage, call, toast } from 'frappe-ui'
-import { useTelemetry } from 'frappe-ui/frappe'
+import { captureEvent } from '@/telemetry'
 import { CircleAlert, Mail as LucideMail } from 'lucide-vue-next'
 import SettingsFields from '@/components/Layouts/settings/desktop/SettingsFields.vue'
 import SettingsLayout from '@/components/Layouts/settings/desktop/SettingsLayout.vue'
@@ -133,7 +133,6 @@ const NEW_RECORD = 'new'
 // the part after the colon.
 const NEW_RECORD_WITH_SERVICE = `${NEW_RECORD}:`
 
-const { capture } = useTelemetry()
 
 const isNew = computed(
 	() =>
@@ -314,7 +313,7 @@ const createAccount = async () => {
 		data: buildCreatePayload(state),
 	})
 	toast.success(__('Email account created'))
-	capture('email_account_created', { data: { service: state.service } })
+	captureEvent('email_account_created', { service: state.service })
 }
 
 const updateAccount = async () => {

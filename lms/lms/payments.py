@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 
+from lms import telemetry
 from lms.lms.utils import (
 	complete_enrollment,
 	get_lms_route,
@@ -75,12 +76,25 @@ def get_payment_link(
 	# still worth keeping.
 	if already_has_access(doctype, docname, payment_for_certificate):
 		save_address(address)
+		# Worth counting on its own: a learner arriving at checkout for something
+		# they already own is a navigation problem, not a purchase.
+		telemetry.capture("checkout_skipped_already_owned", {"for_doctype": doctype})
 		return redirect_to
 
 	# Resolve the controller before writing anything: get_controller validates the
 	# gateway and fails with an actionable message, so a misconfigured gateway
 	# doesn't leave an orphan Address / LMS Payment row behind.
-	controller = get_controller(payment_gateway) if total_amount > 0 else None
+	try:
+		controller = get_controller(payment_gateway) if total_amount > 0 else None
+	except Exception:
+		# The one failure the learner sees as "I could not pay you". It is
+		# invisible in the browser -- the request throws before any success
+		# handler runs -- so it is captured where it happens.
+		telemetry.capture(
+			"checkout_failed_gateway",
+			{"for_doctype": doctype, "gateway": payment_gateway or "", "currency": currency},
+		)
+		raise
 
 	payment = record_payment(
 		address,
@@ -100,6 +114,17 @@ def get_payment_link(
 		frappe.db.set_value("LMS Payment", payment.name, "payment_received", 1)
 		complete_enrollment(payment.name, doctype, docname)
 		return redirect_to
+
+	telemetry.capture(
+		"checkout_redirected_to_gateway",
+		{
+			"for_doctype": doctype,
+			"gateway": payment_gateway or "",
+			"currency": currency,
+			"amount": total_amount,
+			"used_coupon": bool(coupon_code),
+		},
+	)
 
 	payment_details = {
 		"amount": total_amount,

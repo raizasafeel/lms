@@ -81,6 +81,7 @@ import SettingsFieldsPanel from '@/components/Layouts/settings/desktop/SettingsF
 import SettingsListPanel from '@/components/Layouts/settings/desktop/SettingsListPanel.vue'
 import { settingsTree } from '@/components/Settings/settings'
 import { useSettingsHash } from '@/composables/useSettingsHash'
+import { captureEventOnce } from '@/telemetry'
 
 const doctype = ref('LMS Settings')
 const settingsStore = useSettings()
@@ -178,6 +179,25 @@ watch(
 		overlay.addEventListener('pointerdown', dismiss)
 		onCleanup(() => overlay.removeEventListener('pointerdown', dismiss))
 	},
+	{ immediate: true }
+)
+
+// Which settings page a site actually opens is the closest thing there is to a
+// per-feature demand signal: reaching the payment or Raven panel is a deliberate
+// act, unlike having the feature installed. Counted once per slug per page load,
+// because flipping back and forth between two panels is one visit to each.
+watch(
+	activeTab,
+	(tab) => {
+		if (!tab?.slug) return
+		captureEventOnce(
+			'settings_page_opened',
+			{ page: tab.slug },
+			`settings_page_opened:${tab.slug}`
+		)
+	},
+	// A settings URL opened directly already has its tab resolved by the time
+	// this registers, and that visit counts the same as a click.
 	{ immediate: true }
 )
 

@@ -127,7 +127,17 @@ doc_events = {
 	"*": {
 		"on_change": [
 			"lms.lms.doctype.lms_badge.lms_badge.process_badges",
-		]
+		],
+		# Registered against every doctype rather than listed one by one: both
+		# handlers open with a dict lookup on the taxonomy in lms/telemetry.py,
+		# so a doctype is added to product analytics in one place, beside the
+		# properties it reports, instead of two.
+		"after_insert": [
+			"lms.telemetry.capture_doc_event",
+		],
+		"on_update": [
+			"lms.telemetry.capture_publish_event",
+		],
 	},
 	"Discussion Reply": {
 		"after_insert": "lms.lms.utils.handle_notifications",

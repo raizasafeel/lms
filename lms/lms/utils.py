@@ -36,6 +36,7 @@ from frappe.utils.html_utils import sanitize_html
 from pypika import Case
 from pypika import functions as fn
 
+from lms import telemetry
 from lms.lms.doctype.lms_enrollment.lms_enrollment import (
 	update_enrollment,
 	update_program_progress,
@@ -2785,6 +2786,21 @@ def complete_enrollment(payment_name: str, doctype: str, docname: str):
 	# enrolling is the slower half of this transaction.
 	update_coupon_redemption(payment_doc)
 
+	# The one event that says money was actually taken and access actually
+	# granted. It lives here rather than in the gateway callback because every
+	# route to a completed enrollment -- paid, free, and coupon-to-zero -- passes
+	# through this function.
+	telemetry.capture(
+		"payment_completed",
+		{
+			"for_doctype": doctype,
+			"for_certificate": bool(payment_doc.payment_for_certificate),
+			"amount": payment_doc.amount_with_gst or payment_doc.amount,
+			"currency": payment_doc.currency or "",
+			"used_coupon": bool(payment_doc.coupon),
+		},
+	)
+
 
 def get_integration_requests(doctype: str, docname: str):
 	return frappe.get_all(
@@ -2804,7 +2820,7 @@ def get_payment_doc(payment_name: str) -> dict:
 	return frappe.db.get_value(
 		"LMS Payment",
 		payment_name,
-		["name", "coupon", "payment_for_certificate", "amount", "amount_with_gst"],
+		["name", "coupon", "payment_for_certificate", "amount", "amount_with_gst", "currency"],
 		as_dict=True,
 	)
 

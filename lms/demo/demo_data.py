@@ -5,6 +5,18 @@ import frappe
 from lms.lms.doctype.lms_course.lms_course import update_course_statistics
 from lms.lms.utils import create_user, get_course_progress
 
+INSTRUCTOR_IMAGE = "/assets/lms/images/instructor.png"
+STUDENT_IMAGES = (
+	"/assets/lms/images/student.jpg",
+	"/assets/lms/images/student1.jpeg",
+	"/assets/lms/images/student2.jpeg",
+)
+
+# Every portrait this seeder hands out. `lms.lms.api.clear_demo_profile_images`
+# reads it to take them back off, which matters for the instructor: that one can
+# land on a real account, and deleting the demo users does not reach it.
+DEMO_PROFILE_IMAGES = (INSTRUCTOR_IMAGE, *STUDENT_IMAGES)
+
 
 def create_demo_data(args: dict = None):
 	course = create_course()
@@ -13,21 +25,21 @@ def create_demo_data(args: dict = None):
 		first_name="Ashley",
 		last_name="Ippolito",
 		full_name="Ashley Ippolito",
-		user_image="/assets/lms/images/student.jpg",
+		user_image=STUDENT_IMAGES[0],
 	)
 	student1 = create_user(
 		email="john.doe@example.com",
 		first_name="John",
 		last_name="Doe",
 		full_name="John Doe",
-		user_image="/assets/lms/images/student1.jpeg",
+		user_image=STUDENT_IMAGES[1],
 	)
 	student2 = create_user(
 		email="jane.smith@example.com",
 		first_name="Jane",
 		last_name="Smith",
 		full_name="Jane Smith",
-		user_image="/assets/lms/images/student2.jpeg",
+		user_image=STUDENT_IMAGES[2],
 	)
 	create_chapter(course)
 	create_lessons(course)
@@ -105,7 +117,12 @@ def create_instructor():
 			limit=1,
 		)[0]
 		instructor = frappe.get_doc("User", user)
-		instructor.user_image = "/assets/lms/images/instructor.png"
+		# This is a real account -- on a fresh site, the person who just signed
+		# up. Giving them a stock portrait of someone else as their profile
+		# picture is not the seeder's to do, so the demo photo is only a stand-in
+		# for an account that has none.
+		if not instructor.user_image:
+			instructor.user_image = INSTRUCTOR_IMAGE
 		instructor.add_roles("Moderator")
 		instructor.save()
 		return instructor
@@ -114,7 +131,7 @@ def create_instructor():
 		email="jannat@example.com",
 		first_name="Jannat",
 		last_name="Patel",
-		user_image="/assets/lms/images/instructor.png",
+		user_image=INSTRUCTOR_IMAGE,
 		roles=["Moderator"],
 	)
 
