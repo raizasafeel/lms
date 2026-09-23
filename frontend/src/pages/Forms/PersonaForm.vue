@@ -24,7 +24,6 @@
 <script setup>
 import PersonaCard from '@/components/Persona/PersonaCard.vue'
 import { call, usePageMeta } from 'frappe-ui'
-import { useTelemetry } from 'frappe-ui/frappe'
 import { BookOpen, Users, Award, Rocket, Compass } from 'lucide-vue-next'
 import { computed, inject, markRaw, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -33,7 +32,6 @@ import { sessionStore } from '@/stores/session'
 const user = inject('$user')
 const router = useRouter()
 const { brand } = sessionStore()
-const { capture } = useTelemetry()
 
 const leaving = ref(false)
 const FADE_MS = 300
@@ -146,28 +144,30 @@ const steps = computed(() => [
 				value: 'Publish my first course',
 				description: __('Set up your first course and lessons.'),
 				icon: markRaw(BookOpen),
-				route: { name: 'Courses' },
+				route: { name: 'NewCourse' },
 			},
 			{
 				label: __('Onboard my existing learners'),
 				value: 'Onboard my existing learners',
-				description: __('Bring your learners into a batch.'),
+				description: __('Invite your learners to the site.'),
 				icon: markRaw(Users),
-				route: { name: 'Batches' },
+				// Settings is a dialog addressed by the hash, so this opens the
+				// invite form in Settings > Members over the home page.
+				route: { name: 'Home', hash: '#settings/members/new' },
 			},
 			{
 				label: __('Award my first certificate'),
 				value: 'Award my first certificate',
 				description: __('Configure certification for a course.'),
 				icon: markRaw(Award),
-				route: { name: 'Courses' },
+				route: { name: 'NewCourse' },
 			},
 			{
 				label: __('Launch a paid course'),
 				value: 'Launch a paid course',
 				description: __('Add pricing and go live.'),
 				icon: markRaw(Rocket),
-				route: { name: 'Courses' },
+				route: { name: 'NewCourse' },
 			},
 			{
 				label: __('Just exploring'),
@@ -194,17 +194,24 @@ const handleComplete = (answers) => {
 	collected.value = { ...answers }
 }
 
-// The outcome screen IS the first_milestone question, rendered as routed
-// rows. Choosing one completes the persona: single submission with the
-// original key set, so the frappe school / pulse payload shape is unchanged.
-const handleChoose = (step, option) => {
-	if (leaving.value) return
-	const answers = { ...collected.value, [step.key]: option.value }
-	capture('onboarding_persona', answers)
-	// External analytics call; fire without blocking the transition.
+// The server stores the answers and sends them to Pulse, so there is no browser
+// capture here: the page navigates away the moment an option is picked, which
+// is when a browser event is likeliest to be dropped, and one event per persona
+// is what every segmentation downstream counts. Frappe School, the older
+// destination, gets a copy from the server as a deprecated backup.
+const submitPersona = (answers) =>
 	call('lms.lms.api.capture_user_persona', {
 		responses: JSON.stringify({ site: user.data?.sitename, ...answers }),
 	})
+
+// The outcome screen IS the first_milestone question, rendered as routed
+// rows. Choosing one completes the persona in a single submission with the
+// original key set, and opens the form that starts the chosen milestone.
+const handleChoose = (step, option) => {
+	if (leaving.value) return
+	const answers = { ...collected.value, [step.key]: option.value }
+	// Fire without blocking the transition.
+	submitPersona(answers)
 	leaveTo(option.route ?? { name: 'Home' }, persistCaptured())
 }
 
@@ -213,11 +220,7 @@ const skipPersonaForm = () => {
 	// Don't discard answers the user already gave: if they skip on the outcome
 	// screen, submit what was collected (same keys, minus the final choice).
 	if (Object.keys(collected.value).length) {
-		const answers = { ...collected.value }
-		capture('onboarding_persona', answers)
-		call('lms.lms.api.capture_user_persona', {
-			responses: JSON.stringify({ site: user.data?.sitename, ...answers }),
-		})
+		submitPersona({ ...collected.value })
 	}
 	leaveTo({ name: 'Home' }, persistCaptured())
 }

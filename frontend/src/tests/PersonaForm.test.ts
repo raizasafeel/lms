@@ -101,7 +101,24 @@ describe('PersonaForm', () => {
 		])
 		// Tool step carries brand icon keys; outcome carries routes.
 		expect(steps[2].options[0].icon).toBe('moodle')
-		expect(steps[3].options[0].route).toEqual({ name: 'Courses' })
+	})
+
+	it('sends each milestone to the form that starts it, not a list', () => {
+		const wrapper = mountForm()
+		const steps = wrapper.findComponent({ name: 'PersonaCard' }).props('steps')
+		const routes = Object.fromEntries(
+			steps[3].options.map((o: any) => [o.value, o.route])
+		)
+
+		expect(routes['Publish my first course']).toEqual({ name: 'NewCourse' })
+		expect(routes['Onboard my existing learners']).toEqual({
+			name: 'Home',
+			hash: '#settings/members/new',
+		})
+		expect(routes['Award my first certificate']).toEqual({ name: 'NewCourse' })
+		expect(routes['Launch a paid course']).toEqual({ name: 'NewCourse' })
+		// Exploring has no form to open: the list is where the sample course is.
+		expect(routes['Just exploring']).toEqual({ name: 'Courses' })
 	})
 
 	it('on complete: holds the answers, sends nothing yet', async () => {
@@ -120,12 +137,9 @@ describe('PersonaForm', () => {
 		await flushPromises()
 
 		// One submission, keys exactly as before the redesign: the outcome
-		// row IS the first_milestone answer.
-		expect(captureMock).toHaveBeenCalledWith('onboarding_persona', {
-			usage_context: 'School',
-			current_tool: 'Notion',
-			first_milestone: 'Publish',
-		})
+		// row IS the first_milestone answer. The server sends it to Pulse, so
+		// the browser does not capture a second copy.
+		expect(captureMock).not.toHaveBeenCalled()
 		const persona = callMock.mock.calls.find(
 			(c) => c[0] === 'lms.lms.api.capture_user_persona'
 		)
@@ -158,7 +172,11 @@ describe('PersonaForm', () => {
 		await flushPromises()
 
 		// Single submission, single persist, single navigation.
-		expect(captureMock).toHaveBeenCalledTimes(1)
+		expect(
+			callMock.mock.calls.filter(
+				(c) => c[0] === 'lms.lms.api.capture_user_persona'
+			)
+		).toHaveLength(1)
 		expect(
 			callMock.mock.calls.filter((c) => c[0] === 'frappe.client.set_value')
 		).toHaveLength(1)
@@ -172,7 +190,11 @@ describe('PersonaForm', () => {
 		await wrapper.find('button[type="button"]').trigger('click')
 		await flushPromises()
 		// Nothing answered yet, so nothing to submit.
-		expect(captureMock).not.toHaveBeenCalled()
+		expect(
+			callMock.mock.calls.find(
+				(c) => c[0] === 'lms.lms.api.capture_user_persona'
+			)
+		).toBeUndefined()
 		const persist = callMock.mock.calls.find(
 			(c) => c[0] === 'frappe.client.set_value'
 		)
@@ -190,10 +212,7 @@ describe('PersonaForm', () => {
 
 		// Answered questions are not discarded; keys stay a subset of the
 		// original payload (no first_milestone, since it was skipped).
-		expect(captureMock).toHaveBeenCalledWith('onboarding_persona', {
-			usage_context: 'School',
-			current_tool: 'Notion',
-		})
+		expect(captureMock).not.toHaveBeenCalled()
 		const persona = callMock.mock.calls.find(
 			(c) => c[0] === 'lms.lms.api.capture_user_persona'
 		)

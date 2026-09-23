@@ -112,7 +112,7 @@ describe('captureEventOnce', () => {
 		captureEventOnce(
 			'settings_page_opened',
 			{ page: 'coupons' },
-			'page:coupons',
+			'page:coupons'
 		)
 		captureEventOnce('settings_page_opened', { page: 'raven' }, 'page:raven')
 

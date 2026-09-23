@@ -147,6 +147,9 @@ doc_events = {
 	"User": {
 		"validate": "lms.lms.user.validate_username_duplicates",
 		"before_insert": "lms.lms.user.add_lms_student_role",
+		# Frappe Cloud writes the site owner's user last when it prefills a new
+		# site, so this is where LMS hears the setup wizard's answers are in.
+		"on_update": "lms.frappe_cloud.schedule_setup_completion",
 	},
 }
 

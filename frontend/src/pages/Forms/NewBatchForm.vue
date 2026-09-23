@@ -268,9 +268,7 @@ const saveBatch = () => {
 					hash: '#settings',
 				})
 				if (user.data?.is_system_manager) {
-					updateOnboardingStep('create_first_batch', true, false, () => {
-						localStorage.setItem('firstBatch', data.name)
-					})
+					updateOnboardingStep('create_first_batch')
 				}
 			},
 			onError(err: any) {

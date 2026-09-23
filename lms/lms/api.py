@@ -2217,23 +2217,39 @@ def delete_member(user: str):
 
 @frappe.whitelist()
 def capture_user_persona(responses: str):
+	"""Record the onboarding answers: on this site, in Pulse, then Frappe School.
+
+	Pulse is where they are read. Frappe School is the older destination, kept
+	as a backup while anything still reads from it, and it is posted to from a
+	background job: an unreachable host used to hold the admin's first click
+	after onboarding for as long as the request took to time out, and decided
+	whether the site counted the persona as captured at all.
+	"""
 	frappe.only_for("System Manager")
-	data = frappe.parse_json(responses)
+	data = frappe.parse_json(responses) or {}
 
-	# Stored before the outbound post, not after it. The persona is what every
-	# other metric on this site is segmented by, and it used to exist only on
-	# school.frappe.io: an unreachable host meant the site's own events could
-	# never be grouped by who its owner said they were.
 	store_user_persona(data)
+	frappe.db.set_single_value("LMS Settings", "persona_captured", True)
 
-	data = json.dumps(data)
-	response = frappe.integrations.utils.make_post_request(
-		"https://school.frappe.io/api/method/capture-persona",
-		data={"response": data},
+	frappe.enqueue(
+		"lms.lms.api.post_persona_to_frappe_school",
+		queue="short",
+		responses=json.dumps(data),
+		enqueue_after_commit=True,
 	)
-	if response.get("message").get("name"):
-		frappe.db.set_single_value("LMS Settings", "persona_captured", True)
-	return response
+	return {"captured": True}
+
+
+def post_persona_to_frappe_school(responses: str, **kwargs):
+	"""Deprecated backup copy of the persona. Pulse is the source of truth."""
+	try:
+		frappe.integrations.utils.make_post_request(
+			"https://school.frappe.io/api/method/capture-persona",
+			data={"response": responses},
+		)
+	except Exception:
+		# A backup that did not arrive is not worth an error log entry per site.
+		frappe.logger("lms.telemetry").info("Frappe School persona backup failed", exc_info=True)
 
 
 PERSONA_ANSWER_FIELDS = {
@@ -2261,9 +2277,15 @@ def store_user_persona(data: dict):
 	# one of those half-filled must not lose its persona over it.
 	frappe.db.set_single_value("LMS Settings", values)
 
-	# The persona itself rides along as standing context on every event from
-	# this site, so the event only has to mark when it was answered.
-	telemetry.capture("onboarding_persona_captured")
+	# Sent from here rather than from the browser. The form navigates away the
+	# instant it is answered, which is exactly when a browser event is most
+	# likely to be dropped, and this is the one event every retention question
+	# is grouped by. The answers go as properties under the names the form uses;
+	# every later server event carries them as standing context as well.
+	telemetry.capture(
+		"onboarding_persona",
+		{key: data.get(key) for key in PERSONA_ANSWER_FIELDS if data.get(key)},
+	)
 
 
 @frappe.whitelist()

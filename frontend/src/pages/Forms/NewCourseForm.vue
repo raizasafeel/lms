@@ -351,9 +351,7 @@ const saveCourse = () => {
 					hash: '#settings',
 				})
 				if (user.data?.is_system_manager) {
-					updateOnboardingStep('create_first_course', true, false, () => {
-						localStorage.setItem('firstCourse', data.name)
-					})
+					updateOnboardingStep('create_first_course')
 				}
 			},
 			onError(err: any) {

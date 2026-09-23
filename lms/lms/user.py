@@ -6,6 +6,7 @@ from frappe.model.naming import append_number_if_name_exists
 from frappe.utils import cint, escape_html, random_string
 from frappe.website.utils import cleanup_page_name, is_signup_disabled
 
+from lms.frappe_cloud import schedule_setup_completion
 from lms.lms.utils import get_country_code, get_lms_route
 
 
@@ -101,6 +102,11 @@ def set_country_from_ip(login_manager: object = None, user: str = None):
 
 
 def on_login(login_manager):
+	# Frappe Cloud logs in to a new site the moment before it hands it to the
+	# owner. A site it prefilled before this release has no fresh user save to
+	# hear it from, so the login is the other place setup can be finished.
+	schedule_setup_completion()
+
 	default_app = frappe.db.get_single_value("System Settings", "default_app")
 	if default_app == "lms":
 		frappe.local.response["home_page"] = get_lms_route()

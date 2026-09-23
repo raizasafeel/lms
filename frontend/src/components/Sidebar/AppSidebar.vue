@@ -224,6 +224,8 @@ import { buildSidebarRows } from '@/utils/sidebarRows'
 import LMSLogo from '@/components/Icons/LMSLogo.vue'
 import { useRouter } from 'vue-router'
 import { openFormRoute } from '@/composables/useFormRoute'
+import { destinationFor, STEPS_NEEDING_TARGETS } from '@/utils/onboardingSteps'
+import { captureEvent } from '@/telemetry'
 import {
 	ref,
 	onMounted,
@@ -342,16 +344,36 @@ const toggleSidebar = () => {
 	)
 }
 
-const getFirstCourse = async () => {
-	let firstCourse = localStorage.getItem('firstCourse')
-	if (firstCourse) return firstCourse
-	return await call('lms.lms.onboarding.get_first_course')
+// Asked of the server on each click rather than remembered in the browser: a
+// remembered course could be one since deleted, or one made in another browser
+// would be missing, and either sent the step to the wrong place.
+const getOnboardingTargets = async () => {
+	try {
+		return await call('lms.lms.onboarding.get_onboarding_targets')
+	} catch (error) {
+		// Without targets every step still has a destination: the form that
+		// creates the course or batch it would have opened.
+		return {}
+	}
 }
 
-const getFirstBatch = async () => {
-	let firstBatch = localStorage.getItem('firstBatch')
-	if (firstBatch) return firstBatch
-	return await call('lms.lms.onboarding.get_first_batch')
+const openStep = async (stepName) => {
+	minimize.value = true
+	const targets = STEPS_NEEDING_TARGETS.has(stepName)
+		? await getOnboardingTargets()
+		: {}
+	const destination = destinationFor(stepName, targets)
+	if (!destination) return
+
+	captureEvent('onboarding_step_opened', { step: stepName })
+
+	if (destination.type === 'settings') {
+		pushSettingsHash(router, destination.slug, destination.record)
+	} else if (destination.type === 'form') {
+		openFormRoute(router, destination.to)
+	} else {
+		router.push(destination.to)
+	}
 }
 
 const steps = reactive([
@@ -360,12 +382,7 @@ const steps = reactive([
 		title: __('Create your first course'),
 		icon: markRaw(h(BookOpen, iconProps)),
 		completed: false,
-		onClick: () => {
-			minimize.value = true
-			router.push({
-				name: 'Courses',
-			})
-		},
+		onClick: () => openStep('create_first_course'),
 	},
 	{
 		name: 'create_first_chapter',
@@ -373,19 +390,7 @@ const steps = reactive([
 		icon: markRaw(h(FolderTree, iconProps)),
 		completed: false,
 		dependsOn: 'create_first_course',
-		onClick: async () => {
-			minimize.value = true
-			let course = await getFirstCourse()
-			if (course) {
-				router.push({
-					name: 'CourseDetail',
-					params: { courseName: course },
-					hash: '#settings',
-				})
-			} else {
-				openFormRoute(router, { name: 'NewCourse' })
-			}
-		},
+		onClick: () => openStep('create_first_chapter'),
 	},
 	{
 		name: 'create_first_lesson',
@@ -393,19 +398,7 @@ const steps = reactive([
 		icon: markRaw(h(FileText, iconProps)),
 		completed: false,
 		dependsOn: 'create_first_chapter',
-		onClick: async () => {
-			minimize.value = true
-			let course = await getFirstCourse()
-			if (course) {
-				router.push({
-					name: 'CourseDetail',
-					params: { courseName: course },
-					hash: '#settings',
-				})
-			} else {
-				openFormRoute(router, { name: 'NewCourse' })
-			}
-		},
+		onClick: () => openStep('create_first_lesson'),
 	},
 	{
 		name: 'create_first_quiz',
@@ -413,30 +406,21 @@ const steps = reactive([
 		icon: markRaw(h(CircleHelp, iconProps)),
 		completed: false,
 		dependsOn: 'create_first_course',
-		onClick: () => {
-			minimize.value = true
-			router.push({ name: 'Quizzes' })
-		},
+		onClick: () => openStep('create_first_quiz'),
 	},
 	{
 		name: 'invite_students',
 		title: __('Invite your team and students'),
 		icon: markRaw(h(InviteIcon, iconProps)),
 		completed: false,
-		onClick: () => {
-			minimize.value = true
-			pushSettingsHash(router, 'members')
-		},
+		onClick: () => openStep('invite_students'),
 	},
 	{
 		name: 'create_first_batch',
 		title: __('Create your first batch'),
 		icon: markRaw(h(Users, iconProps)),
 		completed: false,
-		onClick: () => {
-			minimize.value = true
-			router.push({ name: 'Batches' })
-		},
+		onClick: () => openStep('create_first_batch'),
 	},
 	{
 		name: 'add_batch_student',
@@ -444,20 +428,7 @@ const steps = reactive([
 		icon: markRaw(h(UserPlus, iconProps)),
 		completed: false,
 		dependsOn: 'create_first_batch',
-		onClick: async () => {
-			minimize.value = true
-			let batch = await getFirstBatch()
-			if (batch) {
-				router.push({
-					name: 'BatchDetail',
-					params: {
-						batchName: batch,
-					},
-				})
-			} else {
-				router.push({ name: 'Batches' })
-			}
-		},
+		onClick: () => openStep('add_batch_student'),
 	},
 	{
 		name: 'add_batch_course',
@@ -465,21 +436,7 @@ const steps = reactive([
 		icon: markRaw(h(BookText, iconProps)),
 		completed: false,
 		dependsOn: 'create_first_batch',
-		onClick: async () => {
-			minimize.value = true
-			let batch = await getFirstBatch()
-			if (batch) {
-				router.push({
-					name: 'BatchDetail',
-					params: {
-						batchName: batch,
-					},
-					hash: '#courses',
-				})
-			} else {
-				router.push({ name: 'Batches' })
-			}
-		},
+		onClick: () => openStep('add_batch_course'),
 	},
 ])
 
