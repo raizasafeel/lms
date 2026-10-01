@@ -485,6 +485,15 @@ class EmptyOrUnknownNameMixin:
 				self.assertTrue(frappe.db.exists(doctype, survivor))
 
 
+class TestDeleteEndpointsArePostOnly(BaseTestUtils):
+	def test_every_delete_endpoint_refuses_get(self):
+		"""Regression from #1132 (cf014bca3): delete_chapter took GET, so a cross-site link
+		deleted a SCORM package. Added for audit finding #27."""
+		for endpoint in (delete_batch, delete_chapter, delete_course):
+			with self.subTest(endpoint=endpoint.__name__):
+				self.assertEqual(set(frappe.allowed_http_methods_for_whitelisted_func[endpoint]), {"POST"})
+
+
 class TestBatchDeletion(EmptyOrUnknownNameMixin, DeletionTestBase):
 	def setUp(self):
 		super().setUp()
@@ -587,3 +596,74 @@ class TestBatchDeletion(EmptyOrUnknownNameMixin, DeletionTestBase):
 		finding #19."""
 		frappe.set_user(self.instructor.name)
 		self.assert_refuses_blank_and_unknown_names(delete_batch, "LMS Batch", self.batch.name)
+
+
+class TestBlankNamesOnCourseContent(EmptyOrUnknownNameMixin, DeletionTestBase):
+	def setUp(self):
+		super().setUp()
+		self.chapter = self._add_chapter("Chapter 1", 1)
+		frappe.set_user(self.instructor.name)
+
+	def test_delete_chapter_refuses_a_blank_or_unknown_name(self):
+		"""Regression from #1132 (cf014bca3), audit finding #19."""
+		self.assert_refuses_blank_and_unknown_names(delete_chapter, "Course Chapter", self.chapter.name)
+
+	def test_delete_course_refuses_a_blank_or_unknown_name(self):
+		"""Regression from #1100 (38e6e4345), audit finding #19."""
+		self.assert_refuses_blank_and_unknown_names(delete_course, "LMS Course", self.course.name)
+
+
+class TestDeskDeleteOfCourseContent(DeletionTestBase):
+	def setUp(self):
+		super().setUp()
+		self.chapter = self._add_chapter("Chapter 1", 1)
+		self.lesson = self._add_lesson(self.chapter, "Lesson 1", 1)
+		self.topic, self.reply = self._create_discussion("Course Lesson", self.lesson.name)
+		self._create_progress(self.student.name, self.course.name, self.lesson.name)
+
+	def _assert_outline_gone(self):
+		self.assertFalse(frappe.db.exists("Course Chapter", self.chapter.name))
+		self.assertFalse(frappe.db.exists("Chapter Reference", {"chapter": self.chapter.name}))
+		self.assertFalse(frappe.db.exists("Course Lesson", self.lesson.name))
+		self.assertFalse(frappe.db.exists("Lesson Reference", {"parent": self.chapter.name}))
+		self.assertFalse(frappe.db.exists("Discussion Topic", self.topic.name))
+		self.assertFalse(frappe.db.exists("Discussion Reply", self.reply.name))
+		self.assertFalse(frappe.db.exists("LMS Course Progress", {"lesson": self.lesson.name}))
+
+	def test_a_desk_chapter_delete_takes_its_lessons(self):
+		"""Regression from #1132: cleanup lived in the endpoint, so a Desk delete orphaned lessons.
+		Added for audit finding #60."""
+		frappe.delete_doc("Course Chapter", self.chapter.name)
+		self._assert_outline_gone()
+
+	def test_a_desk_course_delete_takes_its_outline_and_enrollments(self):
+		"""Regression from #1100: cleanup lived in the endpoint, so a Desk delete orphaned the outline.
+		Added for audit finding #60."""
+		enrollment = self._create_enrollment(self.student.name, self.course.name)
+
+		frappe.delete_doc("LMS Course", self.course.name)
+
+		self.assertFalse(frappe.db.exists("LMS Course", self.course.name))
+		self.assertFalse(frappe.db.exists("LMS Enrollment", enrollment.name))
+		self._assert_outline_gone()
+
+
+class TestCourseDeletionUpdatesPrograms(DeletionTestBase):
+	def test_program_course_count_drops_with_the_course(self):
+		"""Regression from #2537 (c5a86ebd9): the raw delete left course_count stale. Added for
+		audit finding #95."""
+		other = self._create_course(title=f"Program Sibling {frappe.generate_hash(length=8)}")
+		# nosemgrep: lms-unjustified-ignore-permissions - test fixture seeding, not the permission under test
+		program = frappe.get_doc(
+			{
+				"doctype": "LMS Program",
+				"title": f"Count Program {frappe.generate_hash(length=8)}",
+				"program_courses": [{"course": self.course.name}, {"course": other.name}],
+			}
+		).insert(ignore_permissions=True)
+		self.assertEqual(program.course_count, 2)
+		frappe.set_user(self.instructor.name)
+
+		delete_course(self.course.name)
+
+		self.assertEqual(frappe.db.get_value("LMS Program", program.name, "course_count"), 1)
