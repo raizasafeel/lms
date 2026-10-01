@@ -133,6 +133,28 @@ class TestLockedReadsConcurrency(BaseTestUtils):
 
 		self.assertEqual(errors, [])
 
+	def test_an_evaluation_slot_cannot_be_double_booked(self):
+		"""Regression from #706: the slot check was an unlocked check-then-insert.
+		Added for audit finding #45."""
+		course = self._course()
+		evaluator = self._evaluator()
+		frappe.db.set_value("LMS Course", course.name, "evaluator", evaluator)
+		members = [self._member(), self._member()]
+		for member in members:
+			self._create_enrollment(member, course.name)
+		slot_date = add_days(nowdate(), 30)
+
+		errors = self._in_parallel(
+			lambda member: self._book(course.name, evaluator, member, slot_date), members
+		)
+
+		booked = frappe.db.count(
+			"LMS Certificate Request", {"evaluator": evaluator, "date": slot_date, "status": "Upcoming"}
+		)
+		self.assertEqual(booked, 1)
+		self.assertEqual(len(errors), 1, errors)
+		self.assertIn("already booked", str(errors[0][1]))
+
 	def _in_parallel(self, work, items, user=None) -> list:
 		"""Run work(item) once per item on its own connection, as `user` or as the
 		item itself. Each worker reads before the barrier, so its snapshot predates
@@ -231,6 +253,25 @@ class TestLockedReadsConcurrency(BaseTestUtils):
 				{"creation": stamp, "modified": stamp},
 				update_modified=False,
 			)
+
+	def _evaluator(self):
+		evaluator = self._user("eval", ["Batch Evaluator"])
+		self._create_evaluator(evaluator)
+		self.created.append(("Course Evaluator", evaluator))
+		return evaluator
+
+	def _book(self, course, evaluator, member, slot_date):
+		frappe.get_doc(
+			{
+				"doctype": "LMS Certificate Request",
+				"course": course,
+				"member": member,
+				"evaluator": evaluator,
+				"date": slot_date,
+				"start_time": "10:00:00",
+				"end_time": "11:00:00",
+			}
+		).insert()
 
 	def _enrol(self, course):
 		frappe.get_doc(
