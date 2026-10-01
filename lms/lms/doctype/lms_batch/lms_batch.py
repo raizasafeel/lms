@@ -26,6 +26,7 @@ from lms.lms.permissions import (
 	is_site_administrator,
 )
 from lms.lms.utils import (
+	delete_discussions,
 	format_timezone,
 	generate_slug,
 	get_assignment_details,
@@ -59,6 +60,25 @@ class LMSBatch(Document):
 	def on_update(self):
 		if self.has_value_changed("published") and self.published:
 			frappe.enqueue(send_notification_for_published_batch, batch=self)
+
+	def on_trash(self):
+		"""Child tables (instructors, courses, timetable, legends) go with the batch itself."""
+		frappe.db.delete("LMS Batch Enrollment", {"batch": self.name})
+		frappe.db.delete("LMS Batch Feedback", {"batch": self.name})
+		delete_discussions("LMS Batch", self.name)
+		# A live class owns a calendar Event that only its own after_delete removes.
+		for live_class in frappe.get_all("LMS Live Class", {"batch_name": self.name}, pluck="name"):
+			# nosemgrep: lms-unjustified-ignore-permissions - the batch delete was authorised; its classes go with it
+			frappe.delete_doc("LMS Live Class", live_class, ignore_permissions=True)
+		self._unlink_learner_records()
+
+	def _unlink_learner_records(self):
+		"""Certificates and course enrollments outlive the batch that produced them."""
+		for doctype in ("LMS Certificate", "LMS Certificate Request", "LMS Certificate Evaluation"):
+			frappe.db.set_value(doctype, {"batch_name": self.name}, "batch_name", None)
+		frappe.db.set_value(
+			"LMS Enrollment", {"enrollment_from_batch": self.name}, "enrollment_from_batch", None
+		)
 
 	def autoname(self):
 		if not self.name and self.title:
