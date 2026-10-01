@@ -13,6 +13,7 @@ def after_install():
 	give_event_permission()
 	ensure_batch_enrollment_index()
 	ensure_enrollment_unique_constraints()
+	ensure_course_progress_unique_constraint()
 
 
 def ensure_batch_enrollment_index():
@@ -20,6 +21,13 @@ def ensure_batch_enrollment_index():
 	if not frappe.db.table_exists("LMS Batch Enrollment"):
 		return
 	frappe.db.add_index("LMS Batch Enrollment", ["batch", "member"])
+
+
+def ensure_course_progress_unique_constraint():
+	"""Fresh installs skip delete_duplicate_course_progress, the patch that adds this; idempotent."""
+	if not frappe.db.table_exists("LMS Course Progress"):
+		return
+	frappe.db.add_unique("LMS Course Progress", ["member", "lesson"])
 
 
 def after_sync():
