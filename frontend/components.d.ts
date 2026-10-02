@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     AddressModal: typeof import('./src/components/Settings/Transactions/AddressModal.vue')['default']
     AppSidebar: typeof import('./src/components/Sidebar/AppSidebar.vue')['default']
+    AssessmentAuthors: typeof import('./src/components/Assessment/AssessmentAuthors.vue')['default']
     AssessmentBlock: typeof import('./src/components/Assessment/AssessmentBlock.vue')['default']
     AssessmentBlockPreview: typeof import('./src/components/Assessment/AssessmentBlockPreview.vue')['default']
     AssessmentCard: typeof import('./src/components/Assessment/AssessmentCard.vue')['default']

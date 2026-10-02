@@ -1,6 +1,10 @@
 <template>
 	<PageHeader :breadcrumbs="breadcrumbs">
 		<template #actions>
+			<AssessmentAuthors
+				doctype="LMS Quiz"
+				:name="submissionDetails.doc?.quiz || null"
+			/>
 			<!-- The sentence is why the Save button is missing, so it has to stay
 			     reachable on a phone. A tooltip would not do it: there is no hover on
 			     a touch screen, so the header spells it out where it fits and hands
@@ -366,6 +370,7 @@ import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useDebounceFn, useMediaQuery } from '@vueuse/core'
 import { safeUrl } from '@/utils/safeUrl'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
+import AssessmentAuthors from '@/components/Assessment/AssessmentAuthors.vue'
 import PageBody from '@/components/Layouts/pages/PageBody.vue'
 import HeaderButton from '@/components/HeaderButton.vue'
 import ShortcutTooltip from '@/components/ShortcutTooltip.vue'
