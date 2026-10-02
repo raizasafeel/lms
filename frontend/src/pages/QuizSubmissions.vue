@@ -13,6 +13,9 @@
 		empty-icon="lucide-file-check"
 		@load-more="submissions.next()"
 	>
+		<template #actions>
+			<AssessmentAuthors doctype="LMS Quiz" :name="filters.quiz || null" />
+		</template>
 		<template #filters>
 			<Link
 				doctype="LMS Quiz"
@@ -73,6 +76,7 @@ import { useRouter } from 'vue-router'
 import { sessionStore } from '@/stores/session'
 import Link from '@/components/Controls/Link.vue'
 import ListPage from '@/components/Layouts/pages/ListPage.vue'
+import AssessmentAuthors from '@/components/Assessment/AssessmentAuthors.vue'
 import { useBulkDeleteAction } from '@/utils/bulkDelete'
 import type { LMSQuizSubmission } from '@/types/lms/LMSQuizSubmission'
 import type {

@@ -176,3 +176,20 @@ export interface EvaluatorDetails {
 	evaluation_invites: boolean
 	can_configure_invites: boolean
 }
+
+export type AssessmentDoctype =
+	| 'LMS Quiz'
+	| 'LMS Assignment'
+	| 'LMS Programming Exercise'
+
+export interface AssessmentAuthor {
+	name: string
+	full_name: string
+	user_image: string | null
+}
+
+/** Response of lms.lms.api.get_assessment_authors. */
+export interface AssessmentAuthorsInfo {
+	authors: AssessmentAuthor[]
+	can_edit: boolean
+}
