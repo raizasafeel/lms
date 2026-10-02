@@ -111,7 +111,13 @@ class CourseLesson(Document):
 		if not len(enrollments):
 			return
 
-		frappe.enqueue(method=self.recalculate_progress, queue="long", is_async=True, enrollments=enrollments)
+		frappe.enqueue(
+			method=self.recalculate_progress,
+			queue="long",
+			is_async=True,
+			enqueue_after_commit=True,
+			enrollments=enrollments,
+		)
 
 	def recalculate_progress(self, enrollments):
 		for enrollment in enrollments:
