@@ -4,6 +4,7 @@
 from frappe.model.document import Document
 
 from lms.lms.doctype.lms_content_author.lms_content_author import AuthoredDocument
+from lms.lms.lesson_assessments import refuse_assessment_merge, rename_assessment_in_lessons
 from lms.lms.schedule_utils import validate_schedule_fields
 from lms.lms.utils import generate_slug
 
@@ -17,3 +18,9 @@ class LMSAssignment(AuthoredDocument, Document):
 
 	def validate(self):
 		validate_schedule_fields(self)
+
+	def before_rename(self, old, new, merge=False):
+		refuse_assessment_merge(merge)
+
+	def after_rename(self, old, new, merge=False):
+		rename_assessment_in_lessons(self.doctype, old, new)

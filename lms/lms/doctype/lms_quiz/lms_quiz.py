@@ -37,6 +37,7 @@ from lms.lms.doctype.lms_question.lms_question import (
 	QUESTION_OPTION_FIELDS,
 	QUESTION_POSSIBILITY_FIELDS,
 )
+from lms.lms.lesson_assessments import refuse_assessment_merge, rename_assessment_in_lessons
 from lms.lms.schedule_utils import assert_within_schedule, validate_schedule_fields
 from lms.lms.utils import (
 	generate_slug,
@@ -120,6 +121,12 @@ class LMSQuiz(AuthoredDocument, Document):
 	def autoname(self):
 		if not self.name:
 			self.name = generate_slug(self.title, "LMS Quiz")
+
+	def before_rename(self, old, new, merge=False):
+		refuse_assessment_merge(merge)
+
+	def after_rename(self, old, new, merge=False):
+		rename_assessment_in_lessons(self.doctype, old, new)
 
 	def get_last_submission_details(self):
 		"""Returns the latest submission for this user."""
