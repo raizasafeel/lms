@@ -303,3 +303,46 @@ class TestLMSCertificate(BaseTestUtils):
 
 		frappe.set_user(self.member_a)
 		self.assertEqual(is_certified(self.course.name), course_level.name)
+
+	def _grade(self, status, rating):
+		return save_evaluation_details(
+			member=self.member_a,
+			course=self.course.name,
+			batch_name=self.batch_a,
+			date_value=nowdate(),
+			start_time="10:00:00",
+			end_time="11:00:00",
+			status=status,
+			rating=rating,
+			summary="graded",
+		)
+
+	def test_regrading_an_evaluation_validates_the_rating(self):
+		"""Regression: updates went through db.set_value (#1010), so a Pass could carry rating 0.
+		Added for audit finding #61."""
+		frappe.set_user(self.evaluator_a)
+		name = self._grade("Pending", 0)
+
+		with self.assertRaises(frappe.ValidationError):
+			self._grade("Pass", 0)
+
+		self.assertEqual(frappe.db.get_value("LMS Certificate Evaluation", name, "status"), "Pending")
+
+	def test_updating_a_certificate_validates_its_links(self):
+		"""Regression: certificate updates skipped validation too (#1010).
+		Added for audit finding #61."""
+		frappe.set_user(self.evaluator_a)
+
+		with self.assertRaises(frappe.LinkValidationError):
+			save_certificate_details(
+				member=self.member_a,
+				course=self.course.name,
+				batch_name=self.batch_a,
+				issue_date=nowdate(),
+				template=f"No Such Format {frappe.generate_hash(length=6)}",
+			)
+
+		self.assertEqual(
+			frappe.db.get_value("LMS Certificate", self.certificate_a.name, "template"),
+			get_default_certificate_template(),
+		)

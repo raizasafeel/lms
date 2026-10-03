@@ -1821,8 +1821,10 @@ def save_evaluation_details(
 	}
 
 	if evaluation:
-		frappe.db.set_value("LMS Certificate Evaluation", evaluation, details)
-		return evaluation
+		doc = frappe.get_doc("LMS Certificate Evaluation", evaluation, for_update=True)
+		doc.update(details)
+		doc.save()
+		return doc.name
 	else:
 		doc = frappe.new_doc("LMS Certificate Evaluation")
 		details.update(
@@ -1877,8 +1879,10 @@ def save_certificate_details(
 	}
 
 	if certificate:
-		frappe.db.set_value("LMS Certificate", certificate, details)
-		return certificate
+		doc = frappe.get_doc("LMS Certificate", certificate, for_update=True)
+		doc.update(details)
+		doc.save()
+		return doc.name
 	else:
 		doc = frappe.new_doc("LMS Certificate")
 		details.update(
