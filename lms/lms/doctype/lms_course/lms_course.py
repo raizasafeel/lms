@@ -186,7 +186,9 @@ class LMSCourse(Document):
 			update_payment_record("LMS Course", self.name)
 
 	def send_email_to_interested_users(self):
-		interested_users = frappe.get_all("LMS Course Interest", {"course": self.name}, ["name", "user"])
+		interested_users = frappe.get_all(
+			"LMS Course Interest", {"course": self.name, "email_sent": 0}, ["name", "user"]
+		)
 		subject = self.title + " is available!"
 		args = {
 			"title": self.title,

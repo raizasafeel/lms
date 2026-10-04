@@ -2,6 +2,7 @@
 # See license.txt
 
 import unittest
+from unittest.mock import patch
 
 import frappe
 
@@ -116,3 +117,36 @@ class TestPublishWarnsAboutEmptyQuizzes(BaseTestUtils):
 		self.course.save()
 
 		self.assertEqual(frappe.message_log, [])
+
+
+class TestCourseLaunchEmail(BaseTestUtils):
+	def setUp(self):
+		super().setUp()
+		hash = frappe.generate_hash(length=6)
+		instructor = self._create_user(f"launch-{hash}@example.com", "Lia", "Instr", ["Course Creator"])
+		self.notified = self._create_user(f"notified-{hash}@example.com", "Nia", "Old", ["LMS Student"])
+		self.waiting = self._create_user(f"waiting-{hash}@example.com", "Wes", "New", ["LMS Student"])
+		self.course = self._create_course(title=f"Launch Course {hash}", instructor=instructor.email)
+		self.course.db_set("upcoming", 1)
+		self.course.reload()
+		for user, sent in ((self.notified, 1), (self.waiting, 0)):
+			frappe.get_doc(
+				{
+					"doctype": "LMS Course Interest",
+					"course": self.course.name,
+					"user": user.name,
+					"email_sent": sent,
+				}
+			).insert()
+
+	def test_launch_emails_only_users_not_yet_notified(self):
+		"""Every launch re-mailed all interested users since #170 (email_sent was never read).
+		Added for audit finding #93."""
+		with patch("frappe.enqueue") as enqueue:
+			self.course.upcoming = 0
+			self.course.save()
+
+		recipients = [
+			call.kwargs["recipients"] for call in enqueue.call_args_list if "recipients" in call.kwargs
+		]
+		self.assertEqual(recipients, [self.waiting.name])
