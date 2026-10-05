@@ -32,6 +32,7 @@ from frappe.utils import (
 	get_time,
 	getdate,
 	now,
+	validate_email_address,
 )
 from frappe.utils.response import Response
 from pypika import functions as fn
@@ -1193,6 +1194,74 @@ def get_members(start: int = 0, search: str = None, role: str = "All"):
 	return members
 
 
+MEMBER_PROFILE_FIELDS = ("first_name", "last_name", "username", "phone", "mobile_no", "location", "bio")
+
+
+def check_member_target(member: str, allow_self: bool = False):
+	"""Moderator manages LMS members, never site staff: a System User or System
+	Manager target needs a System Manager caller. Mirrors crm/api/user.py."""
+	if member in ("Administrator", "Guest"):
+		frappe.throw(_("You cannot modify this user."), frappe.PermissionError)
+	if not allow_self and member == frappe.session.user:
+		frappe.throw(_("You cannot modify your own account here."), frappe.PermissionError)
+
+	user_type = frappe.db.get_value("User", member, "user_type")
+	if not user_type:
+		frappe.throw(_("Member {0} does not exist.").format(member), frappe.DoesNotExistError)
+	if "System Manager" in frappe.get_roles():
+		return
+	if user_type == "System User" or "System Manager" in frappe.get_roles(member):
+		frappe.throw(_("Only System Managers can modify system users."), frappe.PermissionError)
+
+
+def clean_member_details(details: dict, allowed: tuple) -> dict:
+	if not isinstance(details, dict):
+		frappe.throw(_("details must be an object"), frappe.ValidationError)
+	unknown = set(details) - set(allowed)
+	if unknown:
+		frappe.throw(
+			_("These fields cannot be set: {0}").format(", ".join(sorted(unknown))), frappe.ValidationError
+		)
+	for field, value in details.items():
+		if value is not None and not isinstance(value, str):
+			frappe.throw(_("{0} must be a string").format(field), frappe.ValidationError)
+	return details
+
+
+@frappe.whitelist(methods=["POST"])
+def create_member(details: dict):
+	frappe.only_for("Moderator")
+	details = clean_member_details(details, ("email", *MEMBER_PROFILE_FIELDS))
+	email = (details.get("email") or "").strip()
+	if not email or not validate_email_address(email):
+		frappe.throw(_("A valid email is required."), frappe.ValidationError)
+
+	user = frappe.new_doc("User")
+	user.update(details)
+	user.email = email
+	try:
+		# nosemgrep: lms-unjustified-ignore-permissions - Moderator has no create on User; only_for and the field allowlist gate this
+		user.insert(ignore_permissions=True)
+	except frappe.DuplicateEntryError:
+		frappe.throw(_("User {0} already exists.").format(email), frappe.ValidationError)
+	return {"name": user.name, "full_name": user.full_name, "email": user.email}
+
+
+@frappe.whitelist(methods=["POST"])
+def update_member(member: str, details: dict):
+	frappe.only_for("Moderator")
+	if not isinstance(member, str):
+		frappe.throw(_("member must be a string"), frappe.ValidationError)
+	details = clean_member_details(details, MEMBER_PROFILE_FIELDS)
+	check_member_target(member, allow_self=True)
+
+	user = frappe.get_doc("User", member)
+	user.update(details)
+	# nosemgrep: lms-unjustified-ignore-permissions - Moderator has no write on User; only_for, the allowlist and check_member_target gate this
+	user.save(ignore_permissions=True)
+	return {"name": user.name, "full_name": user.full_name}
+
+
 def check_app_permission():
 	"""Check if the user has permission to access the app."""
 	if frappe.session.user == "Administrator":
@@ -2239,11 +2308,22 @@ def get_certification_details(course: str) -> dict:
 	}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def save_role(user: str, role: str, value: int):
 	frappe.only_for("Moderator")
+	if not isinstance(user, str) or not isinstance(role, str):
+		frappe.throw(_("user and role must be strings"), frappe.ValidationError)
+	if not isinstance(value, int) or value not in (0, 1):
+		frappe.throw(_("value must be 0 or 1"), frappe.ValidationError)
 	if role not in LMS_ROLES:
 		frappe.throw(_("You do not have permission to modify this role."), frappe.PermissionError)
+	check_member_target(user)
+	user_doc = frappe.get_doc("User", user)
+	if user_doc.get("role_profiles") or user_doc.get("role_profile_name"):
+		frappe.throw(
+			_("User {0} has a Role Profile, so their roles are managed there.").format(user),
+			frappe.PermissionError,
+		)
 
 	if role == "Batch Evaluator":
 		return save_evaluator_role(user, value)
@@ -2289,15 +2369,14 @@ def save_evaluator_role(user: str, value: int):
 	return True
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def delete_member(user: str):
 	frappe.only_for("Moderator")
 	if not isinstance(user, str):
 		frappe.throw(_("user must be a string"))
 	if user in ("Administrator", "Guest", frappe.session.user):
 		frappe.throw(_("This user cannot be deleted."), frappe.PermissionError)
-	if not frappe.db.exists("User", user):
-		frappe.throw(_("User {0} does not exist.").format(user))
+	check_member_target(user)
 	frappe.delete_doc("User", user, ignore_permissions=True)
 	frappe.clear_cache(user=user)
 	return True

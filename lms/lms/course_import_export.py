@@ -504,7 +504,9 @@ def get_user_names(user):
 
 
 def create_user(user):
+	frappe.only_for("Moderator", message=True)
 	first_name, last_name, full_name = get_user_names(user)
+	# nosemgrep: lms-unjustified-ignore-permissions - Moderator has no create on User; only_for above gates this
 	user_doc = create_lms_user(
 		email=user["email"],
 		first_name=first_name,
@@ -512,6 +514,7 @@ def create_user(user):
 		full_name=full_name,
 		user_image=user.get("user_image"),
 		roles=["Course Creator"],
+		ignore_permissions=True,
 	)
 	return user_doc
 

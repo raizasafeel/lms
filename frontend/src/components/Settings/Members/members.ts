@@ -92,6 +92,36 @@ export const rolesFrom = (granted: string[] | undefined): MemberRoles => {
 	return roles
 }
 
+// The User fields lms.lms.api.create_member/update_member accept; anything
+// else on the document is refused there.
+const MEMBER_PROFILE_FIELDS = [
+	'first_name',
+	'last_name',
+	'username',
+	'phone',
+	'mobile_no',
+	'location',
+	'bio',
+] as const
+
+export const memberDetails = (
+	doc: SettingsListRow,
+	isNew: boolean
+): Record<string, string | null> => {
+	const fields = isNew
+		? ['email', ...MEMBER_PROFILE_FIELDS]
+		: [...MEMBER_PROFILE_FIELDS]
+	return Object.fromEntries(
+		fields.map((field) => {
+			const value = doc[field]
+			return [
+				field,
+				value === undefined || value === null ? null : String(value),
+			]
+		})
+	)
+}
+
 export interface MemberRowActions {
 	/** The member's own page, which is not a settings page. */
 	profile: (row: SettingsListRow) => void

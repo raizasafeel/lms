@@ -61,7 +61,7 @@ const onToggle = async (key: MemberRoleKey, value: boolean) => {
 	await call('lms.lms.api.save_role', {
 		user: props.profile.data?.name,
 		role: row.role,
-		value,
+		value: value ? 1 : 0,
 	})
 	toast.success(__('Role updated successfully'))
 }

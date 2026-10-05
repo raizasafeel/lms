@@ -106,6 +106,7 @@ import SettingsLayout from '@/components/Layouts/settings/desktop/SettingsLayout
 import {
 	MEMBERS_DOCTYPE,
 	ROLE_ROWS,
+	memberDetails,
 	memberError,
 	noRoles,
 	rolesFrom,
@@ -178,6 +179,12 @@ const {
 	doctype: MEMBERS_DOCTYPE,
 	record,
 	dirty: (s) => s.isDirty || rolesDirty.value,
+	persist: (doc, isNew) => {
+		const details = memberDetails(doc, isNew)
+		return isNew
+			? call('lms.lms.api.create_member', { details })
+			: call('lms.lms.api.update_member', { member: doc.name, details })
+	},
 })
 
 // get_member, not the list endpoint: that one hard-filters `enabled = 1` and

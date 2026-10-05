@@ -152,9 +152,8 @@ const addMember = async (close?: () => void) => {
 
 	submitting.value = true
 	try {
-		const user = await call('frappe.client.insert', {
-			doc: {
-				doctype: 'User',
+		const user = await call('lms.lms.api.create_member', {
+			details: {
 				email: member.email.trim(),
 				first_name: member.first_name.trim() || undefined,
 				last_name: member.last_name.trim() || undefined,

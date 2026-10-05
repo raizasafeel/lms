@@ -60,6 +60,11 @@ export interface UseSettingsSourceOptions {
 	 * New reading "Not saved" before anything is typed.
 	 */
 	defaults?: () => Record<string, unknown>
+	/**
+	 * Writes the record through an endpoint of the page's own instead of the
+	 * generic insert/save, for a doctype the user cannot write directly.
+	 */
+	persist?: (doc: SettingsListRow, isNew: boolean) => Promise<unknown>
 }
 
 export interface SettingsSourceHandle {
@@ -196,9 +201,11 @@ export function useSettingsSource(
 
 	const save = async (): Promise<unknown> => {
 		if (isNew.value) {
-			const inserted = await call('frappe.client.insert', {
-				doc: { doctype, ...draft.value },
-			})
+			const inserted = options.persist
+				? await options.persist(draft.value, true)
+				: await call('frappe.client.insert', {
+						doc: { doctype, ...draft.value },
+				  })
 			// The draft has been written, so it is no longer something to discard.
 			// Without this a create form navigates away still registered dirty and
 			// the guard prompts on top of its own success toast.
@@ -208,6 +215,12 @@ export function useSettingsSource(
 		}
 		const current = resource.value
 		if (!current) return undefined
+		if (options.persist && current.doc) {
+			const saved = await options.persist(current.doc, false)
+			// The write bypassed the resource, so only a reload settles isDirty.
+			await current.reload()
+			return saved
+		}
 
 		const renamed = renameTarget(current.doc)
 		if (renamed) {

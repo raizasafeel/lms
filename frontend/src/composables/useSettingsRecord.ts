@@ -8,6 +8,7 @@ import { useDirtyGuard } from '@/composables/useDirtyGuard'
 import {
 	useSettingsSource,
 	type SettingsSourceHandle,
+	type UseSettingsSourceOptions,
 } from '@/composables/useSettingsSource'
 import type { SettingsListRow } from '@/types'
 
@@ -32,6 +33,8 @@ export interface UseSettingsRecordOptions {
 	 * satisfies the source's "holds anything at all" before being touched.
 	 */
 	dirty?: (source: SettingsSourceHandle) => boolean
+	/** See {@link UseSettingsSourceOptions.persist}. */
+	persist?: UseSettingsSourceOptions['persist']
 }
 
 export interface SettingsRecordHandle {
@@ -60,7 +63,11 @@ export function useSettingsRecord(
 ): SettingsRecordHandle {
 	const source = useSettingsSource(
 		{ doctype: options.doctype, record: 'route' },
-		{ record: options.record, renameField: options.renameField }
+		{
+			record: options.record,
+			renameField: options.renameField,
+			persist: options.persist,
+		}
 	)
 
 	const doc = computed(() => source.doc)

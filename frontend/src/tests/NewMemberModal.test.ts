@@ -140,14 +140,13 @@ describe('NewMemberModal: add mode', () => {
 	it('inserts the user then assigns only the selected roles, emits created, closes', async () => {
 		const w = mountModal()
 		await open(w)
-		callMock.mockResolvedValueOnce({ name: 'jane@doe.com' }) // insert
+		callMock.mockResolvedValueOnce({ name: 'jane@doe.com' }) // create_member
 		await w.get('[data-testid="field-Email"]').setValue('jane@doe.com')
 		await w.get('[data-testid="role-Moderator"]').trigger('click')
 		await clickAction(w, 'Add')
 
-		expect(callMock).toHaveBeenCalledWith('frappe.client.insert', {
-			doc: {
-				doctype: 'User',
+		expect(callMock).toHaveBeenCalledWith('lms.lms.api.create_member', {
+			details: {
 				email: 'jane@doe.com',
 				first_name: undefined,
 				last_name: undefined,
