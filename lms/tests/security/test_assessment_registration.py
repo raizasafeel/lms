@@ -98,6 +98,12 @@ class TestAssessmentRegistrationAgreement(BaseTestUtils):
 		cls._set_authors("LMS Quiz", cls.quiz.name, [cls.author.name])
 		cls._create_enrollment(cls.member.name, cls.course.name)
 
+		cls._require_no_moderators(cls.member.name, cls.outsider.name, cls.instructor.name, cls.author.name)
+		cls._require(
+			frappe.db.get_value("LMS Quiz", cls.quiz.name, "owner") == cls.author.name,
+			"the quiz owner is not the author, so the owner fallback is not measured",
+		)
+
 	def tearDown(self):
 		frappe.set_user("Administrator")
 		super().tearDown()
@@ -113,14 +119,6 @@ class TestAssessmentRegistrationAgreement(BaseTestUtils):
 		return (self.member.name, self.outsider.name, self.instructor.name, self.author.name)
 
 	# --- the controls, read before any count ---
-
-	def test_the_actors_hold_the_roles_the_refusals_rest_on(self):
-		"""A fixed-key fixture hands back an existing row, so declared roles are
-		decoration until they are read. A Moderator is unrestricted by this rule and
-		would make every refusal below meaningless."""
-		for user in (self.member, self.outsider, self.instructor, self.author):
-			self.assertNotIn("Moderator", frappe.get_roles(user.name), user.name)
-		self.assertEqual(frappe.db.get_value("LMS Quiz", self.quiz.name, "owner"), self.author.name)
 
 	def test_the_students_docperm_read_still_grants_the_doctype(self):
 		"""The refusals below are the pair talking and not a missing grant: without a

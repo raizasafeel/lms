@@ -59,19 +59,15 @@ class TestAssessmentPlacementAccess(BaseTestUtils):
 		cls._set_authors("LMS Quiz", cls.quiz.name, [cls.author.name])
 		cls._create_enrollment(cls.member.name, cls.course.name)
 
+		cls._require_no_moderators(cls.member.name, cls.outsider.name, cls.instructor.name)
+		cls._require(
+			frappe.db.get_value("LMS Quiz", cls.quiz.name, "owner") == cls.author.name,
+			"the quiz owner is not the author, so the owner fallback is not measured",
+		)
+
 	def tearDown(self):
 		frappe.set_user("Administrator")
 		super().tearDown()
-
-	# --- the controls, read before any count ---
-
-	def test_the_actors_hold_the_roles_the_refusals_rest_on(self):
-		"""A fixed-key fixture returns the existing row untouched, so its declared roles
-		are decoration. A refusal by a Moderator would prove nothing about placement."""
-		self.assertNotIn("Moderator", frappe.get_roles(self.member.name))
-		self.assertNotIn("Moderator", frappe.get_roles(self.outsider.name))
-		self.assertNotIn("Moderator", frappe.get_roles(self.instructor.name))
-		self.assertEqual(frappe.db.get_value("LMS Quiz", self.quiz.name, "owner"), self.author.name)
 
 	def test_an_unplaced_assessment_reaches_only_its_author(self):
 		"""The floor every other case is measured against: with no placement anywhere,
@@ -462,16 +458,15 @@ class TestAssessmentListScope(BaseTestUtils):
 		cls._set_authors("LMS Quiz", cls.quiz.name, [cls.author.name])
 		cls._create_enrollment(cls.member.name, cls.course.name)
 
+		cls._require_no_moderators(cls.member.name, cls.outsider.name, cls.instructor.name, cls.author.name)
+		cls._require(
+			frappe.db.get_value("LMS Quiz", cls.quiz.name, "owner") == cls.author.name,
+			"the quiz owner is not the author, so the owner fallback is not measured",
+		)
+
 	def tearDown(self):
 		frappe.set_user("Administrator")
 		super().tearDown()
-
-	# --- the controls, read before any count ---
-
-	def test_the_actors_hold_the_roles_the_refusals_rest_on(self):
-		for user in (self.member, self.outsider, self.instructor, self.author):
-			self.assertNotIn("Moderator", frappe.get_roles(user.name), user.name)
-		self.assertEqual(frappe.db.get_value("LMS Quiz", self.quiz.name, "owner"), self.author.name)
 
 	def test_get_all_bypasses_the_condition_that_get_list_enforces(self):
 		"""The outsider holds LMS Student, which grants read site-wide; only the
@@ -767,21 +762,21 @@ class TestAssessmentAdministerScope(BaseTestUtils):
 		cls._place_in_lesson(cls.course.name, "LMS Quiz", cls.quiz.name)
 		cls._place_in_lesson(cls.course.name, "LMS Assignment", cls.assignment.name)
 
+		# A Moderator is granted by a branch this suite is not about, and the member
+		# must really be enrolled or its refusal would prove nothing.
+		cls._require_no_moderators(cls.member.name, cls.outsider.name, cls.instructor.name, cls.author.name)
+		cls._require(
+			"Moderator" in frappe.get_roles(cls.moderator.name),
+			"the moderator fixture lacks Moderator, so its grants prove nothing",
+		)
+		cls._require(
+			bool(frappe.db.exists("LMS Enrollment", {"course": cls.course.name, "member": cls.member.name})),
+			"the member is not enrolled, so its refusals prove nothing",
+		)
+
 	def tearDown(self):
 		frappe.set_user("Administrator")
 		super().tearDown()
-
-	# --- the controls, read before any count ---
-
-	def test_the_actors_hold_the_roles_the_refusals_rest_on(self):
-		"""A Moderator is granted by a branch this suite is not about, and the member
-		must really be enrolled or its refusal would prove nothing."""
-		for user in (self.member, self.outsider, self.instructor, self.author):
-			self.assertNotIn("Moderator", frappe.get_roles(user.name), user.name)
-		self.assertIn("Moderator", frappe.get_roles(self.moderator.name))
-		self.assertTrue(
-			frappe.db.exists("LMS Enrollment", {"course": self.course.name, "member": self.member.name})
-		)
 
 	def test_the_access_predicate_grants_the_member_this_suite_refuses(self):
 		"""The control the split is measured against. Without this the refusals below
