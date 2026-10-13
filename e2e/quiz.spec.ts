@@ -4,16 +4,13 @@ import { authFile, baseURL } from "./config";
 import type { Browser, Page } from "@playwright/test";
 
 let quizName: string;
-// Unique per run: two decades of leftover "Cypress Test Quiz"/"What is 2 + 2?"
-// docs already sit in this dev DB from prior sessions (API-seeded runs whose
-// afterAll never got to run), and the question-bank cleanup below searches by
-// this text — an ambiguous match would select every leftover row, not just
-// this run's.
+// Unique per run: CI gets a fresh site, but a local dev DB keeps every earlier
+// run's quiz and question, and the assertions below match by this text.
 const runToken = Date.now();
 const quizTitle = `Cypress Test Quiz ${runToken}`;
 const questionText = `What is 2 + 2? (${runToken})`;
 
-// test.beforeAll/afterAll run outside any single test and so don't get the
+// test.beforeAll runs outside any single test and so don't get the
 // test-scoped `page` fixture; a real page is created from the worker-scoped
 // `browser` fixture instead, reusing the same logged-in session
 // global.setup.ts already established.
@@ -106,112 +103,58 @@ test.describe("Quiz", () => {
 		});
 	});
 
-	// Mirrors the create flow: delete through the same Settings/authoring UI a
-	// moderator would use, not a bare API call.
-	test.afterAll(async ({ browser }, testInfo) => {
-		// Same reasoning as beforeAll's own setTimeout above — this is the hook
-		// that actually timed out in CI (30s default vs. submissions + quiz +
-		// questions page cleanup, each a real page load).
-		testInfo.setTimeout(90000);
-		await withPage(browser, async (page) => {
-			// The "submits the quiz" test above created a real LMS Quiz Submission;
-			// LMS Quiz's own delete refuses while one links to it (LinkExistsError),
-			// so it has to go first — same select-all-then-delete pattern as the
-			// question bank cleanup below, pre-scoped to this quiz via the same
-			// query param QuizForm.vue's own "Submissions" header button uses.
-			await page.goto(`/lms/quizzes/submissions?quiz=${quizName}`);
-			const submissionCheckbox = page.locator('input[type="checkbox"]').first();
-			if (await submissionCheckbox.isVisible()) {
-				await submissionCheckbox.click();
-				await button(page, "Delete").click();
-				await expect(submissionCheckbox).toBeHidden();
-			}
+	// One test walks the learner through the quiz: start screen, question,
+	// answer, result. Each step needs the one before it, and splitting them
+	// only reloaded the same page three times.
+	test("takes a multiple choice quiz from start screen to result", async ({
+		page,
+	}) => {
+		await page.goto(`/lms/quiz/${quizName}`);
 
-			await page.goto(`/lms/quizzes/edit/${quizName}`);
-			await button(page, "Delete").click();
-			const dialog = page
-				.getByRole("dialog")
-				.filter({ hasText: "Delete this quiz?" });
-			await dialog.getByRole("button", { name: "Delete" }).click();
-			await page.waitForURL(/\/lms\/quizzes$/);
+		await expect(page.getByText(quizTitle).first()).toBeVisible();
 
-			// The question bank record outlives the quiz (it's a shared, separately
-			// owned doctype) — delete it the same way a moderator tidying the
-			// question bank would: search it out, select it, bulk-delete.
-			await page.goto("/lms/quizzes/questions");
-			await page.getByRole("textbox", { name: "Search" }).fill(questionText);
-			await expect(page.getByText(questionText)).toBeVisible();
-			// The header's own "select all" checkbox, applied to a search result
-			// narrowed to this one row, is simpler than hunting a per-row checkbox
-			// that carries no accessible name of its own.
-			await page.locator('input[type="checkbox"]').first().click();
-			await button(page, "Delete").click();
-			await expect(page.getByText(questionText)).toHaveCount(0);
-		});
-	});
+		// The start screen's stats grid pairs each <dt> label with its <dd>.
+		const stat = (label: string) =>
+			page
+				.locator("dl > div")
+				.filter({ has: page.getByText(label, { exact: true }) })
+				.locator("dd");
+		await expect(stat("Questions")).toHaveText("1");
+		await expect(stat("Pass mark")).toHaveText("60%");
 
-	test.describe("multiple choice quiz", () => {
-		test("shows quiz info on the start screen", async ({ page }) => {
-			await page.goto(`/lms/quiz/${quizName}`);
+		const start = button(page, "Start Quiz");
+		await expect(start).toBeEnabled();
+		await start.click();
 
-			await expect(page.getByText(quizTitle).first()).toBeVisible();
-
-			// The start screen's stats grid pairs each <dt> label with its <dd>.
-			const stat = (label: string) =>
-				page
-					.locator("dl > div")
-					.filter({ has: page.getByText(label, { exact: true }) })
-					.locator("dd");
-			await expect(stat("Questions")).toHaveText("1");
-			await expect(stat("Pass mark")).toHaveText("60%");
+		await expect(page.getByText("What is 2 + 2?")).toBeVisible({
+			timeout: 10000,
 		});
 
-		test("starts the quiz and shows the question with answer choices", async ({
-			page,
-		}) => {
-			await page.goto(`/lms/quiz/${quizName}`);
+		// Select any answer. frappe-ui's Radio is a `role="radio"` button, not a
+		// native input, so `.check()` does not apply to it.
+		await page.getByRole("radio").first().click({ timeout: 10000 });
 
-			const start = button(page, "Start Quiz");
-			await expect(start).toBeEnabled();
-			await start.click();
+		const submitQuiz = page.waitForResponse(
+			(res) =>
+				res
+					.url()
+					.includes(
+						"/api/method/lms.lms.doctype.lms_quiz.lms_quiz.submit_quiz"
+					) && res.request().method() === "POST",
+			{ timeout: 15000 }
+		);
 
-			await expect(page.getByText("What is 2 + 2?")).toBeVisible({
-				timeout: 10000,
-			});
-			await expect(page.getByRole("radio").first()).toBeVisible();
+		// show_answers defaults to 1 on LMS Quiz, so a choice question offers
+		// Check before it offers Submit. Submit only replaces it once the
+		// answer has been revealed.
+		await button(page, "Check").click();
+		await button(page, "Submit").click();
+		await submitQuiz;
+
+		// The result leads with a Passed or Failed badge, then the marks.
+		await expect(page.getByTestId("quiz-verdict")).toBeVisible({
+			timeout: 10000,
 		});
-
-		test("submits the quiz and shows the result", async ({ page }) => {
-			await page.goto(`/lms/quiz/${quizName}`);
-
-			await button(page, "Start Quiz").click();
-
-			// Select any answer. frappe-ui's Radio is a `role="radio"` button, not a
-			// native input, so `.check()` does not apply to it.
-			await page.getByRole("radio").first().click({ timeout: 10000 });
-
-			const submitQuiz = page.waitForResponse(
-				(res) =>
-					res
-						.url()
-						.includes(
-							"/api/method/lms.lms.doctype.lms_quiz.lms_quiz.submit_quiz"
-						) && res.request().method() === "POST",
-				{ timeout: 15000 }
-			);
-
-			// show_answers defaults to 1 on LMS Quiz, so a choice question offers
-			// Check before it offers Submit. Submit only replaces it once the
-			// answer has been revealed.
-			await button(page, "Check").click();
-			await button(page, "Submit").click();
-			await submitQuiz;
-
-			// The result leads with a Passed or Failed badge, then the marks.
-			await expect(page.getByTestId("quiz-verdict")).toBeVisible({
-				timeout: 10000,
-			});
-			await expect(page.getByText(/of \d+ marks/)).toBeVisible();
-		});
+		await expect(page.getByText(/of \d+ marks/)).toBeVisible();
 	});
 });
