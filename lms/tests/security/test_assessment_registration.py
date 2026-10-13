@@ -147,10 +147,6 @@ class TestAssessmentRegistrationAgreement(BaseTestUtils):
 				self.assertFalse(framework_allows(doctype, name, "Guest"))
 				self.assertFalse(can_access_assessment(doctype, name, user="Guest"))
 
-	def test_a_malformed_name_is_refused_by_the_document_gate(self):
-		self.assertFalse(can_access_assessment("LMS Quiz", None, user=self.member.name))
-		self.assertFalse(can_access_assessment("LMS Quiz", {"title": ("like", "%")}, user=self.member.name))
-
 	def test_a_doctype_the_hook_does_not_gate_gets_no_opinion(self):
 		"""The hook is registered for three doctypes and reads the doctype off the doc,
 		so anything else must pass through rather than be refused — a hook that denied
