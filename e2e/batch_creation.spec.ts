@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures";
 import type { Page } from "@playwright/test";
-import { closeOnboardingModal, button, waitForApiCall } from "./helpers";
+import { button, waitForApiCall } from "./helpers";
 
 const dateNow = Date.now();
 const randomEvaluator = `evaluator${dateNow}@example.com`;
@@ -34,7 +34,6 @@ const openUsersSettings = async (page: Page) => {
 test.describe("Batch Creation", () => {
 	test("creates an evaluator via Users settings", async ({ page }) => {
 		await page.goto("/lms/batches");
-		await closeOnboardingModal(page);
 
 		await openUsersSettings(page);
 
@@ -90,7 +89,6 @@ test.describe("Batch Creation", () => {
 		const randomStudent = `testuser_${Date.now()}@example.com`;
 
 		await page.goto("/lms/batches");
-		await closeOnboardingModal(page);
 
 		// The Enrol dialog's Student field is a User link that searches
 		// existing users, so the student must exist before we can enrol them.
@@ -114,7 +112,6 @@ test.describe("Batch Creation", () => {
 
 		// Back to the batch list to create the batch.
 		await page.goto("/lms/batches");
-		await closeOnboardingModal(page);
 
 		// Create batch
 		await button(page, "Create").click();
@@ -171,7 +168,6 @@ test.describe("Batch Creation", () => {
 
 		// Verify redirect to settings
 		await expect(page).toHaveURL(/#settings/, { timeout: 10000 });
-		await closeOnboardingModal(page);
 
 		// Publish
 		await button(page, "Publish").click();
@@ -185,7 +181,6 @@ test.describe("Batch Creation", () => {
 
 		// View batch card in list
 		await page.goto("/lms/batches");
-		await closeOnboardingModal(page);
 		await expect(page).toHaveURL(/\/lms\/batches/);
 		await page.getByRole("radio", { name: "Upcoming" }).click();
 
@@ -240,7 +235,6 @@ test.describe("Batch Creation", () => {
 			.or(page.getByRole("tab"))
 			.filter({ hasText: "Dashboard" })
 			.click();
-		await closeOnboardingModal(page);
 		await button(page, "Enroll").click();
 		const enrollDialog = page.locator('div[role="dialog"]').first();
 		const studentField = enrollDialog
