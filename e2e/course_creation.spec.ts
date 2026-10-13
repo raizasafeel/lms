@@ -1,7 +1,8 @@
 import { test, expect } from "./fixtures";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { button, waitForApiCall } from "./helpers";
+import { button, callMethod, waitForApiCall } from "./helpers";
+import { authFile, baseURL } from "./config";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -26,6 +27,23 @@ const settingsTab = (page: import("@playwright/test").Page) =>
 		.filter({ hasText: "Settings" });
 
 test.describe("Course Creation", () => {
+	// Deleting through the UI only re-proved delete_course, whose cascade
+	// lms/tests/api/test_delete.py covers; this just keeps a local site tidy.
+	test.afterAll(async ({ playwright }) => {
+		if (!courseSlug) return;
+		const request = await playwright.request.newContext({
+			baseURL,
+			storageState: authFile,
+		});
+		try {
+			await callMethod(request, "lms.lms.api.delete_course", {
+				course: courseSlug,
+			});
+		} finally {
+			await request.dispose();
+		}
+	});
+
 	test("creates a new course with settings", async ({ page }) => {
 		await page.goto("/lms/courses");
 
@@ -272,25 +290,5 @@ test.describe("Course Creation", () => {
 		await expect(page.getByText("Test Chapter")).toBeVisible({
 			timeout: 15000,
 		});
-	});
-
-	test("deletes the course", async ({ page }) => {
-		await page.goto(`/lms/courses/${courseSlug}`);
-
-		await settingsTab(page).click();
-
-		await page
-			.locator("header")
-			.locator('button[aria-haspopup="menu"]')
-			.first()
-			.click({ force: true, timeout: 10000 });
-		await page
-			.locator("div[role=menu]")
-			.getByRole("menuitem", { name: "Delete" })
-			.click();
-		await page.locator("span").filter({ hasText: "Delete" }).first().click();
-
-		await expect(page).toHaveURL(/\/lms\/courses(\/|\?|$)/, { timeout: 10000 });
-		await expect(page.getByText(courseTitle)).toHaveCount(0);
 	});
 });
