@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures";
 import type { Page } from "@playwright/test";
-import { button, waitForApiCall } from "./helpers";
+import { button, callMethod, waitForApiCall } from "./helpers";
 
 const dateNow = Date.now();
 const randomEvaluator = `evaluator${dateNow}@example.com`;
@@ -85,32 +85,21 @@ test.describe("Batch Creation", () => {
 
 	test("creates and verifies a new batch", async ({ page }) => {
 		// Unique per attempt: on a retry the previous attempt's user already
-		// exists, and re-adding it leaves the member modal open (insert errors).
+		// exists, and inserting it again fails.
 		const randomStudent = `testuser_${Date.now()}@example.com`;
-
-		await page.goto("/lms/batches");
 
 		// The Enrol dialog's Student field is a User link that searches
 		// existing users, so the student must exist before we can enrol them.
-		// Create it via Users settings (mirrors the evaluator setup, without a
-		// role).
-		await openUsersSettings(page);
-		await page
-			.locator("[data-dismissable-layer]")
-			.locator("button")
-			.filter({ hasText: "New" })
-			.click();
-		await fillMemberField(page, "Email", randomStudent);
-		await fillMemberField(page, "First Name", "Student");
-		const studentInsert = waitForApiCall(
-			page,
-			"/api/method/frappe.client.insert"
-		);
-		await page.getByTestId("member-save").click();
-		await studentInsert;
-		await expect(page.getByText("Add New Member")).toHaveCount(0);
+		// Creating a user through Users settings is the evaluator test's job;
+		// this inserts the same doc MemberForm.vue's addMember does.
+		await callMethod(page.request, "frappe.client.insert", {
+			doc: {
+				doctype: "User",
+				email: randomStudent,
+				first_name: "Student",
+			},
+		});
 
-		// Back to the batch list to create the batch.
 		await page.goto("/lms/batches");
 
 		// Create batch

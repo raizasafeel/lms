@@ -27,3 +27,22 @@ export async function csrfToken(request: APIRequestContext) {
 	if (!token) throw new Error("/lms rendered no CSRF token");
 	return token;
 }
+
+// For fixtures the test is not about: setting them up through the UI only
+// adds time and flake.
+export async function callMethod(
+	request: APIRequestContext,
+	method: string,
+	args: Record<string, unknown> = {}
+) {
+	const response = await request.post(`/api/method/${method}`, {
+		data: args,
+		headers: { "X-Frappe-CSRF-Token": await csrfToken(request) },
+	});
+	if (!response.ok()) {
+		throw new Error(
+			`${method} failed: ${response.status()} ${await response.text()}`
+		);
+	}
+	return (await response.json()).message;
+}
