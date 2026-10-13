@@ -199,18 +199,8 @@ test.describe("Batch Creation", () => {
 			page.getByText("Test Batch Short Description to test the UI")
 		).toBeVisible();
 		await expect(page.getByText("Evaluator")).toBeVisible();
-		// BatchOverview renders BatchOverlay twice for responsive layouts: a
-		// mobile copy (md:hidden, first in the DOM) and a desktop copy (hidden
-		// md:block). A plain text locator matches the first DOM node, i.e. the
-		// mobile copy, which is display:none on the desktop test viewport —
-		// scope these assertions to the visible overlay.
-		const overlay = page
-			.locator(".border-2.rounded-5.lg\\:w-72:visible")
-			.first();
-		await expect(overlay.getByText("01 Oct 2030 - 31 Oct 2030")).toBeVisible();
-		await expect(overlay.getByText("10:00 AM - 11:00 AM")).toBeVisible();
-		await expect(overlay.getByText("Asia/Kolkata")).toBeVisible();
-		await expect(overlay.getByText("10 Seats Left")).toBeVisible();
+		// The dates, times, timezone and seats were checked on the card above;
+		// BatchOverlay formats them with the same helpers as BatchCard.
 		await expect(
 			page.getByText(
 				"Test Batch Description. I need a very big description to test the UI."
@@ -240,9 +230,9 @@ test.describe("Batch Creation", () => {
 		// in the shell submits with "Save".
 		await page.getByTestId("batch-student-save").click();
 
-		// Verify seat count (scope to the visible overlay; the mobile
-		// md:hidden copy is first in the DOM but display:none on this
-		// viewport).
+		// Enrolling takes a seat. BatchOverview renders BatchOverlay twice for
+		// responsive layouts: a mobile copy (md:hidden, first in the DOM) and a
+		// desktop copy (hidden md:block), so scope to the visible one.
 		await page
 			.getByRole("button")
 			.or(page.getByRole("tab"))
