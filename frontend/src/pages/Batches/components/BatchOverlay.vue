@@ -105,13 +105,23 @@
 					</template>
 					{{ __('Enroll Now') }}
 				</Button>
+				<Tooltip v-else-if="cannotEnrollReason" :text="cannotEnrollReason">
+					<div class="mt-4">
+						<Button class="w-full" disabled>
+							<template #prefix>
+								<span class="lucide-graduation-cap size-4" />
+							</template>
+							{{ __('Enroll Now') }}
+						</Button>
+					</div>
+				</Tooltip>
 			</div>
 		</div>
 	</div>
 </template>
 <script setup>
 import { inject, computed } from 'vue'
-import { Badge, Button, createResource, toast } from 'frappe-ui'
+import { Badge, Button, createResource, toast, Tooltip } from 'frappe-ui'
 import {
 	formatNumberIntoCurrency,
 	formatTime,
@@ -164,6 +174,16 @@ const enrollInBatch = () => {
 
 const hasSeatsLeft = computed(() => {
 	return !props.batch.data?.seat_count || props.batch.data.seats_left > 0
+})
+
+const cannotEnrollReason = computed(() => {
+	if (!props.batch.data?.accept_enrollments) {
+		return __('Enrollment for this batch is closed')
+	}
+	if (hasSeatsLeft.value) {
+		return __('Contact the Administrator to enroll for this batch')
+	}
+	return ''
 })
 
 const isStudent = computed(() => {

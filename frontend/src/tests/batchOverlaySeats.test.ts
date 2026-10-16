@@ -10,6 +10,10 @@ vi.mock('frappe-ui', () => ({
 		props: ['label'],
 		template: `<span class="badge">{{ label }}</span>`,
 	},
+	Tooltip: {
+		props: ['text'],
+		template: `<div :data-tooltip="text"><slot /></div>`,
+	},
 	Button: {
 		inheritAttrs: false,
 		props: ['route'],
@@ -64,5 +68,30 @@ describe('BatchOverlay seat limits', () => {
 
 		const free = mountOverlay({ allow_self_enrollment: 1, seat_count: 0 })
 		expect(free.text()).toContain('Enroll Now')
+	})
+})
+
+describe('BatchOverlay when the viewer cannot join', () => {
+	const reason = (w: ReturnType<typeof mountOverlay>) =>
+		w.find('[data-tooltip]').attributes('data-tooltip')
+
+	// Regression: no button and no reason when a batch can't be joined (#3028,
+	// fixed in #3035).
+	it('disables Enroll Now and says enrollment is closed', () => {
+		const w = mountOverlay({ allow_self_enrollment: 1, accept_enrollments: 0 })
+		expect(w.find('button').attributes('disabled')).toBeDefined()
+		expect(reason(w)).toBe('Enrollment for this batch is closed')
+	})
+
+	it('points to the administrator when self-enrollment is off', () => {
+		const w = mountOverlay({ seat_count: 0 })
+		expect(w.find('button').attributes('disabled')).toBeDefined()
+		expect(reason(w)).toBe('Contact the Administrator to enroll for this batch')
+	})
+
+	it('leaves a full batch to its Sold Out badge', () => {
+		const w = mountOverlay({ seat_count: 5, seats_left: 0 })
+		expect(w.text()).toContain('Sold Out')
+		expect(w.find('button').exists()).toBe(false)
 	})
 })
