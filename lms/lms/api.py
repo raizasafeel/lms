@@ -17,6 +17,7 @@ from frappe.integrations.frappe_providers.frappecloud_billing import (
 	current_site_info,
 	is_fc_site,
 )
+from frappe.query_builder.functions import Avg, Coalesce
 from frappe.rate_limiter import rate_limit
 from frappe.translate import get_all_translations
 from frappe.utils import (
@@ -3839,6 +3840,7 @@ def get_popular_courses():
 def get_my_batches():
 	my_batches = []
 	batches = get_my_latest_batches()
+	progress = get_batch_progress(batches)
 
 	if not len(batches):
 		batches = get_upcoming_batches()
@@ -3846,9 +3848,28 @@ def get_my_batches():
 	for batch in batches:
 		batch_details = get_batch_details(batch)
 		if batch_details:
+			batch_details.progress = progress.get(batch)
 			my_batches.append(batch_details)
 
 	return my_batches
+
+
+def get_batch_progress(batches: list) -> dict:
+	"""Average course progress over each batch's courses; a course not started counts as 0."""
+	if not batches:
+		return {}
+
+	batch_course = frappe.qb.DocType("Batch Course")
+	enrollment = frappe.qb.DocType("LMS Enrollment")
+	rows = (
+		frappe.qb.from_(batch_course)
+		.left_join(enrollment)
+		.on((enrollment.course == batch_course.course) & (enrollment.member == frappe.session.user))
+		.where((batch_course.parent.isin(batches)) & (batch_course.parenttype == "LMS Batch"))
+		.groupby(batch_course.parent)
+		.select(batch_course.parent, Avg(Coalesce(enrollment.progress, 0)))
+	).run()
+	return {batch: flt(progress, 2) for batch, progress in rows}
 
 
 def get_my_latest_batches():
