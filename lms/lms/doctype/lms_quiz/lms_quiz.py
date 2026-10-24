@@ -168,7 +168,7 @@ def _validate_quiz_results(results):
 			frappe.throw(_("Invalid quiz results submitted."), frappe.ValidationError)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def submit_quiz(
 	quiz: str,
 	results: str | None = None,

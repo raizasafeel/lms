@@ -504,7 +504,7 @@ def apply_enforcement_flags(quiz_done: bool, assignment_done: bool, settings: di
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def save_progress(lesson: str, course: str | None = None, scorm_details: dict = None):
 	"""
 	Note: Pass the argument scorm_details as a dict if it is SCORM related save_progress

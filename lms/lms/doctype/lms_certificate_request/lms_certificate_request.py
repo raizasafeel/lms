@@ -254,7 +254,7 @@ def get_unscheduled_evaluations() -> list[str]:
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def setup_calendar_event(eval_name: str):
 	evaluation = frappe.db.get_value(
 		"LMS Certificate Request",

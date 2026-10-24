@@ -184,7 +184,7 @@ def is_certified(course):
 	return certificate.name if certificate else None
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_certificate(course: str):
 	certificate = is_certified(course)
 	if certificate:
