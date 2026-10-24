@@ -163,6 +163,7 @@
 								class="flex items-center gap-x-2 mt-2 md:mt-0"
 							>
 								<Button
+									v-if="canUseDiscussions"
 									@click="showDiscussionsInZenMode()"
 									:label="__('Toggle discussions')"
 								>
@@ -282,7 +283,7 @@
 							@updateNotes="updateNotes"
 						/>
 						<Discussions
-							v-else-if="allowDiscussions"
+							v-else-if="showDiscussions"
 							:title="'Questions'"
 							:doctype="'Course Lesson'"
 							:docname="lesson.data.name"
@@ -340,7 +341,7 @@
 		</BottomSheet>
 	</div>
 	<InlineLessonMenu
-		v-if="lesson.data?.name"
+		v-if="lesson.data?.name && canCreateNotes"
 		v-model="showInlineMenu"
 		:lesson="lesson.data?.name"
 		v-model:notes="notes"
@@ -406,6 +407,10 @@ import InlineLessonMenu from '@/components/Notes/InlineLessonMenu.vue'
 import { parseStoredEditorJs } from '@/utils/lessonForm'
 import { isLessonSelection } from '@/utils/lessonSelection'
 import { getLmsRoute } from '@/utils/basePath'
+import {
+	canReadDiscussions,
+	hasDoctypePermission,
+} from '@/utils/doctypePermissions'
 import { provideStudentView } from '@/composables/useStudentView'
 import type { UserResource } from '@/composables/useStudentView'
 import type { Note, Notes as NotesResource } from '@/types'
@@ -478,6 +483,16 @@ const { isStudentView, mockedUser } = provideStudentView(
 const user = mockedUser
 const socket = inject<LessonSocket>('$socket')!
 const allowDiscussions = ref(false)
+const canUseDiscussions = computed(() => canReadDiscussions(user))
+const showDiscussions = computed(
+	() => allowDiscussions.value && canUseDiscussions.value
+)
+const canReadNotes = computed(() =>
+	hasDoctypePermission(user, 'LMS Lesson Note')
+)
+const canCreateNotes = computed(() =>
+	hasDoctypePermission(user, 'LMS Lesson Note', 'create')
+)
 const editor = ref<EditorJS | null>(null)
 const instructorEditor = ref<EditorJS | null>(null)
 const lessonProgress = ref(0)
@@ -1283,7 +1298,7 @@ const scrollDiscussionsIntoView = () => {
 }
 
 const updateNotes = () => {
-	if (!user.data) return
+	if (!user.data || !canReadNotes.value) return
 	notes.update({
 		filters: {
 			lesson: lesson.data?.name,
@@ -1298,10 +1313,10 @@ const updateNotes = () => {
 // appeared, and tabs pushed on an earlier lesson stayed after moving on.
 const tabs = computed<LessonTab[]>(() => [
 	// Guests cannot save notes, so they get none.
-	...(user.data && !isAdmin.value
+	...(user.data && !isAdmin.value && canReadNotes.value
 		? [{ label: __('Notes'), value: 'Notes' }]
 		: []),
-	...(allowDiscussions.value
+	...(showDiscussions.value
 		? [{ label: __('Community'), value: 'Community' }]
 		: []),
 ])

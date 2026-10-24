@@ -1,5 +1,8 @@
 <template>
-	<div v-if="reviews.data?.length || membership" class="mt-12">
+	<div
+		v-if="canReadReviews && (reviews.data?.length || membership)"
+		class="mt-12"
+	>
 		<div class="flex items-center justify-between gap-3 mb-8">
 			<div class="flex items-center gap-2">
 				<LucideStar class="size-5 text-transparent fill-ink-amber-7" />
@@ -17,7 +20,7 @@
 				</span>
 			</div>
 			<Button
-				v-if="membership && !hasReviewed.data"
+				v-if="canWriteReview && membership && !hasReviewed.data"
 				class="text-p-base-medium"
 				@click="openReviewModal()"
 			>
@@ -111,6 +114,7 @@ import { createResource, Button } from 'frappe-ui'
 import { computed, inject, reactive, ref, watch } from 'vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { formatRating } from '@/utils'
+import { hasDoctypePermission } from '@/utils/doctypePermissions'
 import ReviewModal from '@/components/Modals/ReviewModal.vue'
 import type dayjsType from 'dayjs'
 import type {
@@ -132,6 +136,15 @@ const props = defineProps<{
 	membership?: Membership | null
 }>()
 
+// Guests keep the public list get_reviews serves them; a signed-in role is
+// gated on its LMS Course Review DocPerms.
+const canReadReviews = computed(
+	() => !user.data || hasDoctypePermission(user, 'LMS Course Review')
+)
+const canWriteReview = computed(() =>
+	hasDoctypePermission(user, 'LMS Course Review', 'create')
+)
+
 const hasReviewed = createResource({
 	url: 'frappe.client.get_count',
 	cache: ['eligible_to_review', props.courseName, props.membership?.member],
@@ -142,7 +155,7 @@ const hasReviewed = createResource({
 			owner: props.membership?.member,
 		},
 	},
-	auto: user.data?.name ? true : false,
+	auto: Boolean(user.data?.name && canReadReviews.value),
 }) as Resource<number | null>
 
 const reviews = createResource({
@@ -151,13 +164,13 @@ const reviews = createResource({
 	makeParams() {
 		return { course: props.courseName }
 	},
-	auto: Boolean(props.courseName),
+	auto: Boolean(props.courseName && canReadReviews.value),
 }) as Resource<CourseReviewInfo[] | null>
 
 watch(
 	() => props.courseName,
 	() => {
-		if (props.courseName) reviews.reload()
+		if (props.courseName && canReadReviews.value) reviews.reload()
 	}
 )
 
