@@ -1,0 +1,208 @@
+"""What every certificate design prints. Fonts and the QR code travel inside the HTML because
+wkhtmltopdf, Chromium and the sandboxed preview iframe cannot all fetch them while rendering."""
+
+import base64
+import functools
+import io
+from pathlib import Path
+
+import frappe
+from frappe import _
+from frappe.utils import get_url, getdate
+
+from lms.lms.utils import get_instructors, resolve_text_direction
+
+DESIGNS = ("classic", "modern", "minimal", "ledger", "banner", "corners", "record")
+MAX_PEOPLE = 4
+SAMPLE_ID = "SAMPLE0000"
+
+# Longest name/title (in characters) each pixel size still fits, per design. The last
+# step has no limit: long names wrap instead of being cut.
+TEXT_SIZES = {
+	"classic": (((26, 56), (36, 46), (None, 38)), ((40, 30), (70, 25), (None, 21))),
+	"modern": (((22, 76), (32, 60), (44, 48), (None, 42)), ((40, 34), (70, 28), (None, 23))),
+	"minimal": (((26, 52), (38, 42), (None, 36)), ((40, 26), (70, 22), (None, 19))),
+	"ledger": (((22, 60), (32, 48), (44, 40), (None, 34)), ((40, 28), (70, 24), (None, 20))),
+	"banner": (((24, 54), (34, 44), (None, 36)), ((40, 26), (70, 22), (None, 19))),
+	"corners": (((24, 58), (36, 46), (None, 38)), ((40, 28), (70, 23), (None, 20))),
+	"record": (((22, 68), (32, 54), (44, 44), (None, 38)), ((40, 24), (70, 20), (None, 18))),
+}
+
+FONT_DIR = ("public", "fonts", "certificates")
+FONT_FACES = {
+	"sans": (
+		("LMS Sans", "NotoSans-Regular.woff", 400, "normal"),
+		("LMS Sans", "NotoSans-Bold.woff", 700, "normal"),
+		("LMS Sans Arabic", "NotoSansArabic-Regular.woff", 400, "normal"),
+		("LMS Sans Arabic", "NotoSansArabic-Bold.woff", 700, "normal"),
+	),
+	"serif": (
+		("LMS Serif", "NotoSerif-Regular.woff", 400, "normal"),
+		("LMS Serif", "NotoSerif-Bold.woff", 700, "normal"),
+		("LMS Serif", "NotoSerif-Italic.woff", 400, "italic"),
+		("LMS Naskh Arabic", "NotoNaskhArabic-Regular.woff", 400, "normal"),
+		("LMS Naskh Arabic", "NotoNaskhArabic-Bold.woff", 700, "normal"),
+	),
+	"mono": (("LMS Mono", "NotoSansMono-Regular.woff", 400, "normal"),),
+}
+ARABIC_LIST_LANGUAGES = ("ar", "fa", "ur", "ps")
+
+
+def get_certificate_context(doc, design: str = "classic") -> frappe._dict:
+	"""Everything a certificate design prints for `doc`, an LMS Certificate that may be unsaved."""
+	lang = get_certificate_language()
+	labels = get_labels(lang)
+	kind = "course" if doc.course else "batch"
+	title = get_certificate_title(doc, kind)
+	name = doc.member_name or frappe.db.get_value("User", doc.member, "full_name") or ""
+	certificate_id = doc.name or SAMPLE_ID
+	verify_url = get_verification_url(certificate_id)
+	name_size, title_size = get_text_sizes(design, name, title)
+	return frappe._dict(
+		{
+			"lang": lang,
+			"direction": resolve_text_direction(lang),
+			"labels": labels,
+			"kind": kind,
+			"completed": labels.completed_batch if kind == "batch" else labels.completed_course,
+			"kind_label": labels.batch if kind == "batch" else labels.course,
+			"name": name,
+			"title": title,
+			"name_size": name_size,
+			"title_size": title_size,
+			"issued": format_certificate_date(doc.issue_date, lang),
+			"expires": format_certificate_date(doc.expiry_date, lang),
+			"certificate_id": certificate_id,
+			"verify_url": verify_url,
+			"verify_short": verify_url.split("://", 1)[-1],
+			"qr_code": get_qr_code(verify_url),
+			"font_css": get_certificate_font_css("serif" if design == "classic" else "sans"),
+			**get_issuer(),
+			**get_people(doc, kind, lang, labels),
+		}
+	)
+
+
+def get_certificate_language() -> str:
+	return frappe.db.get_single_value("System Settings", "language") or "en"
+
+
+def get_labels(lang: str) -> frappe._dict:
+	return frappe._dict(
+		{
+			"heading": _("Certificate of completion", lang=lang),
+			"certifies": _("This certifies that", lang=lang),
+			"awarded_to": _("Awarded to", lang=lang),
+			"completed_course": _("has completed the course", lang=lang),
+			"completed_batch": _("has completed the batch", lang=lang),
+			"issued": _("Date of issue", lang=lang),
+			"valid_until": _("Valid until", lang=lang),
+			"certificate_id": _("Certificate ID", lang=lang),
+			"verify_at": _("Verify at", lang=lang),
+			"instructor": _("Instructor", lang=lang),
+			"instructors": _("Instructors", lang=lang),
+			"evaluator": _("Evaluator", lang=lang),
+			"taught_by": _("Taught by", lang=lang),
+			"evaluated_by": _("Evaluated by", lang=lang),
+			"course": _("Course", lang=lang),
+			"batch": _("Batch", lang=lang),
+		}
+	)
+
+
+def get_certificate_title(doc, kind: str) -> str:
+	if kind == "course":
+		return doc.course_title or frappe.db.get_value("LMS Course", doc.course, "title") or ""
+	if not doc.batch_name:
+		return ""
+	return doc.batch_title or frappe.db.get_value("LMS Batch", doc.batch_name, "title") or ""
+
+
+def get_text_sizes(design: str, name: str, title: str) -> tuple[int, int]:
+	name_steps, title_steps = TEXT_SIZES.get(design, TEXT_SIZES["classic"])
+	return pick_size(len(name), name_steps), pick_size(len(title), title_steps)
+
+
+def pick_size(length: int, steps) -> int:
+	for limit, size in steps:
+		if limit is None or length <= limit:
+			return size
+	return steps[-1][1]
+
+
+def format_certificate_date(value, lang: str) -> str:
+	if not value:
+		return ""
+	from babel.core import UnknownLocaleError
+	from babel.dates import format_date
+
+	try:
+		return format_date(getdate(value), "d MMMM y", locale=lang.replace("-", "_"))
+	except (UnknownLocaleError, ValueError):
+		return format_date(getdate(value), "d MMMM y", locale="en")
+
+
+def get_verification_url(certificate_id: str) -> str:
+	return get_url(f"/certificates/{certificate_id}")
+
+
+def get_qr_code(url: str) -> str:
+	"""An SVG data URI, as frappe's two-factor setup renders its QR code."""
+	from pyqrcode import create
+
+	stream = io.BytesIO()
+	create(url, error="M").svg(
+		stream, scale=1, omithw=True, quiet_zone=0, module_color="#171717", background="#ffffff"
+	)
+	return "data:image/svg+xml;base64," + base64.b64encode(stream.getvalue()).decode()
+
+
+def get_issuer() -> dict:
+	logo = frappe.db.get_single_value("Website Settings", "banner_image")
+	return {
+		"site_name": frappe.db.get_single_value("Website Settings", "app_name") or "Frappe Learning",
+		"logo": get_url(logo) if logo else "",
+	}
+
+
+def get_people(doc, kind: str, lang: str, labels: frappe._dict) -> dict:
+	"""The evaluator when one signed off, else up to four instructors of the course or batch."""
+	if doc.evaluator:
+		evaluator = doc.evaluator_name or frappe.db.get_value("User", doc.evaluator, "full_name") or ""
+		names, label, prefix = [evaluator], labels.evaluator, labels.evaluated_by
+	else:
+		doctype, parent = ("LMS Course", doc.course) if kind == "course" else ("LMS Batch", doc.batch_name)
+		names = [row.full_name for row in get_instructors(doctype, parent)][:MAX_PEOPLE] if parent else []
+		label = labels.instructors if len(names) > 1 else labels.instructor
+		prefix = labels.taught_by
+	people = join_names(names, lang)
+	return {
+		"people": names,
+		"people_label": label,
+		"people_names": people,
+		"people_line": f"{prefix} {people}" if people else "",
+	}
+
+
+def join_names(names: list[str], lang: str) -> str:
+	""" "A", "A and B", "A, B and C" in the certificate's language."""
+	if len(names) <= 1:
+		return names[0] if names else ""
+	separator = "، " if lang.split("-")[0] in ARABIC_LIST_LANGUAGES else ", "
+	return _("{0} and {1}", lang=lang).format(separator.join(names[:-1]), names[-1])
+
+
+@functools.lru_cache(maxsize=4)
+def get_certificate_font_css(family: str) -> str:
+	"""@font-face rules for the bundled Noto fonts as data URIs. The files are static, so
+	one read per process is enough."""
+	faces = FONT_FACES[family] + FONT_FACES["mono"]
+	return "".join(font_face_rule(*face) for face in faces)
+
+
+def font_face_rule(family: str, filename: str, weight: int, style: str) -> str:
+	data = base64.b64encode(Path(frappe.get_app_path("lms", *FONT_DIR), filename).read_bytes()).decode()
+	return (
+		f"@font-face{{font-family:'{family}';font-weight:{weight};font-style:{style};"
+		f"src:url(data:font/woff;base64,{data}) format('woff')}}"
+	)
