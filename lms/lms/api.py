@@ -39,6 +39,7 @@ from frappe.utils.password import get_decrypted_password, remove_encrypted_passw
 from frappe.utils.response import Response
 from pypika import functions as fn
 
+from lms.lms.certificate_designs import PREVIEW_OPTIONS, render_certificate_preview
 from lms.lms.code_runner import code_to_store, run_test_cases
 from lms.lms.course_import_export import (
 	export_course_zip,
@@ -47,13 +48,19 @@ from lms.lms.course_import_export import (
 	validate_archive,
 )
 from lms.lms.doctype.course_lesson.course_lesson import save_progress
-from lms.lms.doctype.lms_certificate.lms_certificate import evaluates_certificate, get_latest_certificate
+from lms.lms.doctype.lms_certificate.lms_certificate import (
+	evaluates_certificate,
+	get_certificate_template,
+	get_latest_certificate,
+	is_certificate_template,
+)
 from lms.lms.doctype.lms_certificate_evaluation.lms_certificate_evaluation import can_evaluate
 from lms.lms.html_sanitizer import sanitize_rich_text
 from lms.lms.permissions import (
 	ASSESSMENT_DOCTYPES,
 	can_administer_assessment,
 	can_author_assessment,
+	can_author_course,
 	is_site_administrator,
 	stored_authors,
 )
@@ -2759,6 +2766,61 @@ def send_contact_us_email(subject: str, content: str) -> str:
 		message_id=message_id,
 	)
 	return communication.name
+
+
+@frappe.whitelist()
+def preview_certificate_template(print_format: str, course: str, sample: str | None = None) -> dict:
+	"""A certificate design rendered with sample data, for a course's design picker."""
+	if not isinstance(course, str) or not can_author_course(course):
+		frappe.throw(
+			_("You can preview certificate designs only for courses you author."), frappe.PermissionError
+		)
+	if not isinstance(print_format, str) or not is_certificate_template(print_format):
+		frappe.throw(
+			_("Pick an enabled Print Format for LMS Certificate."), title=_("Invalid certificate design")
+		)
+	return {"html": render_certificate_preview(print_format, course, parse_preview_options(sample))}
+
+
+def parse_preview_options(sample: str | None) -> dict:
+	if sample is None:
+		return {}
+	try:
+		options = json.loads(sample) if isinstance(sample, str) else None
+	except ValueError:
+		options = None
+	if not isinstance(options, dict) or not set(options) <= set(PREVIEW_OPTIONS):
+		frappe.throw(
+			_("Preview options must be a JSON object with keys from: {0}").format(", ".join(PREVIEW_OPTIONS))
+		)
+	if not all(isinstance(value, bool) for value in options.values()):
+		frappe.throw(_("Preview options must be true or false."))
+	return options
+
+
+@frappe.whitelist()
+def get_certificate_designs() -> dict:
+	"""The enabled certificate designs and the site default, for the design picker."""
+	if not frappe.has_permission("LMS Certificate", "create"):
+		frappe.throw(_("You cannot issue certificates."), frappe.PermissionError)
+	designs = frappe.get_all(
+		"Print Format",
+		filters={"doc_type": "LMS Certificate", "disabled": 0},
+		pluck="name",
+		order_by="name asc",
+		limit=100,
+	)
+	return {"designs": designs, "default": get_certificate_template()}
+
+
+@frappe.whitelist()
+def get_certificate_template_default(course: str | None = None) -> str | None:
+	"""The design a new certificate of `course` gets, for the forms that issue certificates."""
+	if course is not None and not isinstance(course, str):
+		frappe.throw(_("Course must be a string."))
+	if not frappe.has_permission("LMS Certificate", "create"):
+		frappe.throw(_("You cannot issue certificates."), frappe.PermissionError)
+	return get_certificate_template(course)
 
 
 @frappe.whitelist()

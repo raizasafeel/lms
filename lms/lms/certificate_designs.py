@@ -8,7 +8,7 @@ from pathlib import Path
 
 import frappe
 from frappe import _
-from frappe.utils import get_url, getdate
+from frappe.utils import add_years, get_url, getdate, nowdate
 
 from lms.lms.utils import get_instructors, resolve_text_direction
 
@@ -50,9 +50,10 @@ ARABIC_LIST_LANGUAGES = ("ar", "fa", "ur", "ps")
 
 def get_certificate_context(doc, design: str = "classic") -> frappe._dict:
 	"""Everything a certificate design prints for `doc`, an LMS Certificate that may be unsaved."""
-	lang = get_certificate_language()
+	preview = doc.flags.certificate_preview or {}
+	lang = preview.get("language") or get_certificate_language()
 	labels = get_labels(lang)
-	kind = "course" if doc.course else "batch"
+	kind = preview.get("kind") or ("course" if doc.course else "batch")
 	title = get_certificate_title(doc, kind)
 	name = doc.member_name or frappe.db.get_value("User", doc.member, "full_name") or ""
 	certificate_id = doc.name or SAMPLE_ID
@@ -77,8 +78,8 @@ def get_certificate_context(doc, design: str = "classic") -> frappe._dict:
 			"verify_short": verify_url.split("://", 1)[-1],
 			"qr_code": get_qr_code(verify_url),
 			"font_css": get_certificate_font_css("serif" if design == "classic" else "sans"),
-			**get_issuer(),
-			**get_people(doc, kind, lang, labels),
+			**get_issuer(hide_logo=preview.get("hide_logo")),
+			**get_people(doc, lang, labels, preview.get("people")),
 		}
 	)
 
@@ -113,9 +114,9 @@ def get_labels(lang: str) -> frappe._dict:
 def get_certificate_title(doc, kind: str) -> str:
 	if kind == "course":
 		return doc.course_title or frappe.db.get_value("LMS Course", doc.course, "title") or ""
-	if not doc.batch_name:
-		return ""
-	return doc.batch_title or frappe.db.get_value("LMS Batch", doc.batch_name, "title") or ""
+	if doc.batch_title or not doc.batch_name:
+		return doc.batch_title or ""
+	return frappe.db.get_value("LMS Batch", doc.batch_name, "title") or ""
 
 
 def get_text_sizes(design: str, name: str, title: str) -> tuple[int, int]:
@@ -157,21 +158,25 @@ def get_qr_code(url: str) -> str:
 	return "data:image/svg+xml;base64," + base64.b64encode(stream.getvalue()).decode()
 
 
-def get_issuer() -> dict:
-	logo = frappe.db.get_single_value("Website Settings", "banner_image")
+def get_issuer(hide_logo: bool = False) -> dict:
+	logo = None if hide_logo else frappe.db.get_single_value("Website Settings", "banner_image")
 	return {
 		"site_name": frappe.db.get_single_value("Website Settings", "app_name") or "Frappe Learning",
 		"logo": get_url(logo) if logo else "",
 	}
 
 
-def get_people(doc, kind: str, lang: str, labels: frappe._dict) -> dict:
+def get_people(doc, lang: str, labels: frappe._dict, sample: list | None = None) -> dict:
 	"""The evaluator when one signed off, else up to four instructors of the course or batch."""
-	if doc.evaluator:
+	if sample:
+		names = sample[:MAX_PEOPLE]
+		label = labels.instructors if len(names) > 1 else labels.instructor
+		prefix = labels.taught_by
+	elif doc.evaluator:
 		evaluator = doc.evaluator_name or frappe.db.get_value("User", doc.evaluator, "full_name") or ""
 		names, label, prefix = [evaluator], labels.evaluator, labels.evaluated_by
 	else:
-		doctype, parent = ("LMS Course", doc.course) if kind == "course" else ("LMS Batch", doc.batch_name)
+		doctype, parent = ("LMS Course", doc.course) if doc.course else ("LMS Batch", doc.batch_name)
 		names = [row.full_name for row in get_instructors(doctype, parent)][:MAX_PEOPLE] if parent else []
 		label = labels.instructors if len(names) > 1 else labels.instructor
 		prefix = labels.taught_by
@@ -235,3 +240,66 @@ def render_certificate(certificate: str, print_format: str) -> str | None:
 		return None
 	finally:
 		frappe.flags.ignore_print_permissions = previous
+
+
+PREVIEW_OPTIONS = ("long", "batch", "expiry", "no_logo", "rtl")
+SAMPLE = {
+	"en": {
+		"name": "Maya Fernandes",
+		"long_name": "Maximiliana Alexandra Wójcik-Fitzgerald Okonkwo",
+		"long_title": "Advanced data analysis and interactive dashboard design for decision makers",
+		"batch_title": "Spring 2026 cohort",
+		"people": ["Ana Ruiz", "Wei Chen", "Rahul Mehta", "Sara Okafor"],
+	},
+	"ar": {
+		"name": "ليلى عبد الرحمن",
+		"long_name": "عبد الرحمن بن محمد بن إبراهيم الفلاحي القحطاني",
+		"long_title": "تحليل البيانات المتقدم وتصميم لوحات المعلومات التفاعلية لصناع القرار",
+		"batch_title": "دفعة ربيع 2026",
+		"people": ["سارة الخطيب"],
+	},
+}
+
+
+def render_certificate_preview(print_format: str, course: str, options: dict) -> str | None:
+	"""`print_format` rendered for an unsaved certificate of `course` with sample data. A custom
+	design that cannot render sample data returns None instead of a traceback."""
+	doc = build_preview_certificate(course, options)
+	previous = frappe.flags.ignore_print_permissions
+	frappe.flags.ignore_print_permissions = True
+	try:
+		return as_screen_document(
+			frappe.get_print("LMS Certificate", None, print_format, doc=doc, no_letterhead=1)
+		)
+	except Exception:
+		frappe.log_error(title=f"Certificate design preview failed: {print_format}")
+		return None
+	finally:
+		frappe.flags.ignore_print_permissions = previous
+
+
+def build_preview_certificate(course: str, options: dict):
+	sample = SAMPLE["ar" if options.get("rtl") else "en"]
+	title = sample["long_title"] if options.get("long") or options.get("rtl") else None
+	doc = frappe.new_doc("LMS Certificate")
+	doc.update(
+		{
+			"course": course,
+			"member": frappe.session.user,
+			"member_name": sample["long_name"] if options.get("long") else sample["name"],
+			"course_title": title or frappe.db.get_value("LMS Course", course, "title"),
+			"batch_title": sample["batch_title"] if options.get("batch") else None,
+			"issue_date": nowdate(),
+			"expiry_date": add_years(nowdate(), 2) if options.get("expiry") else None,
+		}
+	)
+	if options.get("batch"):
+		doc.course_title = None
+	people = sample["people"] if options.get("long") or options.get("rtl") else None
+	doc.flags.certificate_preview = {
+		"kind": "batch" if options.get("batch") else "course",
+		"hide_logo": bool(options.get("no_logo")),
+		"language": "ar" if options.get("rtl") else None,
+		"people": people,
+	}
+	return doc
