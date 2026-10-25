@@ -23,6 +23,7 @@ class LMSCertificate(Document):
 		):
 			self.validate_criteria()
 		self.validate_duplicate_certificate()
+		self.validate_template()
 
 	def autoname(self):
 		self.name = make_autoname("hash", self.doctype)
@@ -101,6 +102,17 @@ class LMSCertificate(Document):
 					frappe.throw(
 						_("Certification cannot be issued as the member has not completed the course.")
 					)
+
+	def validate_template(self):
+		"""Only a change is checked, so a certificate keeps a design disabled after it was issued.
+		A name that does not exist is left to the link check."""
+		if not (self.template and self.has_value_changed("template")):
+			return
+		if frappe.db.exists("Print Format", self.template) and not is_certificate_template(self.template):
+			frappe.throw(
+				_("{0} is not an enabled certificate design.").format(frappe.bold(self.template)),
+				title=_("Invalid certificate design"),
+			)
 
 	def validate_duplicate_certificate(self):
 		self.validate_course_duplicates()
@@ -207,7 +219,7 @@ def create_certificate(course: str):
 
 	else:
 		validate_certification_eligibility(course)
-		default_certificate_template = get_default_certificate_template()
+		default_certificate_template = get_certificate_template(course)
 		certificate = frappe.get_doc(
 			{
 				"doctype": "LMS Certificate",
@@ -252,6 +264,20 @@ def get_default_certificate_template():
 		)
 
 	return default_certificate_template
+
+
+def get_certificate_template(course: str | None = None) -> str | None:
+	"""The design a new certificate of `course` gets: the course's choice, else the site default."""
+	template = course and frappe.db.get_value("LMS Course", course, "certificate_template")
+	if template and is_certificate_template(template):
+		return template
+	return get_default_certificate_template()
+
+
+def is_certificate_template(print_format: str) -> bool:
+	return bool(
+		frappe.db.exists("Print Format", {"name": print_format, "doc_type": "LMS Certificate", "disabled": 0})
+	)
 
 
 def validate_certification_eligibility(course):
