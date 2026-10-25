@@ -206,3 +206,32 @@ def font_face_rule(family: str, filename: str, weight: int, style: str) -> str:
 		f"@font-face{{font-family:'{family}';font-weight:{weight};font-style:{style};"
 		f"src:url(data:font/woff;base64,{data}) format('woff')}}"
 	)
+
+
+SCREEN_RESET = (
+	"<style>@media screen{.print-hide,.action-banner{display:none!important}"
+	".print-format-gutter{padding:0!important;background:#fff!important}"
+	".print-format{max-width:none!important;min-height:0!important;padding:0!important;"
+	"margin:0!important;border-radius:0!important}}</style>"
+)
+
+
+def as_screen_document(html: str) -> str:
+	"""A printview page shown in a browser frame, without the print toolbar and grey gutter
+	that frappe adds on screen, so it looks like the PDF."""
+	return html.replace("</head>", SCREEN_RESET + "</head>", 1)
+
+
+def render_certificate(certificate: str, print_format: str) -> str | None:
+	"""A saved certificate as HTML. The caller has already decided the viewer may see it."""
+	previous = frappe.flags.ignore_print_permissions
+	frappe.flags.ignore_print_permissions = True
+	try:
+		return as_screen_document(
+			frappe.get_print("LMS Certificate", certificate, print_format, no_letterhead=1)
+		)
+	except Exception:
+		frappe.log_error(title=f"Certificate render failed: {certificate}")
+		return None
+	finally:
+		frappe.flags.ignore_print_permissions = previous
