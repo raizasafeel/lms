@@ -173,3 +173,67 @@ class TestCertificateContext(CertificateFixture):
 	def test_the_issue_date_is_required_only_to_print_it(self):
 		self.assertEqual(get_certificate_context(self.certificate(issue_date=None), "classic").issued, "")
 
+
+class TestCertificateDesignsRender(CertificateFixture):
+	"""Every shipped design renders the data it is given, escaped, on one landscape page."""
+
+	def render(self, design, doc):
+		return frappe.get_print(
+			"LMS Certificate", doc.name, f"Certificate {design.title()}", doc=doc, no_letterhead=1
+		)
+
+	def variants(self):
+		return {
+			"course": self.certificate(),
+			"batch": self.certificate(course=None, course_title=None, batch_name=self.batch.name),
+			"evaluator": self.certificate(evaluator=self.evaluator.name, evaluator_name="Rahul Mehta"),
+			"expiry": self.certificate(expiry_date="2028-05-30"),
+		}
+
+	def test_each_design_renders_every_variant(self):
+		for design in DESIGNS:
+			for variant, doc in self.variants().items():
+				with self.subTest(design=design, variant=variant):
+					doc.name = "8f3k2q9a1c"
+					html = self.render(design, doc)
+					self.assertIn("Maya Fernandes", html)
+					self.assertIn("8f3k2q9a1c", html)
+					self.assertIn("/certificates/8f3k2q9a1c", html)
+					self.assertIn("data:image/svg+xml;base64,", html)
+
+	def test_each_design_renders_without_a_logo(self):
+		frappe.db.set_single_value("Website Settings", "banner_image", None)
+		for design in DESIGNS:
+			with self.subTest(design=design):
+				self.assertNotIn("northwind.png", self.render(design, self.certificate()))
+
+	def test_each_design_renders_right_to_left(self):
+		frappe.db.set_single_value("System Settings", "language", "ar")
+		for design in DESIGNS:
+			with self.subTest(design=design):
+				self.assertIn('dir="rtl"', self.render(design, self.certificate()))
+
+	def test_learner_supplied_text_is_escaped(self):
+		doc = self.certificate(member_name='<img src=x onerror="alert(1)">')
+		for design in DESIGNS:
+			with self.subTest(design=design):
+				html = self.render(design, doc)
+				self.assertNotIn('<img src=x onerror="alert(1)">', html)
+				self.assertIn("&lt;img src=x", html)
+
+	def test_a_design_prints_on_one_landscape_a4_page(self):
+		import io
+		import shutil
+
+		from pypdf import PdfReader
+
+		if not shutil.which("wkhtmltopdf"):
+			self.skipTest("wkhtmltopdf is not installed")
+		doc = self.certificate()
+		doc.name = "8f3k2q9a1c"
+		pdf = frappe.get_print(
+			"LMS Certificate", doc.name, "Certificate Modern", doc=doc, no_letterhead=1, as_pdf=True
+		)
+		pages = PdfReader(io.BytesIO(pdf)).pages
+		self.assertEqual(len(pages), 1)
+		self.assertGreater(float(pages[0].mediabox.width), float(pages[0].mediabox.height))
