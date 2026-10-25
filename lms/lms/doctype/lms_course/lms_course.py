@@ -10,6 +10,7 @@ from frappe.model.document import Document
 from frappe.utils import cint, comma_and, escape_html, flt, today
 
 from lms.lms.doctype.course_lesson.course_lesson import get_valid_question_count
+from lms.lms.doctype.lms_certificate.lms_certificate import is_certificate_template
 
 from ...utils import (
 	generate_slug,
@@ -48,6 +49,7 @@ class LMSCourse(Document):
 		self.validate_status()
 		self.validate_payments_app()
 		self.validate_certification()
+		self.validate_certificate_template()
 		self.validate_amount_and_currency()
 		validate_attachable_file(self, "image")
 		self.image = validate_image(self.image)
@@ -120,6 +122,15 @@ class LMSCourse(Document):
 
 		if self.paid_certificate and not self.timezone:
 			frappe.throw(_("Timezone is required for paid certificates."))
+
+	def validate_certificate_template(self):
+		if self.certificate_template and not is_certificate_template(self.certificate_template):
+			frappe.throw(
+				_(
+					"{0} is not an enabled certificate design. Pick a Print Format for LMS Certificate."
+				).format(frappe.bold(self.certificate_template)),
+				title=_("Invalid certificate design"),
+			)
 
 	def validate_amount_and_currency(self):
 		if self.paid_course and (cint(self.course_price) <= 0 or not self.currency):

@@ -38,6 +38,7 @@
   "paid_certificate",
   "column_break_acoj",
   "enable_certification",
+  "certificate_template",
   "section_break_vqbh",
   "course_price",
   "currency",
@@ -144,6 +145,14 @@
    "fieldname": "enable_certification",
    "fieldtype": "Check",
    "label": "Completion Certificate"
+  },
+  {
+   "depends_on": "eval:doc.enable_certification || doc.paid_certificate",
+   "description": "Design for new certificates of this course. Leave empty to use the site default.",
+   "fieldname": "certificate_template",
+   "fieldtype": "Link",
+   "label": "Certificate Design",
+   "options": "Print Format"
   },
   {
    "fieldname": "related_courses",
@@ -322,7 +331,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-02-19 11:41:57.038869",
+ "modified": "2026-10-26 10:00:00.000000",
  "modified_by": "sayali@frappe.io",
  "module": "LMS",
  "name": "LMS Course",
