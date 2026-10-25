@@ -28,6 +28,8 @@ declare module 'vue' {
     BrandSettings: typeof import('./src/components/Settings/BrandSettings.vue')['default']
     CardLink: typeof import('./src/components/CardLink.vue')['default']
     Categories: typeof import('./src/components/Settings/Categories.vue')['default']
+    CertificateDesignDialog: typeof import('./src/components/Modals/CertificateDesignDialog.vue')['default']
+    CertificatePreview: typeof import('./src/components/CertificatePreview.vue')['default']
     CertificationLinks: typeof import('./src/components/CertificationLinks.vue')['default']
     ChannelView: typeof import('./src/components/Settings/Raven/ChannelView.vue')['default']
     ChapterRow: typeof import('./src/components/ChapterRow.vue')['default']

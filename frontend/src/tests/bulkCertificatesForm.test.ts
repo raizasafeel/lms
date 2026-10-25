@@ -211,6 +211,27 @@ describe('BulkCertificatesForm as a route', () => {
 		expect(JSON.stringify(params)).not.toContain('member')
 	})
 
+	it('follows the default design for the chosen course', async () => {
+		const router = makeRouter()
+		await router.push('/batches/B1/certificates')
+		await mountForm(router, moderator)
+		const defaultCall = createResourceMock.mock.calls.find(
+			(c) => c[0].url === 'lms.lms.api.get_certificate_template_default'
+		)
+		const submitCall = createResourceMock.mock.calls.find(
+			(c) => c[0].url === 'lms.lms.api.generate_batch_certificates'
+		)
+		expect(defaultCall?.[0].makeParams()).toEqual({ course: null })
+		defaultCall?.[0].onSuccess('Certificate Modern')
+		expect(submitCall?.[0].makeParams().details.template).toBe(
+			'Certificate Modern'
+		)
+		defaultCall?.[0].onSuccess('Certificate Ledger')
+		expect(submitCall?.[0].makeParams().details.template).toBe(
+			'Certificate Ledger'
+		)
+	})
+
 	it('stays open and shows each failure the server reports', async () => {
 		certificateSubmit.mockImplementation(
 			(_params: unknown, options: { onSuccess: (r: unknown) => void }) => {

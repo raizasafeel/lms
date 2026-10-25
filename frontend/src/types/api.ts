@@ -201,3 +201,19 @@ export interface AssessmentAuthorsInfo {
 	authors: AssessmentAuthor[]
 	can_edit: boolean
 }
+
+export interface CertificateDesignList {
+	designs: string[]
+	default: string | null
+}
+
+export type CertificatePreviewOption =
+	| 'long'
+	| 'batch'
+	| 'expiry'
+	| 'no_logo'
+	| 'rtl'
+
+export interface CertificatePreviewResponse {
+	html: string | null
+}
