@@ -39,6 +39,8 @@ export interface LMSCourse {
 	instructors: CourseInstructor[]
 	/**	Completion Certificate : Check	*/
 	enable_certification?: 0 | 1
+	/**	Certificate Design : Link - Print Format	*/
+	certificate_template?: string | null
 	/**	Related Courses : Table - Related Courses	*/
 	related_courses?: RelatedCourses[]
 	/**	Status : Select	*/

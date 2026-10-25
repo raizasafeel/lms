@@ -68,7 +68,7 @@
 	</FormShell>
 </template>
 <script setup>
-import { computed, inject, reactive, ref } from 'vue'
+import { computed, inject, reactive, ref, watch } from 'vue'
 import { createResource, FormControl, toast } from 'frappe-ui'
 import { useRoute } from 'vue-router'
 import BooleanSwitch from '@/components/Controls/BooleanSwitch.vue'
@@ -140,6 +140,26 @@ const details = reactive({
 	published: true,
 	course: null,
 })
+
+// The course's own design when one is picked, else the site default; a template
+// the user chose by hand is left alone.
+let defaultApplied = null
+const defaultTemplate = createResource({
+	url: 'lms.lms.api.get_certificate_template_default',
+	makeParams() {
+		return { course: details.course }
+	},
+	auto: true,
+	onSuccess(template) {
+		if (details.template === defaultApplied) details.template = template
+		defaultApplied = template
+	},
+})
+
+watch(
+	() => details.course,
+	() => defaultTemplate.reload()
+)
 
 // The server certifies each student under the caller's own permissions, so this
 // form never holds their addresses. On any failure the form stays open, so the

@@ -144,26 +144,32 @@
 
 				<div
 					v-if="doc?.enable_certification || doc?.paid_certificate"
-					class="flex flex-wrap items-center gap-1 text-p-sm text-ink-gray-6"
+					class="flex items-center justify-between gap-4"
 				>
-					<span>
-						{{
-							__(
-								'Certificates render from a Print Format. Build or customize templates from the desk.'
-							)
-						}}
-					</span>
-					<button
-						type="button"
-						class="font-medium text-ink-gray-8 underline"
-						@click="openPrintFormats"
-					>
-						{{ __('Manage templates') }}
-					</button>
+					<div class="flex min-w-0 flex-col gap-0.5">
+						<span class="text-p-sm-medium text-ink-gray-7">
+							{{ __('Certificate design') }}
+						</span>
+						<span class="text-p-sm text-ink-gray-6">
+							{{ certificateDesignLabel }}
+						</span>
+					</div>
+					<Button size="sm" variant="outline" @click="showDesignDialog = true">
+						{{ __('Change') }}
+					</Button>
 				</div>
 			</div>
 		</CollapsibleSection>
 	</div>
+
+	<CertificateDesignDialog
+		v-if="doc && showDesignDialog"
+		v-model:open="showDesignDialog"
+		:course="doc.name"
+		:courseTitle="doc.title"
+		:current="doc.certificate_template || null"
+		@select="setCertificateDesign"
+	/>
 
 	<NewMemberModal
 		v-model="showMemberModal"
@@ -198,14 +204,17 @@
 </template>
 
 <script setup lang="ts">
-import { Dialog, FormControl, createResource } from 'frappe-ui'
+import { Button, Dialog, FormControl, createResource } from 'frappe-ui'
 import BooleanSwitch from '@/components/Controls/BooleanSwitch.vue'
 import { computed, inject, ref } from 'vue'
 import CollapsibleSection from '@/components/CollapsibleSection.vue'
 import Link from '@/components/Controls/Link.vue'
+import CertificateDesignDialog from '@/components/Modals/CertificateDesignDialog.vue'
 import NewMemberModal from '@/components/Modals/NewMemberModal.vue'
 import { useSettings } from '@/stores/settings'
 import type { CourseFormContext, Resource } from '@/types'
+import type { CertificateDesignList } from '@/types/api'
+import { describeDesign } from '@/utils/certificateDesigns'
 import { openExternal } from '@/utils/openExternal'
 
 const { resource, markDirty } = inject<CourseFormContext>('courseForm')!
@@ -281,8 +290,24 @@ function openEvaluatorModal() {
 	showMemberModal.value = true
 }
 
-function openPrintFormats() {
-	openExternal('/app/print-format?doc_type=LMS Certificate')
+const showDesignDialog = ref<boolean>(false)
+
+const certificateDesigns = createResource({
+	url: 'lms.lms.api.get_certificate_designs',
+	cache: 'certificateDesigns',
+	auto: true,
+}) as Resource<CertificateDesignList | null>
+
+const certificateDesignLabel = computed<string>(() => {
+	const design =
+		doc.value?.certificate_template || certificateDesigns.data?.default
+	return design ? describeDesign(design).label : __('Site default')
+})
+
+function setCertificateDesign(design: string): void {
+	if (!resource.doc) return
+	resource.doc.certificate_template = design
+	markDirty()
 }
 
 function onEvaluatorCreated(created: { name: string }) {

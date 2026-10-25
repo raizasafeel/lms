@@ -221,19 +221,12 @@ const userIsEvaluator = () => {
 }
 
 const defaultTemplate = createResource({
-	url: 'frappe.client.get_value',
-	makeParams(values) {
-		return {
-			doctype: 'Property Setter',
-			fieldname: 'value',
-			filters: {
-				doc_type: 'LMS Certificate',
-				property: 'default_print_format',
-			},
-		}
+	url: 'lms.lms.api.get_certificate_template_default',
+	makeParams() {
+		return { course: props.event.course }
 	},
 	onSuccess(data) {
-		certificate.template = data.value
+		certificate.template = data
 	},
 })
 

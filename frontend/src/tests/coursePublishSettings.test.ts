@@ -18,9 +18,20 @@ vi.mock('@/stores/settings', () => ({
 }))
 
 vi.mock('frappe-ui', () => ({
+	Button: { template: '<button v-bind="$attrs"><slot /></button>' },
 	Dialog: { template: '<div><slot /></div>' },
 	FormControl: { template: '<div />' },
-	createResource: () => ({ data: null, reload: vi.fn(), submit: vi.fn() }),
+	createResource: ({ url }: { url: string }) => ({
+		data:
+			url === 'lms.lms.api.get_certificate_designs'
+				? {
+						designs: ['Certificate', 'Certificate Modern'],
+						default: 'Certificate',
+				  }
+				: null,
+		reload: vi.fn(),
+		submit: vi.fn(),
+	}),
 }))
 
 // NewMemberModal.vue -> RoleSwitches.vue pulls in members.ts -> Members.vue ->
@@ -104,4 +115,65 @@ describe('CoursePublishSettings currency picker', () => {
 			expect(picker?.props('query')).toBe('lms.lms.api.search_currencies')
 		}
 	)
+})
+
+describe('CoursePublishSettings certificate design', () => {
+	function mountWithCertification(extra: Record<string, unknown> = {}) {
+		const markDirty = vi.fn()
+		const courseDoc: Record<string, unknown> = {
+			...doc,
+			title: 'Data',
+			enable_certification: 1,
+			...extra,
+		}
+		const wrapper = mount(CoursePublishSettings, {
+			global: {
+				mocks: { __: (s: string) => s },
+				provide: {
+					courseForm: { resource: { doc: courseDoc }, markDirty },
+					$dayjs: (v: unknown) => ({ format: () => String(v) }),
+				},
+				stubs: {
+					CollapsibleSection: { template: '<div><slot /></div>' },
+					Link: true,
+					NewMemberModal: true,
+					BooleanSwitch: true,
+					CertificateDesignDialog: {
+						name: 'CertificateDesignDialog',
+						props: ['open', 'current'],
+						emits: ['select', 'update:open'],
+						template: '<div />',
+					},
+				},
+			},
+		})
+		return { wrapper, markDirty, courseDoc }
+	}
+
+	it('names the site default when the course has no design', () => {
+		const { wrapper } = mountWithCertification()
+		expect(wrapper.text()).toContain('Original')
+	})
+
+	it('names the course design when one is set', () => {
+		const { wrapper } = mountWithCertification({
+			certificate_template: 'Certificate Modern',
+		})
+		expect(wrapper.text()).toContain('Modern')
+	})
+
+	it('stores the chosen design on the course and marks the form dirty', async () => {
+		const { wrapper, markDirty, courseDoc } = mountWithCertification()
+		await wrapper.find('button').trigger('click')
+		const dialog = wrapper.findComponent({ name: 'CertificateDesignDialog' })
+		expect(dialog.props('open')).toBe(true)
+		dialog.vm.$emit('select', 'Certificate Modern')
+		expect(courseDoc.certificate_template).toBe('Certificate Modern')
+		expect(markDirty).toHaveBeenCalled()
+	})
+
+	it('hides the row when the course offers no certificate', () => {
+		const { wrapper } = mountWithCertification({ enable_certification: 0 })
+		expect(wrapper.text()).not.toContain('Certificate design')
+	})
 })
