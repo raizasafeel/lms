@@ -10,6 +10,7 @@ from lms.lms.certificate_designs import (
 	get_certificate_font_css,
 	get_text_sizes,
 	join_names,
+	render_certificate,
 )
 from lms.lms.test_helpers import BaseTestUtils
 
@@ -237,3 +238,37 @@ class TestCertificateDesignsRender(CertificateFixture):
 		pages = PdfReader(io.BytesIO(pdf)).pages
 		self.assertEqual(len(pages), 1)
 		self.assertGreater(float(pages[0].mediabox.width), float(pages[0].mediabox.height))
+
+
+class TestRenderCertificate(CertificateFixture):
+	def setUp(self):
+		super().setUp()
+		self._create_enrollment(self.member.name, self.course.name)
+		self.issued = self._create_certificate(self.course.name, self.member.name)
+
+	def test_a_saved_certificate_renders_without_the_print_toolbar(self):
+		html = render_certificate(self.issued.name, "Certificate Classic")
+		self.assertIn("Maya Fernandes", html)
+		self.assertIn(".action-banner{display:none!important}", html)
+
+	def test_rendering_does_not_need_print_permission(self):
+		frappe.set_user("Guest")
+		self.assertIn("Maya Fernandes", render_certificate(self.issued.name, "Certificate Classic"))
+		self.assertFalse(frappe.flags.ignore_print_permissions)
+
+	def test_a_design_that_fails_returns_none(self):
+		broken = frappe.get_doc(
+			{
+				"doctype": "Print Format",
+				"name": f"Broken Design {frappe.generate_hash(length=6)}",
+				"doc_type": "LMS Certificate",
+				"module": "LMS",
+				"custom_format": 1,
+				"print_format_type": "Jinja",
+				"standard": "No",
+				"html": "{{ doc.no_such_field.title() }}",
+			}
+		)
+		# nosemgrep: lms-unjustified-ignore-permissions - fixture seeding, not the permission under test
+		broken.insert(ignore_permissions=True)
+		self.assertIsNone(render_certificate(self.issued.name, broken.name))
