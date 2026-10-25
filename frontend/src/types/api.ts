@@ -32,6 +32,8 @@ export interface UserInfo {
 	open_to?: 'Work' | 'Hiring' | string
 }
 
+export type DoctypePermissionType = 'read' | 'write' | 'create' | 'delete'
+
 export interface SessionUser {
 	data?: UserInfo & {
 		is_moderator?: boolean
@@ -39,6 +41,7 @@ export interface SessionUser {
 		is_evaluator?: boolean
 		is_student?: boolean
 		is_system_manager?: boolean
+		permissions?: Record<string, Record<DoctypePermissionType, 0 | 1>>
 	}
 }
 
@@ -172,4 +175,21 @@ export interface EvaluatorDetails {
 	timezone: string
 	evaluation_invites: boolean
 	can_configure_invites: boolean
+}
+
+export type AssessmentDoctype =
+	| 'LMS Quiz'
+	| 'LMS Assignment'
+	| 'LMS Programming Exercise'
+
+export interface AssessmentAuthor {
+	name: string
+	full_name: string
+	user_image: string | null
+}
+
+/** Response of lms.lms.api.get_assessment_authors. */
+export interface AssessmentAuthorsInfo {
+	authors: AssessmentAuthor[]
+	can_edit: boolean
 }

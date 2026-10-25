@@ -756,6 +756,7 @@ def stored_authors(doctype: str, name: str) -> list[str]:
 		"LMS Content Author",
 		filters={"parent": name, "parenttype": doctype, "parentfield": "authors"},
 		pluck="author",
+		order_by="idx asc",
 	)
 	return [author for author in rows if author]
 

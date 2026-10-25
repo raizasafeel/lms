@@ -8,6 +8,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import ceil
 
+from lms.lms.locking import locked_count
+
 IDENTITY_FIELDS = ("course", "member", "enrollment_from_batch")
 
 
@@ -61,6 +63,7 @@ class LMSEnrollment(Document):
 		update_program_progress(self.member)
 
 	def after_insert(self):
+		self.validate_against_committed_rows()
 		if self.member_type == "Student":
 			_update_course_enrollments(self.course, increment=True)
 
@@ -70,8 +73,7 @@ class LMSEnrollment(Document):
 
 	def validate_duplicate_enrollment(self):
 		# Lock the course row first: see the note in
-		# lms_batch_enrollment.validate_duplicate_members. Two concurrent
-		# enrolments in the same course both read "absent" without it.
+		# lms_batch_enrollment.validate_duplicate_members.
 		frappe.db.get_value("LMS Course", self.course, "name", for_update=True)
 
 		existing_enrollment = frappe.db.exists(
@@ -84,6 +86,12 @@ class LMSEnrollment(Document):
 		)
 
 		if existing_enrollment and existing_enrollment != self.name:
+			frappe.throw(_("Student is already enrolled in this course."))
+
+	def validate_against_committed_rows(self):
+		"""The duplicate check above reads a snapshot that misses a row committed while
+		this request waited on the course lock. Recount with a read that sees it."""
+		if locked_count("LMS Enrollment", {"course": self.course, "member": self.member}) > 1:
 			frappe.throw(_("Student is already enrolled in this course."))
 
 	def validate_course_enrollment_eligibility(self):

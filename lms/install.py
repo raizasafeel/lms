@@ -1,18 +1,24 @@
 import frappe
+from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.permissions import add_permission, update_permission_property
 
 from lms.lms.api import give_discussions_permission
 from lms.lms.enrollment_constraints import ensure_enrollment_unique_constraints
 from lms.lms.sidebar import seed_sidebar_items
 
+LEGACY_USER_FIELDS = ["profile_complete"]
+
 
 def after_install():
+	create_default_records()
+	create_user_custom_fields()
 	create_batch_source()
 	give_discussions_permission()
 	give_user_list_permission()
 	give_event_permission()
 	ensure_batch_enrollment_index()
 	ensure_enrollment_unique_constraints()
+	ensure_course_progress_unique_constraint()
 
 
 def ensure_batch_enrollment_index():
@@ -20,6 +26,13 @@ def ensure_batch_enrollment_index():
 	if not frappe.db.table_exists("LMS Batch Enrollment"):
 		return
 	frappe.db.add_index("LMS Batch Enrollment", ["batch", "member"])
+
+
+def ensure_course_progress_unique_constraint():
+	"""Fresh installs skip delete_duplicate_course_progress, the patch that adds this; idempotent."""
+	if not frappe.db.table_exists("LMS Course Progress"):
+		return
+	frappe.db.add_unique("LMS Course Progress", ["member", "lesson"])
 
 
 def after_sync():
@@ -120,49 +133,31 @@ def set_default_certificate_print_format():
 		doc.save()
 
 
-def delete_custom_fields():
-	fields = [
-		"user_category",
-		"headline",
-		"college",
-		"city",
-		"verify_terms",
-		"country",
-		"preferred_location",
-		"preferred_functions",
-		"preferred_industries",
-		"work_environment_column",
-		"time",
-		"role",
-		"carrer_preference_details",
-		"skill",
-		"certification_details",
-		"internship",
-		"branch",
-		"github",
-		"medium",
-		"linkedin",
-		"profession",
-		"open_to",
-		"cover_image" "work_environment",
-		"dream_companies",
-		"career_preference_column",
-		"attire",
-		"collaboration",
-		"location_preference",
-		"company_type",
-		"skill_details",
-		"certification",
-		"education",
-		"work_experience",
-		"education_details",
-		"hide_private",
-		"work_experience_details",
-		"profile_complete",
+def load_install_data(filename):
+	return frappe.get_file_json(frappe.get_app_path("lms", "install_data", filename))
+
+
+def create_default_records():
+	for filename in ("lms_category.json", "function.json", "industry.json"):
+		for record in load_install_data(filename):
+			frappe.get_doc(record).insert(ignore_if_duplicate=True)
+
+
+def get_user_custom_fields():
+	skip = {"name", "doctype", "dt", "modified", "docstatus", "module", "is_system_generated"}
+	return [
+		{key: value for key, value in field.items() if key not in skip and value not in (None, "", 0)}
+		for field in load_install_data("custom_field.json")
 	]
 
-	for field in fields:
-		frappe.db.delete("Custom Field", {"fieldname": field})
+
+def create_user_custom_fields():
+	create_custom_fields({"User": get_user_custom_fields()}, update=False)
+
+
+def delete_custom_fields():
+	fieldnames = [field["fieldname"] for field in get_user_custom_fields()] + LEGACY_USER_FIELDS
+	frappe.db.delete("Custom Field", {"dt": "User", "fieldname": ["in", fieldnames]})
 
 
 def create_batch_source():

@@ -47,6 +47,7 @@ from lms.lms.doctype.lms_enrollment.lms_enrollment import (
 	update_enrollment,
 	update_program_progress,
 )
+from lms.lms.locking import locked_get_all
 from lms.lms.md import find_macros
 
 RE_SLUG_NOTALLOWED = re.compile("[^a-z0-9]+")
@@ -68,7 +69,37 @@ def get_lms_route(path=""):
 
 
 def extend_bootinfo(bootinfo: dict):
+	warn_if_lms_path_differs_from_routes()
 	bootinfo["lms_path"] = get_lms_path()
+
+
+_lms_path_checked_sites = set()
+
+
+def warn_if_lms_path_differs_from_routes():
+	"""The route rules in lms/hooks.py read lms_path once, at import, so the value
+	is bench-wide and a per-site override is not routed."""
+	site = frappe.local.site
+	if site in _lms_path_checked_sites:
+		return
+	_lms_path_checked_sites.add(site)
+
+	routed = get_routed_lms_path()
+	if routed is None or routed == get_lms_path():
+		return
+
+	frappe.logger("lms", allow_site=True).warning(
+		f"lms_path for site {site} is '{get_lms_path()}' but routes are served at '/{routed}'. "
+		"lms_path is bench-wide: set it in common_site_config.json, not site_config.json, "
+		"and restart the bench."
+	)
+
+
+def get_routed_lms_path() -> str | None:
+	for rule in frappe.get_hooks("website_route_rules"):
+		if rule.get("to_route") == "_lms" and "<" not in rule["from_route"]:
+			return rule["from_route"].strip("/")
+	return None
 
 
 def resolve_text_direction(lang: str) -> str:
@@ -483,25 +514,35 @@ def get_progress(course: str, lesson: str, member: str = None):
 	)
 
 
-def get_course_progress(course: str, member: str = None):
-	"""Returns the course progress of the session user"""
+def get_course_progress(course: str, member: str = None, for_update: bool = False):
+	"""Returns the course progress of the session user. Pass for_update when the result is
+	written back, so the count sees lessons other requests completed meanwhile."""
 	chapters = frappe.get_all("Chapter Reference", {"parent": course}, pluck="chapter")
 	if not chapters:
 		return 0
 	lessons = frappe.get_all("Lesson Reference", {"parent": ("in", chapters)}, pluck="lesson")
 	if not lessons:
 		return 0
-	completed_lessons = frappe.db.count(
-		"LMS Course Progress",
-		{
-			"course": course,
-			"member": member or frappe.session.user,
-			"status": "Complete",
-			"lesson": ("in", lessons),
-		},
-	)
+	member = member or frappe.session.user
+	if for_update:
+		completed_lessons = count_completed_lessons_locked(course, member, lessons)
+	else:
+		completed_lessons = frappe.db.count(
+			"LMS Course Progress",
+			{"course": course, "member": member, "status": "Complete", "lesson": ("in", lessons)},
+		)
 	precision = cint(frappe.db.get_default("float_precision")) or 3
 	return flt(min(completed_lessons / len(lessons) * 100, 100), precision)
+
+
+def count_completed_lessons_locked(course: str, member: str, lessons: list[str]) -> int:
+	# Locked by member alone, the leading column of every usable index, so two
+	# learners recounting one course lock disjoint rows and cannot deadlock.
+	rows = locked_get_all("LMS Course Progress", {"member": member}, ["course", "lesson", "status"])
+	outline = set(lessons)
+	return sum(
+		1 for row in rows if row.course == course and row.lesson in outline and row.status == "Complete"
+	)
 
 
 def is_instructor(course: str) -> bool:
@@ -2301,7 +2342,7 @@ def get_batch_details(batch: str):
 	if (
 		not batch_details.accept_enrollments
 		and batch_details.start_date == getdate()
-		and str(batch_details.start_time) > nowtime()
+		and get_time(batch_details.start_time) > get_time(nowtime())
 	):
 		batch_details.accept_enrollments = True
 
@@ -2913,8 +2954,9 @@ def can_access_topic(doctype: str, docname: str) -> bool:
 	return True
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def get_discussion_topics(doctype: str, docname: str, single_thread: bool = False):
+	frappe.has_permission("Discussion Topic", "read", throw=True)
 	if not can_access_topic(doctype, docname):
 		frappe.throw(_("You are not authorized to view the discussion topics for this item."))
 
@@ -2977,6 +3019,7 @@ def create_discussion_topic(doctype: str, docname: str) -> str:
 
 @frappe.whitelist()
 def get_discussion_replies(topic: str):
+	frappe.has_permission("Discussion Reply", "read", throw=True)
 	topic_details = frappe.db.get_value(
 		"Discussion Topic", topic, ["reference_doctype", "reference_docname"], as_dict=True
 	)
@@ -3537,12 +3580,9 @@ def get_payment_total(payment_doc: dict) -> float:
 
 
 def enroll_in_course(course: str, payment_name: str):
-	# The check below exists so a repeated payment callback is a no-op, and an
-	# unlocked check cannot deliver that: two callbacks arriving together both read
-	# "absent", and the loser then hits the controller's own duplicate error —
-	# failing a request that has already taken the learner's money. Locking the
-	# course row first makes the skip reliable. The controller locks the same row,
-	# so this adds no new lock ordering.
+	# A repeated payment callback is a no-op. The second of two concurrent callbacks
+	# waits on the course lock, misses the first's row in its snapshot, and fails on
+	# the unique index, which is the same no-op.
 	frappe.db.get_value("LMS Course", course, "name", for_update=True)
 
 	if not frappe.db.exists("LMS Enrollment", {"member": frappe.session.user, "course": course}):
@@ -3556,7 +3596,10 @@ def enroll_in_course(course: str, payment_name: str):
 				"payment": payment.name,
 			}
 		)
-		enrollment.save(ignore_permissions=True)
+		try:
+			enrollment.save(ignore_permissions=True)
+		except frappe.UniqueValidationError:
+			pass
 
 
 @frappe.whitelist(methods=["POST"])
@@ -3593,7 +3636,11 @@ def create_enrollment(batch: str, payment_doc: dict = None):
 				"source": payment_doc.source,
 			}
 		)
-	new_student.save()
+	try:
+		new_student.save()
+	except frappe.UniqueValidationError:
+		# A request that committed after this one's snapshot already enrolled them.
+		pass
 
 
 def update_certificate_purchase(course: str, payment_name: str):
@@ -3998,6 +4045,17 @@ def validate_batch_access(batch: str):
 		frappe.throw(_("You do not have access to this batch."))
 
 
+def delete_discussions(reference_doctype: str, reference_docname: str):
+	topics = frappe.get_all(
+		"Discussion Topic",
+		{"reference_doctype": reference_doctype, "reference_docname": reference_docname},
+		pluck="name",
+	)
+	if topics:
+		frappe.db.delete("Discussion Reply", {"topic": ("in", topics)})
+		frappe.db.delete("Discussion Topic", {"name": ("in", topics)})
+
+
 def can_modify_course(course: str) -> bool:
 	is_instructor = frappe.db.exists(
 		"Course Instructor",
@@ -4030,7 +4088,8 @@ def has_lms_role():
 
 
 def recalculate_course_progress(course: str, member: str):
-	progress = get_course_progress(course, member)
+	# Locked before counting, so two completions for one enrollment recompute one after
+	# the other and the second counts the first's lesson.
 	membership = frappe.db.get_value(
 		"LMS Enrollment",
 		{
@@ -4038,11 +4097,14 @@ def recalculate_course_progress(course: str, member: str):
 			"course": course,
 		},
 		"name",
+		for_update=True,
 	)
 	if not membership:
 		# No enrollment to write, but the member's programs still need rolling up.
 		update_program_progress(member)
 		return
+
+	progress = get_course_progress(course, member, for_update=True)
 
 	# A raw set_value here fired no doc events at all, so On Update webhooks and
 	# DocType Event scripts never ran. update_enrollment() writes outside the version

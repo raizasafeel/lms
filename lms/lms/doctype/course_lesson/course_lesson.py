@@ -111,7 +111,13 @@ class CourseLesson(Document):
 		if not len(enrollments):
 			return
 
-		frappe.enqueue(method=self.recalculate_progress, queue="long", is_async=True, enrollments=enrollments)
+		frappe.enqueue(
+			method=self.recalculate_progress,
+			queue="long",
+			is_async=True,
+			enqueue_after_commit=True,
+			enrollments=enrollments,
+		)
 
 	def recalculate_progress(self, enrollments):
 		for enrollment in enrollments:
@@ -498,7 +504,7 @@ def apply_enforcement_flags(quiz_done: bool, assignment_done: bool, settings: di
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def save_progress(lesson: str, course: str | None = None, scorm_details: dict = None):
 	"""
 	Note: Pass the argument scorm_details as a dict if it is SCORM related save_progress
@@ -523,7 +529,11 @@ def save_progress(lesson: str, course: str | None = None, scorm_details: dict = 
 
 
 def _save_progress(lesson: str, course: str, scorm_details: dict = None):
-	membership = frappe.db.exists("LMS Enrollment", {"course": course, "member": frappe.session.user})
+	# Locked first, so completions for one enrollment run one after the other and the
+	# recount below sees the lessons the earlier ones recorded.
+	membership = frappe.db.get_value(
+		"LMS Enrollment", {"course": course, "member": frappe.session.user}, "name", for_update=True
+	)
 	if not membership:
 		return 0
 
@@ -613,7 +623,7 @@ def _save_progress(lesson: str, course: str, scorm_details: dict = None):
 	):
 		next_lesson = get_next_lesson(course, lesson)
 
-	progress = get_course_progress(course)
+	progress = get_course_progress(course, for_update=True)
 	if not is_demo_course(course):
 		capture("course_progress", "lms")
 
