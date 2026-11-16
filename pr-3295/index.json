@@ -1,0 +1,378 @@
+[
+ {
+  "flow": "admin-pages",
+  "title": "Admin pages",
+  "state": "homeLoading",
+  "description": "Home while the admin's evaluations request is out: the greeting over a spinner.",
+  "stem": "sidebar",
+  "kind": "sidebar"
+ },
+ {
+  "flow": "admin-pages",
+  "title": "Admin pages",
+  "state": "notificationsUnread",
+  "description": "The notifications panel for the student: her unread quiz-score and announcement alerts.",
+  "stem": "admin-pages-notificationsUnread",
+  "kind": "page"
+ },
+ {
+  "flow": "admin-pages",
+  "title": "Admin pages",
+  "state": "settingsGeneral",
+  "description": "Settings opened from the user menu, on its first section: language, timezone, access and notifications.",
+  "stem": "admin-pages-settingsGeneral",
+  "kind": "page"
+ },
+ {
+  "flow": "admin-pages",
+  "title": "Admin pages",
+  "state": "settingsPayments",
+  "description": "Settings, Payment Configuration: currency, gateway and payment reminders.",
+  "stem": "admin-pages-settingsPayments",
+  "kind": "page"
+ },
+ {
+  "flow": "admin-pages",
+  "title": "Admin pages",
+  "state": "settingsUsers",
+  "description": "Settings, Users: the site's members with their roles.",
+  "stem": "admin-pages-settingsUsers",
+  "kind": "page"
+ },
+ {
+  "flow": "admin-pages",
+  "title": "Admin pages",
+  "state": "settingsProgress",
+  "description": "Settings, Progress: lesson completion time and what learners must finish or pass.",
+  "stem": "admin-pages-settingsProgress",
+  "kind": "page"
+ },
+ {
+  "flow": "admin-pages",
+  "title": "Admin pages",
+  "state": "settingsCommunication",
+  "description": "Settings, Communication General: contact details and the email templates in use.",
+  "stem": "admin-pages-settingsCommunication",
+  "kind": "page"
+ },
+ {
+  "flow": "assignments",
+  "title": "Assignments",
+  "state": "studentEmptySubmit",
+  "description": "Submit pressed with no answer: a toast asks for an answer or a file.",
+  "stem": "assignments-studentEmptySubmit",
+  "kind": "page"
+ },
+ {
+  "flow": "assignments",
+  "title": "Assignments",
+  "state": "newValidation",
+  "description": "Create pressed with nothing filled in: a toast asks for a Title.",
+  "stem": "assignments-newValidation",
+  "kind": "page"
+ },
+ {
+  "flow": "assignments",
+  "title": "Assignments",
+  "state": "submissions",
+  "description": "All 21 assignment submissions across the four assignments, newest first: 11 Pass, 3 Fail, 7 Not Graded, the list running past the fold.",
+  "stem": "assignments-submissions",
+  "kind": "page"
+ },
+ {
+  "flow": "assignments",
+  "title": "Assignments",
+  "state": "editAssignment",
+  "description": "A row opened: Edit Assignment with the saved title, type, course and question.",
+  "stem": "assignments-editAssignment",
+  "kind": "page"
+ },
+ {
+  "flow": "assignments",
+  "title": "Assignments",
+  "state": "newScheduling",
+  "description": "Enable Scheduling switched on: Schedule Start and Schedule End appear.",
+  "stem": "assignments-newScheduling",
+  "kind": "page"
+ },
+ {
+  "flow": "assignments",
+  "title": "Assignments",
+  "state": "studentRedirected",
+  "description": "A student opening /assignments is sent to the course list.",
+  "stem": "assignments-studentRedirected",
+  "kind": "page"
+ },
+ {
+  "flow": "batch-learning",
+  "title": "Batch learning",
+  "state": "billingEnrolled",
+  "description": "The ongoing sprint's billing page opened by a student already in it: Not Permitted says the batch has already started, beside a Checkout Batch button and a contradicting error toast.",
+  "stem": "batch-learning-billingEnrolled",
+  "kind": "page"
+ },
+ {
+  "flow": "batch-learning",
+  "title": "Batch learning",
+  "state": "upcoming",
+  "description": "A student's batch list: the Upcoming tab with Winter Cohort 2027 and Python Data Bootcamp, and no staff actions.",
+  "stem": "batch-learning-upcoming",
+  "kind": "page"
+ },
+ {
+  "flow": "batches",
+  "title": "Batches",
+  "state": "newBatchInvalid",
+  "description": "Create pressed on the empty form: a toast names the first missing field.",
+  "stem": "batches-newBatchInvalid",
+  "kind": "page"
+ },
+ {
+  "flow": "batches",
+  "title": "Batches",
+  "state": "billing",
+  "description": "Billing page for the free, upcoming Winter Cohort 2027, opened directly by an admin who is not enrolled: access passes, the order summary fails, and the page is blank under an error toast.",
+  "stem": "batches-billing",
+  "kind": "page"
+ },
+ {
+  "flow": "batches",
+  "title": "Batches",
+  "state": "emailTemplate",
+  "description": "New Email Template form, opened from the confirmation email field's Create New.",
+  "stem": "batches-emailTemplate",
+  "kind": "page"
+ },
+ {
+  "flow": "batches",
+  "title": "Batches",
+  "state": "addCourse",
+  "description": "Add Course form, opened from the Courses section in Settings.",
+  "stem": "batches-addCourse",
+  "kind": "page"
+ },
+ {
+  "flow": "batches",
+  "title": "Batches",
+  "state": "enrollForm",
+  "description": "Enroll Students form, opened from the dashboard header.",
+  "stem": "batches-enrollForm",
+  "kind": "page"
+ },
+ {
+  "flow": "batches",
+  "title": "Batches",
+  "state": "dashboard",
+  "description": "Dashboard tab: counts, the thirteen students, the progress chart and feedback, with Enroll in the header.",
+  "stem": "batches-dashboard",
+  "kind": "page"
+ },
+ {
+  "flow": "course-admin",
+  "title": "Course admin",
+  "state": "enrollPicker",
+  "description": "The student picker open: everyone not yet enrolled, learners and instructors alike.",
+  "stem": "course-admin-enrollPicker",
+  "kind": "page"
+ },
+ {
+  "flow": "course-admin",
+  "title": "Course admin",
+  "state": "settingsInvalid",
+  "description": "Title cleared: the Not Saved badge and the autosave's 'Add a Title' toast.",
+  "stem": "course-admin-settingsInvalid",
+  "kind": "page"
+ },
+ {
+  "flow": "course-admin",
+  "title": "Course admin",
+  "state": "optionsMenu",
+  "description": "The course options menu on the Settings tab: Export and Delete.",
+  "stem": "course-admin-optionsMenu",
+  "kind": "page"
+ },
+ {
+  "flow": "course-admin",
+  "title": "Course admin",
+  "state": "importForm",
+  "description": "Import Course from ZIP form, with the empty drop zone.",
+  "stem": "course-admin-importForm",
+  "kind": "page"
+ },
+ {
+  "flow": "courses",
+  "title": "Courses",
+  "state": "importMenu",
+  "description": "The Import menu: spreadsheet or ZIP.",
+  "stem": "courses-importMenu",
+  "kind": "page"
+ },
+ {
+  "flow": "courses",
+  "title": "Courses",
+  "state": "newCourse",
+  "description": "New Course form, opened over the list.",
+  "stem": "courses-newCourse",
+  "kind": "page"
+ },
+ {
+  "flow": "jobs",
+  "title": "Jobs",
+  "state": "newJobInvalid",
+  "description": "Save on the empty New Job form: the server refuses, but the toast only says '' is not a valid URL and no field is marked.",
+  "stem": "jobs-newJobInvalid",
+  "kind": "page"
+ },
+ {
+  "flow": "jobs",
+  "title": "Jobs",
+  "state": "applicationActions",
+  "description": "More actions on the first application: View Resume and Send Email.",
+  "stem": "jobs-applicationActions",
+  "kind": "page"
+ },
+ {
+  "flow": "jobs",
+  "title": "Jobs",
+  "state": "filteredByType",
+  "description": "Filtered to Part Time: only the Learning Experience Designer card.",
+  "stem": "jobs-filteredByType",
+  "kind": "page"
+ },
+ {
+  "flow": "jobs",
+  "title": "Jobs",
+  "state": "editJob",
+  "description": "The job form filled from the Learning Experience Designer job, with Status for an existing job.",
+  "stem": "jobs-editJob",
+  "kind": "page"
+ },
+ {
+  "flow": "learning",
+  "title": "Learning",
+  "state": "guestEnrollToast",
+  "description": "Enroll Now pressed signed out: a toast says to log in first, just before the login redirect.",
+  "stem": "learning-guestEnrollToast",
+  "kind": "page"
+ },
+ {
+  "flow": "learning",
+  "title": "Learning",
+  "state": "courseFailed",
+  "description": "The course details request failed: with no data the page reads her as not allowed and sends her to the course list.",
+  "stem": "learning-courseFailed",
+  "kind": "page"
+ },
+ {
+  "flow": "profile",
+  "title": "Profile",
+  "state": "editMissingName",
+  "description": "First name cleared and Save pressed: a toast names the missing field and nothing is sent.",
+  "stem": "profile-editMissingName",
+  "kind": "page"
+ },
+ {
+  "flow": "profile",
+  "title": "Profile",
+  "state": "slotsFailed",
+  "description": "Her availability request failed: an error in place of the hours, with Retry.",
+  "stem": "profile-slotsFailed",
+  "kind": "page"
+ },
+ {
+  "flow": "programming-exercises",
+  "title": "Programming Exercises",
+  "state": "studentOwnSubmission",
+  "description": "Ashley opening her own Passed submission: the exercise read is refused, so a PermissionError toast sits over her code with no problem, language or results, and Run enabled.",
+  "stem": "programming-exercises-studentOwnSubmission",
+  "kind": "page"
+ },
+ {
+  "flow": "programming-exercises",
+  "title": "Programming Exercises",
+  "state": "failedSubmission",
+  "description": "A Failed Reverse a String submission seen by the admin: 0 of 2 passed, Run disabled because it is not the admin's.",
+  "stem": "programming-exercises-failedSubmission",
+  "kind": "page"
+ },
+ {
+  "flow": "programming-exercises",
+  "title": "Programming Exercises",
+  "state": "submissions",
+  "description": "All 11 programming exercise submissions across the three exercises, nine Passed and two Failed, newest first.",
+  "stem": "programming-exercises-submissions",
+  "kind": "page"
+ },
+ {
+  "flow": "programming-exercises",
+  "title": "Programming Exercises",
+  "state": "preview",
+  "description": "Preview: the exercise as a learner sees it, inside the form.",
+  "stem": "programming-exercises-preview",
+  "kind": "page"
+ },
+ {
+  "flow": "programming-exercises",
+  "title": "Programming Exercises",
+  "state": "editExercise",
+  "description": "FizzBuzz opened: Saved badge, Preview, Submissions and Delete, with its two test cases.",
+  "stem": "programming-exercises-editExercise",
+  "kind": "page"
+ },
+ {
+  "flow": "programming-exercises",
+  "title": "Programming Exercises",
+  "state": "runnerUnavailable",
+  "description": "The code runner script fails to load: an amber banner with Settings, and Run disabled.",
+  "stem": "programming-exercises-runnerUnavailable",
+  "kind": "page"
+ },
+ {
+  "flow": "programs",
+  "title": "Programs",
+  "state": "createUntitledError",
+  "description": "Create clicked with no title: the server refuses and a toast says why.",
+  "stem": "programs-createUntitledError",
+  "kind": "page"
+ },
+ {
+  "flow": "programs",
+  "title": "Programs",
+  "state": "addCourseDialog",
+  "description": "Add Course to Program, stacked on the new program dialog.",
+  "stem": "programs-addCourseDialog",
+  "kind": "page"
+ },
+ {
+  "flow": "quiz-taking",
+  "title": "Taking a quiz",
+  "state": "checkWithoutAnswer",
+  "description": "Check pressed with no option chosen: a warning toast asks for an option.",
+  "stem": "quiz-taking-checkWithoutAnswer",
+  "kind": "page"
+ },
+ {
+  "flow": "quizzes",
+  "title": "Quizzes",
+  "state": "submissionsFilteredEmpty",
+  "description": "Submissions filtered to a course with none: the page says no learner has taken a quiz yet, with no Clear filters, though the filter is the cause.",
+  "stem": "quizzes-submissionsFilteredEmpty",
+  "kind": "page"
+ },
+ {
+  "flow": "quizzes",
+  "title": "Quizzes",
+  "state": "newQuestionDialog",
+  "description": "The New question dialog, empty, with Save disabled until it is valid.",
+  "stem": "quizzes-newQuestionDialog",
+  "kind": "page"
+ },
+ {
+  "flow": "quizzes",
+  "title": "Quizzes",
+  "state": "rowSelected",
+  "description": "One quiz selected: the selection bar offers Delete.",
+  "stem": "quizzes-rowSelected",
+  "kind": "page"
+ }
+]
