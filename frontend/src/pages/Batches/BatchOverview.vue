@@ -1,9 +1,9 @@
 <template>
 	<div class="p-5 pb-16">
-		<div class="flex flex-col items-start gap-8 lg:flex-row">
-			<div class="min-w-0 space-y-10 lg:w-[70%]">
+		<div class="flex flex-col items-start gap-8 @4xl:flex-row">
+			<div class="min-w-0 space-y-10 @4xl:w-[70%]">
 				<BatchHeading :batch="batch.data" :doc="doc" :form="form" />
-				<div class="w-full lg:hidden">
+				<div class="w-full @4xl:hidden">
 					<BatchEnrollCardEditor
 						v-if="doc"
 						:doc="doc"
@@ -66,7 +66,7 @@
 			</div>
 
 			<aside
-				class="hidden w-full shrink-0 self-start sticky-below-header lg:block lg:w-[30%]"
+				class="hidden w-full shrink-0 self-start sticky-below-header @4xl:block @4xl:w-[30%]"
 			>
 				<BatchEnrollCardEditor
 					v-if="doc"

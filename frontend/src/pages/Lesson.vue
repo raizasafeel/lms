@@ -50,7 +50,7 @@
 			</Button>
 		</div>
 
-		<div class="grid md:grid-cols-[70%,30%] sm:h-[94vh]">
+		<div class="grid @2xl:grid-cols-[70%,30%] sm:h-[94vh]">
 			<div v-if="lesson.data.no_preview" class="sm:border-e">
 				<div class="shadow rounded-5 w-3/4 mt-10 mx-auto text-center p-4">
 					<div class="flex items-center justify-center mt-4 gap-x-2">
@@ -116,7 +116,7 @@
 				>
 					<div class="px-5">
 						<div
-							class="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center justify-between"
+							class="flex flex-col space-y-3 md:space-y-0 @2xl:flex-row md:items-center justify-between"
 						>
 							<div class="flex flex-col">
 								<h1 class="text-4xl-semibold text-ink-gray-9">

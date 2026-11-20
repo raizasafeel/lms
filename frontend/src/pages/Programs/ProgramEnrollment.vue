@@ -43,7 +43,7 @@
 					<div class="text-sm-semibold text-ink-gray-6">
 						{{ __('Courses in this Program') }}
 					</div>
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+					<div class="grid grid-cols-1 @2xl:grid-cols-2 gap-4 mt-2">
 						<div
 							v-for="course in program.data.courses"
 							:key="course.name"

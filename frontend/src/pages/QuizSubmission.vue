@@ -74,14 +74,14 @@
 		     above the rule and leave the same gap again. -->
 		<div
 			v-if="submissionDetails.doc"
-			class="grid lg:flex-1 lg:grid-cols-[minmax(0,1fr)_300px] lg:grid-rows-[auto_1fr]"
+			class="grid lg:flex-1 @4xl:grid-cols-[minmax(0,1fr)_300px] @4xl:grid-rows-[auto_1fr]"
 		>
 			<!-- The rule belongs to this column, not to the sidebar blocks: they are
 			     only as tall as their own content, so a submission with no
 			     violations ended the line halfway down the page. Spanning both rows
 			     against a grid that fills the body carries it to the bottom. -->
 			<div
-				class="order-3 min-w-0 lg:order-none lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:border-e"
+				class="order-3 min-w-0 lg:order-none @4xl:col-start-1 lg:row-start-1 @4xl:row-span-2 lg:border-e"
 			>
 				<h1 class="text-lg-semibold mb-4 px-5 pt-5 text-ink-gray-9 lg:pe-10">
 					{{ submissionDetails.doc.quiz_title }}
@@ -101,7 +101,7 @@
 					<div
 						v-for="(row, index) in submissionDetails.doc.result"
 						:key="row.name"
-						class="flex flex-col gap-3 px-5 py-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-10 lg:pe-10"
+						class="flex flex-col gap-3 px-5 py-3 @4xl:grid @4xl:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-10 lg:pe-10"
 					>
 						<div class="min-w-0 space-y-3">
 							<!-- The number runs inline with the question rather than beside
@@ -182,7 +182,7 @@
 			     them, so summary then log then questions. The explicit placement
 			     outranks order once there are two columns. -->
 			<aside
-				class="order-1 border-b lg:order-none lg:col-start-2 lg:row-start-1 lg:border-b-0"
+				class="order-1 border-b lg:order-none @4xl:col-start-2 lg:row-start-1 lg:border-b-0"
 			>
 				<div class="flex items-center gap-3 px-5 py-5">
 					<Avatar
@@ -240,7 +240,7 @@
 			     submission with no violations still gets one from the summary. -->
 			<aside
 				v-if="submissionDetails.doc.violation_count"
-				class="order-2 border-b px-5 py-5 lg:order-none lg:col-start-2 lg:row-start-2 lg:border-b-0 lg:border-t"
+				class="order-2 border-b px-5 py-5 lg:order-none @4xl:col-start-2 lg:row-start-2 lg:border-b-0 lg:border-t"
 			>
 				<details
 					:open="logOpen"

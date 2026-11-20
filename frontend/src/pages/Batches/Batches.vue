@@ -1,7 +1,6 @@
 <template>
 	<ListPage
 		:breadcrumbs="breadcrumbs"
-		grid-class="grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]"
 		:rows="batches.data || []"
 		:loading="batches.list.loading"
 		:total-count="batchCount"

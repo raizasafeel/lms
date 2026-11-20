@@ -1,7 +1,7 @@
 <template>
 	<div
 		class="grid grid-cols-1 flex-1 min-h-0"
-		:class="{ 'md:grid-cols-[70%,30%]': outlineVisible }"
+		:class="{ '@2xl:grid-cols-[70%,30%]': outlineVisible }"
 	>
 		<div class="flex flex-col overflow-hidden">
 			<div class="overflow-y-auto h-full">

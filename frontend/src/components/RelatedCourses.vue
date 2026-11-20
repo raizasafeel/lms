@@ -6,7 +6,7 @@
 			</div>
 		</div>
 		<div
-			class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3"
+			class="grid grid-cols-1 @2xl:grid-cols-2 @4xl:grid-cols-3 @7xl:grid-cols-4 gap-5"
 		>
 			<CourseCard
 				v-for="course in relatedCourses.data"

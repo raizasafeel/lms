@@ -50,7 +50,7 @@
 	</div>
 	<div
 		v-else-if="doc"
-		class="grid flex-1 grid-cols-1 lg:min-h-0 lg:grid-cols-[7fr,3fr]"
+		class="grid flex-1 grid-cols-1 lg:min-h-0 @4xl:grid-cols-[7fr,3fr]"
 	>
 		<div class="flex min-h-0 flex-col overflow-y-auto px-5 py-5">
 			<div v-if="previewing" data-testid="quiz-preview" class="w-full">

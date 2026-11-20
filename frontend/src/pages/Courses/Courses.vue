@@ -6,7 +6,6 @@
 		:total-count="courseCount"
 		:has-next-page="courses.hasNextPage"
 		v-model:page-length="pageLength"
-		grid-class="grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]"
 		:empty-name="__('Courses')"
 		empty-icon="lucide-book-open"
 		:empty-title="emptyState?.title"
@@ -165,7 +164,9 @@
 				<h2 class="mb-3 text-lg-semibold text-ink-gray-9">
 					{{ __('Coming soon') }}
 				</h2>
-				<div class="grid grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-5">
+				<div
+					class="grid grid-cols-1 @2xl:grid-cols-2 @4xl:grid-cols-3 @7xl:grid-cols-4 gap-5"
+				>
 					<CourseCard
 						v-for="course in upcomingCourses.data"
 						:key="course.name"

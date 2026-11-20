@@ -5,7 +5,7 @@
 		</h2>
 		<router-link
 			:to="route"
-			class="grid w-full gap-4 rounded-6 border border-outline-gray-2 p-3 text-start hover:border-outline-gray-3 sm:grid-cols-[13rem_minmax(0,1fr)]"
+			class="grid w-full gap-4 rounded-6 border border-outline-gray-2 p-3 text-start hover:border-outline-gray-3 @lg:grid-cols-[13rem_minmax(0,1fr)]"
 		>
 			<img
 				v-if="awardedFor.image"

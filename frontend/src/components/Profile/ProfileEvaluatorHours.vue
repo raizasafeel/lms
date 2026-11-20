@@ -54,7 +54,7 @@
 			:aria-busy="loading || undefined"
 		>
 			<div
-				class="hidden gap-x-4 border-b border-outline-gray-2 px-4 py-2 text-p-sm text-ink-gray-6 sm:grid sm:grid-cols-[7rem_8rem_minmax(0,1fr)_auto]"
+				class="hidden gap-x-4 border-b border-outline-gray-2 px-4 py-2 text-p-sm text-ink-gray-6 @lg:grid @lg:grid-cols-[7rem_8rem_minmax(0,1fr)_auto]"
 				data-testid="week-header"
 				aria-hidden="true"
 			>
@@ -70,7 +70,7 @@
 				>
 					<div
 						v-if="loading"
-						class="grid grid-cols-1 items-center gap-x-4 gap-y-3 px-4 py-3.5 sm:grid-cols-[7rem_8rem_minmax(0,1fr)_auto]"
+						class="grid grid-cols-1 items-center gap-x-4 gap-y-3 px-4 py-3.5 @lg:grid-cols-[7rem_8rem_minmax(0,1fr)_auto]"
 					>
 						<div class="flex h-7 items-center">
 							<Skeleton class="h-4 w-20 rounded-4" />

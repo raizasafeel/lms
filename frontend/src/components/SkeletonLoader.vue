@@ -2,7 +2,7 @@
 	<div class="motion-safe:animate-pulse" aria-hidden="true">
 		<div v-if="variant === 'course-page'" class="p-5">
 			<div
-				class="flex w-full flex-col items-start justify-between gap-x-8 gap-y-8 md:flex-row"
+				class="flex w-full flex-col items-start justify-between gap-x-8 gap-y-8 @2xl:flex-row"
 			>
 				<div class="w-full min-w-0 space-y-10 md:w-2/3">
 					<section class="space-y-4">
@@ -57,12 +57,12 @@
 
 		<div
 			v-else-if="variant === 'form'"
-			class="grid h-full grid-cols-1 md:grid-cols-[70%,30%]"
+			class="grid h-full grid-cols-1 @2xl:grid-cols-[70%,30%]"
 		>
 			<div class="space-y-8 p-5">
 				<section v-for="s in 2" :key="s" class="space-y-5">
 					<div class="h-4 w-40 rounded-4 bg-surface-gray-3" />
-					<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+					<div class="grid grid-cols-1 gap-5 @2xl:grid-cols-2">
 						<div v-for="i in 4" :key="i" class="space-y-1.5">
 							<div class="h-4 w-24 rounded-4 bg-surface-gray-2" />
 							<div class="h-7 w-full rounded-4 bg-surface-gray-2" />
@@ -149,7 +149,7 @@
 
 		<div
 			v-else-if="variant === 'cards'"
-			class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+			class="grid grid-cols-1 gap-5 @2xl:grid-cols-2 @4xl:grid-cols-3 @7xl:grid-cols-4"
 		>
 			<div
 				v-for="i in count"

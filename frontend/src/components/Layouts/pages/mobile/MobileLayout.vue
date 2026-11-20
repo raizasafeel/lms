@@ -8,7 +8,7 @@
 			{{ __('Skip to main content') }}
 		</a>
 		<main
-			class="flex min-h-0 flex-1 flex-col overflow-y-auto focus:outline-none"
+			class="@container flex min-h-0 flex-1 flex-col overflow-y-auto focus:outline-none"
 			id="scrollContainer"
 			tabindex="-1"
 		>

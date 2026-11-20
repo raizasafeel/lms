@@ -28,10 +28,10 @@ svg.lucide {
 	scale: -1 1;
 }
 
-/* 48px, the desk header's height. The property is the single source so the
+/* 42px, the header height of Flow's panel beside a frappe-ui app (and of CRM, Helpdesk). The property is the single source so the
    scroll containers below clear exactly the header (WCAG 2.4.11). */
 :root {
-	--header-frame-h: 3rem;
+	--header-frame-h: 2.625rem;
 }
 
 .header-frame {

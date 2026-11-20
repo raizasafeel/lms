@@ -7,7 +7,7 @@
 		<AssessmentCardHeader icon="lucide-circle-help" :title="__('Quiz')" />
 		<div class="space-y-4 p-3.5">
 			<Skeleton class="h-5 w-1/3 rounded-4" />
-			<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+			<div class="grid grid-cols-2 gap-2 @lg:grid-cols-4">
 				<Skeleton v-for="i in 4" :key="i" class="h-14 rounded-6" />
 			</div>
 			<div class="flex justify-end">
@@ -193,7 +193,7 @@
 							!attemptsExhausted &&
 							!scheduleBlocked
 						"
-						class="-mx-3.5 -mt-3.5 grid border-b border-outline-gray-1 md:grid-cols-2 md:divide-x md:divide-outline-gray-1 rtl:divide-x-reverse"
+						class="-mx-3.5 -mt-3.5 grid border-b border-outline-gray-1 @2xl:grid-cols-2 @2xl:divide-x @2xl:divide-outline-gray-1 rtl:divide-x-reverse"
 					>
 						<!-- One band split by a divider, not two boxed cards: the quiz card
 						     is the only box. It is the first thing in this section whenever it

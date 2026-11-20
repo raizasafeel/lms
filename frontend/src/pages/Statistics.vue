@@ -8,7 +8,7 @@
 			<LoadingIndicator class="size-5 text-ink-gray-5" />
 		</div>
 		<div v-else-if="chartDetails.data" class="p-5">
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+			<div class="grid grid-cols-1 @2xl:grid-cols-2 @4xl:grid-cols-5 gap-4">
 				<Tooltip :text="__('Published Courses')">
 					<NumberCard
 						:title="__('Courses')"
@@ -45,7 +45,7 @@
 					/>
 				</Tooltip>
 			</div>
-			<div class="statistics-charts grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+			<div class="statistics-charts grid grid-cols-1 @4xl:grid-cols-2 gap-4 mt-4">
 				<ChartCard class="h-72">
 					<LineChart
 						v-if="hasPoints(signupsChart.data)"

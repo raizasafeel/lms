@@ -3,7 +3,7 @@
 		<PageHeader :breadcrumbs="breadcrumbs" />
 		<div
 			v-if="details"
-			class="mx-auto grid w-full max-w-6xl items-start gap-8 px-5 py-6 lg:grid-cols-[minmax(0,1fr)_20rem]"
+			class="mx-auto grid w-full max-w-6xl items-start gap-8 px-5 py-6 @4xl:grid-cols-[minmax(0,1fr)_20rem]"
 		>
 			<div class="flex min-w-0 flex-col gap-6">
 				<div class="space-y-2">
@@ -49,7 +49,7 @@
 					:evaluator="details.evaluator_name"
 				/>
 			</div>
-			<aside class="flex flex-col gap-3 lg:sticky lg:top-16">
+			<aside class="flex flex-col gap-3 @4xl:sticky @4xl:top-16">
 				<CertificateValidityCard :certificate="details" />
 				<component
 					:is="memberRoute ? 'router-link' : 'div'"

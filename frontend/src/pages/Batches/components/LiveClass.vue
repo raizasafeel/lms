@@ -33,7 +33,7 @@
 		</template>
 		<div
 			v-if="liveClasses.data?.length"
-			class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-5"
+			class="grid grid-cols-1 @lg:grid-cols-2 @4xl:grid-cols-4 gap-5 mt-5"
 		>
 			<div
 				v-for="cls in liveClasses.data"

@@ -43,7 +43,7 @@
 		v-else
 		:disabled="!canEdit"
 		data-testid="programming-exercise-fields"
-		class="m-0 grid min-w-0 flex-1 grid-cols-1 border-0 p-0 lg:min-h-0 lg:grid-cols-[7fr,3fr]"
+		class="m-0 grid min-w-0 flex-1 grid-cols-1 border-0 p-0 lg:min-h-0 @4xl:grid-cols-[7fr,3fr]"
 	>
 		<div
 			class="flex min-h-0 flex-col gap-8 overflow-y-auto p-5"

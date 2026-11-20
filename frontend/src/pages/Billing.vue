@@ -2,7 +2,7 @@
 	<PageHeader :breadcrumbs="breadcrumbs" />
 	<PageBody :title="__('Billing Details')">
 		<div v-if="access.data?.access && orderSummary.data" class="px-5 pb-10">
-			<div class="flex flex-col lg:flex-row justify-between">
+			<div class="flex flex-col @4xl:flex-row justify-between">
 				<div class="flex flex-col lg:order-last mb-10 lg:mt-10 lg:w-1/4">
 					<div class="h-fit bg-surface-gray-2 rounded-5 p-5 space-y-4">
 						<div class="space-y-1">
@@ -100,7 +100,7 @@
 							{{ __('Address') }}
 						</h2>
 					</div>
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+					<div class="grid grid-cols-1 @2xl:grid-cols-2 gap-5">
 						<div class="space-y-4">
 							<FormControl
 								:label="__('Billing Name')"
@@ -186,7 +186,7 @@
 						</div>
 					</div>
 					<div
-						class="flex flex-col lg:flex-row items-start lg:items-center justify-between border-t pt-4 mt-8 space-y-4 lg:space-y-0"
+						class="flex flex-col @4xl:flex-row items-start lg:items-center justify-between border-t pt-4 mt-8 space-y-4 lg:space-y-0"
 					>
 						<div>
 							<FormControl

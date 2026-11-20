@@ -2,11 +2,11 @@
 	<SkeletonLoader v-if="!course.data" variant="course-page" />
 	<div v-else class="p-5">
 		<div
-			class="flex flex-col md:flex-row items-start justify-between w-full gap-x-8 gap-y-8"
+			class="flex flex-col @2xl:flex-row items-start justify-between w-full gap-x-8 gap-y-8"
 		>
-			<div class="md:w-2/3 space-y-10 min-w-0">
+			<div class="@2xl:w-2/3 space-y-10 min-w-0">
 				<CourseHeading :course="course.data" :editable="editable" />
-				<div class="md:hidden">
+				<div class="@2xl:hidden">
 					<CourseEditCard v-if="editable" :course="course" />
 					<CourseCardOverlay
 						v-else
@@ -87,7 +87,7 @@
 			</div>
 
 			<aside
-				class="hidden md:flex w-80 shrink-0 flex-col space-y-6 self-start sticky-below-header"
+				class="hidden @2xl:flex w-80 shrink-0 flex-col space-y-6 self-start sticky-below-header"
 			>
 				<CourseEditCard v-if="editable" :course="course" />
 				<template v-else>

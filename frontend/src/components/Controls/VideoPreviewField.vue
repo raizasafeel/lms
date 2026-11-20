@@ -17,7 +17,7 @@
 				</button>
 			</Tooltip>
 		</div>
-		<div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+		<div class="flex flex-col gap-4 @lg:flex-row sm:items-start">
 			<div
 				class="relative aspect-[750/422] w-full shrink-0 grid place-items-center overflow-hidden rounded-6 border border-outline-gray-2 bg-surface-gray-2 sm:w-56"
 			>

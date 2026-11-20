@@ -1,12 +1,12 @@
 <template>
 	<div
-		class="grid w-full items-start gap-x-12 gap-y-10 px-5 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,16rem)]"
+		class="grid w-full items-start gap-x-12 gap-y-10 px-5 py-8 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,16rem)]"
 	>
 		<div class="min-w-0 space-y-10">
 			<slot />
 		</div>
 		<aside
-			class="hidden lg:sticky lg:top-[calc(var(--header-frame-h)+1.25rem)] lg:block"
+			class="hidden @4xl:sticky @4xl:top-[calc(var(--header-frame-h)+1.25rem)] @4xl:block"
 		>
 			<SettingsSectionNav
 				:sections="sections"

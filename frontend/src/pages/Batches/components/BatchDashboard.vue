@@ -1,6 +1,6 @@
 <template>
 	<div class="lg:h-[88vh]">
-		<div class="grid grid-cols-1 lg:grid-cols-[2fr,1fr] gap-5">
+		<div class="grid grid-cols-1 @4xl:grid-cols-[2fr,1fr] gap-5">
 			<div class="p-5">
 				<div class="mb-8 space-y-2">
 					<div class="text-lg-semibold text-ink-gray-9">

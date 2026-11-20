@@ -25,7 +25,7 @@
 		</template>
 
 		<div v-if="program.data?.is_member" class="px-5 pb-10">
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-5">
+			<div class="grid grid-cols-1 @2xl:grid-cols-2 @4xl:grid-cols-3 gap-5 mb-5">
 				<div
 					v-for="(course, index) in program.data.courses"
 					:key="course.name"

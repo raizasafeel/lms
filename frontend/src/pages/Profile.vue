@@ -20,7 +20,7 @@
 			@select="(imageUrl) => coverImage.submit({ url: imageUrl })"
 		/>
 		<div class="mx-auto -mt-10 md:-mt-4 max-w-4xl translate-x-0 px-5">
-			<div class="flex flex-col md:flex-row items-center">
+			<div class="flex flex-col @2xl:flex-row items-center">
 				<div>
 					<ProfileAvatar
 						:image="profile.data.user_image"

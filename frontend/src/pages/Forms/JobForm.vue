@@ -19,12 +19,12 @@
 			</template>
 		</PageHeader>
 		<div class="">
-			<div class="grid grid-cols-1 gap-5 px-5 lg:grid-cols-[70%,30%]">
+			<div class="grid grid-cols-1 gap-5 px-5 @4xl:grid-cols-[70%,30%]">
 				<div class="space-y-5 pt-5">
 					<h2 class="text-ink-gray-9 font-semibold">
 						{{ __('Job Details') }}
 					</h2>
-					<div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+					<div class="grid grid-cols-1 gap-5 @lg:grid-cols-3">
 						<FormControl
 							v-model="job.job_title"
 							:label="__('Title')"

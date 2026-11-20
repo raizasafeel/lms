@@ -1,7 +1,7 @@
 <template>
 	<div
 		data-slot="dashboard-kpis"
-		class="grid shrink-0 grid-cols-2 gap-5 md:grid-cols-4 lg:grid-cols-2 min-[1400px]:grid-cols-4"
+		class="grid shrink-0 grid-cols-2 gap-5 @2xl:grid-cols-4 @4xl:grid-cols-2 @[73.5rem]:grid-cols-4"
 	>
 		<component
 			:is="kpi.select ? 'button' : 'div'"

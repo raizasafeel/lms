@@ -6,7 +6,7 @@
 				<h2 class="font-semibold text-md mb-3 text-ink-gray-9">
 					{{ __('Upcoming Live Classes') }}
 				</h2>
-				<div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+				<div class="grid grid-cols-1 @2xl:grid-cols-4 gap-5">
 					<div
 						v-for="cls in myLiveClasses.data"
 						:key="cls.name"
@@ -50,7 +50,7 @@
 					</span>
 				</router-link>
 			</div>
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+			<div class="grid grid-cols-1 @lg:grid-cols-2 @4xl:grid-cols-3 gap-5">
 				<CourseCard
 					v-for="course in myCourses.data"
 					:key="course.name"
@@ -82,7 +82,7 @@
 					</span>
 				</router-link>
 			</div>
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+			<div class="grid grid-cols-1 @lg:grid-cols-2 @4xl:grid-cols-4 gap-5">
 				<BatchCard
 					v-for="batch in myBatches.data"
 					:key="batch.name"

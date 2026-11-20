@@ -1,6 +1,6 @@
 <template>
-	<div class="flex flex-col gap-5 py-3 sm:flex-row">
-		<div class="flex shrink-0 flex-col gap-2 sm:w-40">
+	<div class="flex flex-col gap-5 py-3 @lg:flex-row">
+		<div class="flex shrink-0 flex-col gap-2 @lg:w-40">
 			<div
 				class="grid aspect-video w-full place-items-center overflow-hidden rounded-4 border border-outline-gray-1"
 				:class="image ? 'bg-surface-gray-2' : courseTint(tint)"

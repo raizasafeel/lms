@@ -5,7 +5,7 @@
 				<div class="text-lg-semibold text-ink-gray-9 mb-3">
 					{{ __('Upcoming Evaluations') }}
 				</div>
-				<div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+				<div class="grid grid-cols-1 @2xl:grid-cols-4 gap-5">
 					<component
 						:is="user.data?.username ? 'router-link' : 'div'"
 						v-for="evaluation in evals?.data"
@@ -54,7 +54,7 @@
 				<div class="text-lg-semibold text-ink-gray-9 mb-3">
 					{{ __('Upcoming Live Classes') }}
 				</div>
-				<div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+				<div class="grid grid-cols-1 @2xl:grid-cols-4 gap-5">
 					<div
 						v-for="cls in liveClasses?.data"
 						:key="cls.name"
@@ -94,7 +94,7 @@
 					</span>
 				</router-link>
 			</div>
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+			<div class="grid grid-cols-1 @lg:grid-cols-2 @4xl:grid-cols-3 gap-5">
 				<CourseCard
 					v-for="course in createdCourses.data"
 					:key="course.name"
@@ -122,7 +122,7 @@
 					</span>
 				</router-link>
 			</div>
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+			<div class="grid grid-cols-1 @lg:grid-cols-2 @4xl:grid-cols-4 gap-5">
 				<BatchCard
 					v-for="batch in createdBatches.data"
 					:key="batch.name"

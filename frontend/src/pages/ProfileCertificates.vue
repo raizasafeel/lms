@@ -10,7 +10,7 @@
 		</div>
 		<div
 			v-if="certificates.data?.length"
-			class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+			class="grid grid-cols-1 gap-4 @2xl:grid-cols-2 @4xl:grid-cols-3"
 		>
 			<div
 				v-for="certificate in certificates.data"
