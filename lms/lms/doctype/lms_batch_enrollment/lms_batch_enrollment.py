@@ -17,6 +17,7 @@ from lms.lms.doctype.lms_enrollment.lms_enrollment import (
 )
 from lms.lms.locking import locked_count
 from lms.lms.permissions import authored_batch_condition, can_author_batch, is_site_administrator
+from lms.lms.student_view import STAFF_MEMBER_TYPE
 from lms.lms.utils import has_moderator_role
 
 # Roles that keep today's blanket access: every row, every ptype.
@@ -26,7 +27,10 @@ UNSCOPED_ROLES = ("Moderator", "Batch Evaluator")
 class LMSBatchEnrollment(Document):
 	def after_insert(self):
 		self.validate_against_committed_rows()
-		self.send_confirmation_email_or_log()
+		# An instructor walking through their own batch needs no welcome or invites.
+		if self.flags.student_view:
+			return
+		send_confirmation_email(self)
 		from lms.lms.doctype.lms_live_class.lms_live_class import add_learner_to_live_classes
 
 		add_learner_to_live_classes(self.batch)
@@ -110,7 +114,10 @@ class LMSBatchEnrollment(Document):
 
 	def can_skip_payment(self):
 		"""Only a site admin or Moderator enrolls themselves without paying. The
-		batch's tagged instructors and evaluators may also enroll others free."""
+		batch's tagged instructors and evaluators may also enroll others free, and
+		themselves through student view."""
+		if self.flags.student_view:
+			return can_author_batch(self.batch)
 		if self.owner != self.member:
 			return can_author_batch(self.batch)
 		return is_site_administrator() or bool(has_moderator_role())
@@ -163,6 +170,8 @@ class LMSBatchEnrollment(Document):
 				enrollment.course = course.course
 				enrollment.member = self.member
 				enrollment.enrollment_from_batch = self.batch
+				if self.flags.student_view:
+					enrollment.member_type = STAFF_MEMBER_TYPE
 				# Adding the learner to the batch is what was authorised and paid for;
 				# its courses come with it, whoever added them.
 				enrollment.flags.via_batch_enrollment = True
