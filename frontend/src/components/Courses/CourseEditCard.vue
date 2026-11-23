@@ -8,9 +8,11 @@
 				:image="doc.image"
 				:videoLink="doc.video_link"
 				:tint="doc.card_gradient"
+				:icon="doc.icon"
 				@update:image="(value) => setField('image', value)"
 				@update:videoLink="(value) => setField('video_link', value)"
 				@update:tint="(value) => setField('card_gradient', value)"
+				@update:icon="(value) => setField('icon', value)"
 			/>
 		</div>
 		<div class="space-y-4 p-5">

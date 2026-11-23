@@ -5,21 +5,14 @@
 			__('Who can find the course, how they join and how they move through it.')
 		"
 	>
-		<SettingRow
+		<SettingSwitch
 			v-for="row in accessRows"
 			:key="row.label"
 			:label="row.label"
 			:summary="row.summary"
-		>
-			<template #control>
-				<BooleanSwitch
-					:modelValue="row.value"
-					:aria-label="row.label"
-					:data-label="row.label"
-					@update:modelValue="row.set"
-				/>
-			</template>
-		</SettingRow>
+			:modelValue="row.value"
+			@update:modelValue="row.set"
+		/>
 	</SettingsGroup>
 
 	<SettingsGroup
@@ -27,47 +20,32 @@
 		:description="__('Certificate type and price are on the Overview page.')"
 	>
 		<template v-if="hasCertificate">
-			<SettingRow
+			<SettingAction
 				:label="__('Certificate design')"
 				:summary="certificateDesignLabel"
-			>
-				<template #control>
-					<Button size="sm" @click="showDesignDialog = true">
-						{{ __('Change') }}
-					</Button>
-				</template>
-			</SettingRow>
-			<SettingRow
+				:action="__('Change')"
+				@click="showDesignDialog = true"
+			/>
+			<SettingLink
 				v-if="doc.paid_certificate"
+				v-model="doc.evaluator"
 				:label="__('Evaluator')"
 				:summary="__('Learners book a session with them after finishing.')"
-			>
-				<Link
-					ref="evaluatorLinkRef"
-					v-model="doc.evaluator"
-					doctype="Course Evaluator"
-					:aria-label="__('Evaluator')"
-					:placeholder="__('Select evaluator')"
-					variant="outline"
-					:onCreate="openEvaluatorModal"
-					@update:modelValue="markDirty()"
-				/>
-			</SettingRow>
-			<SettingRow
+				doctype="Course Evaluator"
+				:placeholder="__('Select evaluator')"
+				:onCreate="openEvaluatorModal"
+				@update:modelValue="markDirty()"
+			/>
+			<SettingField
 				v-if="doc.paid_certificate"
+				v-model="doc.timezone"
+				type="combobox"
 				:label="__('Timezone')"
 				:summary="__('Evaluation slots are shown in this timezone.')"
-			>
-				<FormControl
-					v-model="doc.timezone"
-					type="combobox"
-					:aria-label="__('Timezone')"
-					:options="timezoneOptions"
-					:placeholder="__('Select timezone')"
-					variant="outline"
-					@update:modelValue="markDirty()"
-				/>
-			</SettingRow>
+				:options="timezoneOptions"
+				:placeholder="__('Select timezone')"
+				@update:modelValue="markDirty()"
+			/>
 		</template>
 		<SettingRow
 			v-else
@@ -93,11 +71,13 @@
 </template>
 
 <script setup lang="ts">
-import { Button, FormControl, createResource } from 'frappe-ui'
+import { createResource } from 'frappe-ui'
 import { computed, inject, ref } from 'vue'
-import BooleanSwitch from '@/components/Controls/BooleanSwitch.vue'
-import Link from '@/components/Controls/Link.vue'
+import SettingAction from '@/components/InlineEdit/SettingAction.vue'
+import SettingField from '@/components/InlineEdit/SettingField.vue'
+import SettingLink from '@/components/InlineEdit/SettingLink.vue'
 import SettingRow from '@/components/InlineEdit/SettingRow.vue'
+import SettingSwitch from '@/components/InlineEdit/SettingSwitch.vue'
 import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import CertificateDesignDialog from '@/components/Modals/CertificateDesignDialog.vue'
 import NewMemberModal from '@/components/Modals/NewMemberModal.vue'
@@ -106,11 +86,10 @@ import type { LMSCourse } from '@/types/lms/LMSCourse'
 import type { CertificateDesignList } from '@/types/api'
 import { describeDesign } from '@/utils/certificateDesigns'
 
-/** The Access and certificate sections of the Options tab. */
+/** The Access and certificate sections of the Settings tab. */
 const { resource, markDirty } = inject<CourseFormContext>('courseForm')!
 
 const doc = computed(() => resource.doc!)
-const evaluatorLinkRef = ref<{ reload: () => void } | null>(null)
 const showMemberModal = ref<boolean>(false)
 const showDesignDialog = ref<boolean>(false)
 
@@ -191,7 +170,6 @@ function openEvaluatorModal(): void {
 
 function onEvaluatorCreated(created: { name: string }): void {
 	doc.value.evaluator = created.name
-	evaluatorLinkRef.value?.reload()
 	markDirty()
 }
 </script>

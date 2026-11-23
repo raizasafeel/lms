@@ -99,7 +99,6 @@
 						{{ __('Clear filters') }}
 					</Button>
 				</div>
-
 				<div
 					v-if="categoryOptions.length"
 					class="flex flex-wrap gap-2"
@@ -172,13 +171,13 @@ const { brand } = sessionStore()
 const start = ref(0)
 const categories = ref([])
 const currentCategory = ref(null)
+const allCategories = { label: __('All'), value: null }
 const title = ref('')
 const certification = ref(false)
 const price = ref('')
 const medium = ref('')
 const showFilters = ref(false)
 const filters = ref({})
-const allCategories = { label: __('All'), value: null }
 const priceOptions = [
 	{ label: __('Any price'), value: '' },
 	{ label: __('Free'), value: 'free' },
@@ -195,11 +194,7 @@ const isAdmin = computed(() =>
 		(role) => user.data?.[role]
 	)
 )
-// A signed-in learner most often comes back for a batch they are in, and a
-// batch that has started is no longer under Upcoming.
-const currentTab = ref(
-	isAdmin.value ? 'active' : user.data ? 'enrolled' : 'upcoming'
-)
+const currentTab = ref(isAdmin.value ? 'upcoming' : 'all')
 const orderBy = ref('start_date')
 const readOnlyMode = window.read_only_mode
 const router = useRouter()
@@ -348,6 +343,28 @@ const updatePriceAndModeFilters = () => {
 	else delete filters.value['medium']
 }
 
+// Upcoming, In progress and Completed are settled to the day here; the server
+// settles the time of day from these same filter shapes.
+const staffTabFilters = () => {
+	const today = dayjs().format('YYYY-MM-DD')
+	return {
+		upcoming: {
+			filters: { start_date: ['>=', today], published: 1 },
+			orderBy: 'start_date',
+		},
+		active: {
+			filters: {
+				start_date: ['<=', today],
+				end_date: ['>=', today],
+				published: 1,
+			},
+			orderBy: 'start_date',
+		},
+		completed: { filters: { end_date: ['<', today] } },
+		unpublished: { filters: { published: 0 } },
+	}
+}
+
 const updateTabFilter = () => {
 	orderBy.value = 'start_date'
 	if (!user.data) {
@@ -364,20 +381,9 @@ const updateTabFilter = () => {
 		delete filters.value['start_date']
 		delete filters.value['end_date']
 		delete filters.value['published']
-		orderBy.value = 'start_date desc'
-		if (currentTab.value == 'active') {
-			filters.value['end_date'] = ['>=', dayjs().format('YYYY-MM-DD')]
-			filters.value['published'] = 1
-			orderBy.value = 'start_date'
-		} else if (currentTab.value == 'upcoming') {
-			filters.value['start_date'] = ['>=', dayjs().format('YYYY-MM-DD')]
-			filters.value['published'] = 1
-			orderBy.value = 'start_date'
-		} else if (currentTab.value == 'archived') {
-			filters.value['start_date'] = ['<=', dayjs().format('YYYY-MM-DD')]
-		} else if (currentTab.value == 'unpublished') {
-			filters.value['published'] = 0
-		}
+		const tab = staffTabFilters()[currentTab.value]
+		Object.assign(filters.value, tab?.filters)
+		orderBy.value = tab?.orderBy || 'start_date desc'
 	} else {
 		delete filters.value['enrolled']
 	}
@@ -439,9 +445,9 @@ watch(currentTab, () => {
 const batchTabs = computed(() => {
 	if (isAdmin.value) {
 		return [
-			{ label: __('Active'), value: 'active' },
 			{ label: __('Upcoming'), value: 'upcoming' },
-			{ label: __('Archived'), value: 'archived' },
+			{ label: __('In progress'), value: 'active' },
+			{ label: __('Completed'), value: 'completed' },
 			{ label: __('Drafts'), value: 'unpublished' },
 		]
 	}

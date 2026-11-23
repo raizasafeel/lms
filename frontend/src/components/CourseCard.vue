@@ -15,7 +15,8 @@
 			/>
 			<span
 				v-else
-				class="lucide-book-open size-10 stroke-[1.5]"
+				class="size-10 stroke-[1.5]"
+				:class="courseIcon(course.icon)"
 				aria-hidden="true"
 			/>
 			<span
@@ -113,6 +114,7 @@ import { Badge } from 'frappe-ui'
 import { computed } from 'vue'
 import { sessionStore } from '@/stores/session'
 import { formatRating } from '@/utils'
+import { courseIcon } from '@/utils/courseIcons'
 import { courseTint } from '@/utils/courseTints'
 import { safeUrl } from '@/utils/safeUrl'
 import CardLink from '@/components/CardLink.vue'

@@ -4,7 +4,8 @@
 			:title="__('Enrollment')"
 			:description="__('How people join this batch.')"
 		>
-			<SettingRow
+			<SettingSwitch
+				v-model="doc.allow_self_enrollment"
 				:label="__('Self enrollment')"
 				:summary="
 					doc.allow_self_enrollment
@@ -13,32 +14,15 @@
 						  )
 						: __('Learners are asked to contact you, and you enroll them.')
 				"
-			>
-				<template #control>
-					<Switch
-						v-model="doc.allow_self_enrollment"
-						:aria-label="__('Self enrollment')"
-					/>
-				</template>
-			</SettingRow>
-			<SettingRow
+			/>
+			<SettingLink
+				v-model="doc.confirmation_email_template"
 				:label="__('Confirmation email')"
 				:summary="__('Sent to each learner when they are enrolled.')"
-			>
-				<template #control>
-					<Link
-						variant="outline"
-						ref="emailTemplateLink"
-						v-model="doc.confirmation_email_template"
-						doctype="Email Template"
-						:placeholder="__('Default email')"
-						:aria-label="__('Confirmation email template')"
-						:onCreate="openEmailTemplateForm"
-						align="end"
-						class="w-56"
-					/>
-				</template>
-			</SettingRow>
+				doctype="Email Template"
+				:placeholder="__('Default email')"
+				:onCreate="openEmailTemplateForm"
+			/>
 		</SettingsGroup>
 
 		<SettingsGroup
@@ -47,38 +31,33 @@
 				__('Each class gets a join link from the video call account set here.')
 			"
 		>
-			<SettingRow :label="__('Video calls')" :summary="conferencingSummary">
-				<template #control>
-					<Select
-						variant="outline"
-						v-model="doc.conferencing_provider"
-						:options="conferencingOptions"
-						:aria-label="__('Conferencing provider')"
-						class="w-40"
-					/>
-				</template>
-				<Link
-					variant="outline"
-					v-if="doc.conferencing_provider === 'Zoom'"
-					v-model="doc.zoom_account"
-					doctype="LMS Zoom Settings"
-					:label="__('Zoom account')"
-					:onCreate="
-						(_value: string, close: () => void) => openSettings('zoom', close)
-					"
-				/>
-				<Link
-					variant="outline"
-					v-else-if="doc.conferencing_provider === 'Google Meet'"
-					v-model="doc.google_meet_account"
-					doctype="LMS Google Meet Settings"
-					:label="__('Google Meet account')"
-					:onCreate="
-						(_value: string, close: () => void) =>
-							openSettings('google-meet', close)
-					"
-				/>
-			</SettingRow>
+			<SettingField
+				v-model="doc.conferencing_provider"
+				type="select"
+				:label="__('Video calls')"
+				:summary="conferencingSummary"
+				:options="conferencingOptions"
+			/>
+			<SettingLink
+				v-if="doc.conferencing_provider === 'Zoom'"
+				v-model="doc.zoom_account"
+				:label="__('Zoom account')"
+				doctype="LMS Zoom Settings"
+				:onCreate="
+					(_value: string | null, close?: () => void) =>
+						openSettings('zoom', close)
+				"
+			/>
+			<SettingLink
+				v-else-if="doc.conferencing_provider === 'Google Meet'"
+				v-model="doc.google_meet_account"
+				:label="__('Google Meet account')"
+				doctype="LMS Google Meet Settings"
+				:onCreate="
+					(_value: string | null, close?: () => void) =>
+						openSettings('google-meet', close)
+				"
+			/>
 		</SettingsGroup>
 
 		<SettingsGroup
@@ -87,26 +66,31 @@
 				__('How the batch shows up in search results and shared links.')
 			"
 		>
-			<SettingRow
-				:label="__('Description')"
+			<SettingField
+				v-model="form!.meta.description"
+				type="textarea"
+				:label="__('Meta description')"
 				:summary="__('Leave empty to use the short description.')"
-			>
-				<FormControl
-					variant="outline"
-					v-model="form!.meta.description"
-					type="textarea"
-					:placeholder="doc.description"
-					:aria-label="__('Meta description')"
-				/>
-			</SettingRow>
-			<SettingRow :label="__('Keywords')">
-				<FormControl
-					variant="outline"
-					v-model="form!.meta.keywords"
-					:placeholder="__('Comma separated keywords')"
-					:aria-label="__('Meta keywords')"
-				/>
-			</SettingRow>
+				:placeholder="doc.description"
+			/>
+			<SettingField
+				v-model="form!.meta.keywords"
+				:label="__('Meta keywords')"
+				:summary="__('Comma separated keywords for search engines.')"
+			/>
+			<SettingImage
+				v-model="doc.meta_image"
+				:label="__('Meta image')"
+				:summary="__('Shown when the batch link is shared.')"
+			/>
+			<SettingField
+				v-model="doc.video_link"
+				:label="__('Preview video')"
+				:summary="
+					__('A YouTube or video link shown to learners before they enroll.')
+				"
+				placeholder="https://"
+			/>
 		</SettingsGroup>
 
 		<BatchManageGroup :batch="batch" />
@@ -114,12 +98,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useTemplateRef, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { FormControl, Switch } from 'frappe-ui'
-import Link from '@/components/Controls/Link.vue'
-import Select from '@/components/Controls/Select.vue'
-import SettingRow from '@/components/InlineEdit/SettingRow.vue'
+import SettingField from '@/components/InlineEdit/SettingField.vue'
+import SettingImage from '@/components/InlineEdit/SettingImage.vue'
+import SettingLink from '@/components/InlineEdit/SettingLink.vue'
+import SettingSwitch from '@/components/InlineEdit/SettingSwitch.vue'
 import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import BatchManageGroup from '@/pages/Batches/components/BatchManageGroup.vue'
 import { openBatchForm } from '@/composables/useBatchForms'
@@ -134,9 +118,6 @@ const router = useRouter()
 const route = useRoute()
 const form = injectBatchForm()
 const doc = computed(() => form?.doc.value ?? null)
-const emailTemplateLink = useTemplateRef<{ reload: () => void }>(
-	'emailTemplateLink'
-)
 
 const conferencingOptions = [
 	{ label: __('None'), value: '' },
@@ -170,7 +151,6 @@ watch(
 	([created]) => {
 		if (typeof created !== 'string' || !created || !doc.value) return
 		doc.value.confirmation_email_template = created
-		emailTemplateLink.value?.reload()
 		const query = { ...route.query }
 		delete query.emailTemplate
 		router.replace({ ...route, query })

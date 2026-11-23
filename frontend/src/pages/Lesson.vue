@@ -1194,10 +1194,9 @@ const updateVideoTime = (video: WatchedVideo): void => {
 let videoFallbackArmed = false
 let fallbackGeneration = 0
 const fallbackToDwellTimer = (reason: string): void => {
-	// The dwell fallback only matters for an enrolled student tracking progress.
-	// Don't surface the "mark as viewed" toast in student view or to
-	// non-enrolled viewers (admins/instructors reviewing the lesson).
-	if (isStudentView.value || !lesson.data?.membership) return
+	// The dwell fallback only matters for an enrolled learner tracking progress,
+	// including an instructor enrolled through student view.
+	if (!lesson.data?.membership) return
 	if (videoFallbackArmed) return
 	videoFallbackArmed = true
 	releaseLessonCompletion()

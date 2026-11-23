@@ -42,7 +42,7 @@
 						<CourseOutline
 							v-else
 							:courseName="course.data.name"
-							:getProgress="course.data.membership ? true : false"
+							:getProgress="Boolean(membership)"
 							:editorLinks="isCourseAdmin && !preview"
 						/>
 					</div>
@@ -77,7 +77,7 @@
 				<CourseReviews
 					:courseName="course.data.name"
 					:avg_rating="course.data.rating"
-					:membership="course.data.membership || null"
+					:membership="membership"
 				/>
 			</div>
 
@@ -96,25 +96,14 @@
 			</aside>
 		</div>
 
-		<section v-if="editable && form" class="mt-12 space-y-4">
-			<div class="flex items-baseline justify-between gap-4">
-				<h2 class="text-3xl-semibold text-ink-gray-9">
-					{{ __('Related courses') }}
-				</h2>
-				<span class="text-p-sm text-ink-gray-6">
-					{{ __('Shown to learners below the course') }}
-				</span>
-			</div>
-			<MultiLink
-				v-model="form.relatedCourses.value"
-				doctype="LMS Course"
-				:filters="{ name: ['!=', course.data.name], published: 1 }"
-				:placeholder="__('Add related courses')"
-				:emptyText="__('No other published courses available')"
-				variant="outline"
-				@update:modelValue="form.markDirty()"
-			/>
-		</section>
+		<RelatedCoursesEditor
+			v-if="editable && form"
+			v-model="form.relatedCourses.value"
+			:courseName="course.data.name"
+			:category="course.data.category"
+			class="mt-12"
+			@update:modelValue="form.markDirty()"
+		/>
 		<RelatedCourses v-else :courseName="course.data.name" class="mt-12" />
 	</div>
 </template>
@@ -135,7 +124,7 @@ import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import CourseReviews from '@/components/CourseReviews.vue'
 import CourseCreatorCard from '@/components/CourseCreatorCard.vue'
 import RelatedCourses from '@/components/RelatedCourses.vue'
-import MultiLink from '@/components/Controls/MultiLink.vue'
+import RelatedCoursesEditor from '@/components/Courses/RelatedCoursesEditor.vue'
 import CourseEditCard from '@/components/Courses/CourseEditCard.vue'
 import CourseHeading from '@/components/Courses/CourseHeading.vue'
 import RichTextField from '@/components/InlineEdit/RichTextField.vue'
@@ -155,6 +144,13 @@ const aboutHeadingId = useId()
 
 const editable = computed<boolean>(
 	() => !props.preview && Boolean(form?.resource.doc)
+)
+
+// A not-enrolled preview hides the instructor's own student view enrollment.
+const membership = computed(() =>
+	props.preview === 'not-enrolled'
+		? null
+		: props.course.data?.membership || null
 )
 
 const isCourseAdmin = computed<boolean>(

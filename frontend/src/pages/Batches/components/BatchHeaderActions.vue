@@ -41,35 +41,14 @@
 	</template>
 	<template v-if="isEditTab && form">
 		<Button
-			v-if="!isMobile && manage"
+			v-if="!isMobile && manage && !batch.data?.published"
 			variant="subtle"
 			:loading="manage.publishing()"
 			@click="manage.togglePublish()"
 		>
-			{{ batch.data?.published ? __('Unpublish') : __('Publish') }}
+			{{ __('Publish') }}
 		</Button>
-		<span
-			@mouseenter="form.previewRequired(true)"
-			@mouseleave="form.previewRequired(false)"
-			@focusin="form.previewRequired(true)"
-			@focusout="form.previewRequired(false)"
-		>
-			<ShortcutTooltip v-if="canSave" :label="__('Save')">
-				<HeaderButton
-					:label="__('Save')"
-					variant="solid"
-					@click="form.submitBatch()"
-				/>
-			</ShortcutTooltip>
-			<Tooltip v-else :text="form.saveTooltip.value">
-				<HeaderButton
-					:label="__('Save')"
-					variant="solid"
-					:disabled="!form.isDirty.value"
-					@click="form.submitBatch()"
-				/>
-			</Tooltip>
-		</span>
+		<BatchSaveButton v-if="isMobile" :form="form" />
 	</template>
 </template>
 
@@ -77,8 +56,8 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Button, Dropdown, Tooltip } from 'frappe-ui'
+import BatchSaveButton from '@/pages/Batches/components/BatchSaveButton.vue'
 import HeaderButton from '@/components/HeaderButton.vue'
-import ShortcutTooltip from '@/components/ShortcutTooltip.vue'
 import { openBatchForm } from '@/composables/useBatchForms'
 import type { BatchRouteName } from '@/composables/useBatchForms'
 import { useScreenSize } from '@/utils/composables'
@@ -104,10 +83,6 @@ const isEditTab = computed(() =>
 	['overview', 'settings'].includes(props.tab ?? 'overview')
 )
 
-const canSave = computed(
-	() => Boolean(form?.isDirty.value) && !form?.missingFields.value.length
-)
-
 const openForm = (name: BatchRouteName) => {
 	openBatchForm(router, name, props.batch.data?.name ?? '', route.hash)
 }
@@ -122,7 +97,8 @@ const menu = computed(() => {
 			onClick: manage.generateCertificates,
 		})
 	}
-	if (isMobile.value) {
+	// Unpublish lives here; on a phone Publish does too.
+	if (props.batch.data?.published || isMobile.value) {
 		options.push({
 			label: props.batch.data?.published
 				? __('Unpublish batch')

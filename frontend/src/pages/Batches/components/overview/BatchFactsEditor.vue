@@ -4,35 +4,21 @@
 			<span class="lucide-calendar size-4 shrink-0 text-ink-gray-5" />
 			<DateRangePicker
 				v-model="dates"
-				variant="outline"
+				variant="ghost"
 				format="D MMM YYYY"
 				:placeholder="__('Start and end dates')"
 				:aria-label="__('Batch dates')"
 				class="flex-1"
 			/>
 		</div>
-		<div class="flex items-center gap-2.5 rounded-4" :class="ring('times')">
-			<span class="lucide-clock size-4 shrink-0 text-ink-gray-5" />
-			<TimePicker
-				v-model="doc.start_time"
-				variant="outline"
-				format="h:mm a"
-				:interval="30"
-				:placeholder="__('Start')"
-				:aria-label="__('Class start time')"
-				class="w-28"
-			/>
-			<span class="text-ink-gray-6">–</span>
-			<TimePicker
-				v-model="doc.end_time"
-				variant="outline"
-				format="h:mm a"
-				:interval="30"
-				:placeholder="__('End')"
-				:aria-label="__('Class end time')"
-				class="w-28"
-			/>
-		</div>
+		<TimeRangeField
+			v-model:start="doc.start_time"
+			v-model:end="doc.end_time"
+			:startLabel="__('Class start time')"
+			:endLabel="__('Class end time')"
+			class="-ms-2 rounded-4"
+			:class="ring('times')"
+		/>
 		<div class="flex items-center gap-2.5 rounded-4" :class="ring('timezone')">
 			<span class="lucide-globe size-4 shrink-0 text-ink-gray-5" />
 			<Combobox
@@ -40,7 +26,7 @@
 				:options="timezoneOptions"
 				:placeholder="__('Timezone')"
 				:aria-label="__('Timezone')"
-				variant="outline"
+				variant="ghost"
 				class="flex-1"
 			/>
 		</div>
@@ -52,10 +38,12 @@
 			<Select
 				:modelValue="doc.medium === 'Offline' ? 'Offline' : 'Online'"
 				:options="mediumOptions"
-				variant="outline"
+				variant="ghost"
 				:aria-label="__('Medium')"
-				class="w-36"
-				@update:modelValue="(value) => (doc.medium = value as LMSBatch['medium'])"
+				class="w-40"
+				@update:modelValue="
+					(value) => (doc.medium = value as LMSBatch['medium'])
+				"
 			/>
 		</div>
 		<div class="flex items-center gap-2.5">
@@ -64,7 +52,7 @@
 				:modelValue="doc.seat_count || ''"
 				type="number"
 				min="1"
-				variant="outline"
+				variant="ghost"
 				placeholder="–"
 				:aria-label="__('Seat count')"
 				class="w-20"
@@ -72,9 +60,7 @@
 					(value: string) => (doc.seat_count = Number(value) || 0)
 				"
 			/>
-			<span class="text-ink-gray-6">
-				{{ doc.seat_count ? __('seats') : __('No seat limit') }}
-			</span>
+			<span class="text-ink-gray-6">{{ seatsLabel }}</span>
 		</div>
 		<BatchSwitchFact
 			v-model="doc.certification"
@@ -94,7 +80,7 @@
 			}}</span>
 			<DatePicker
 				v-model="doc.evaluation_end_date"
-				variant="outline"
+				variant="ghost"
 				format="D MMM YYYY"
 				:min="doc.end_date"
 				:placeholder="__('Evaluation end date')"
@@ -113,15 +99,19 @@ import {
 	DateRangePicker,
 	FormControl,
 	Select,
-	TimePicker,
 } from 'frappe-ui'
 import { missingRing } from '@/components/InlineEdit/fieldClasses'
+import TimeRangeField from '@/components/InlineEdit/TimeRangeField.vue'
 import BatchSwitchFact from '@/pages/Batches/components/overview/BatchSwitchFact.vue'
 import type { BatchForm } from '@/pages/Batches/composables/useBatchForm'
 import type { LMSBatch } from '@/types/lms/LMSBatch'
 
 /** The enrol card's facts as inline fields. */
-const props = defineProps<{ doc: LMSBatch; form: BatchForm }>()
+const props = defineProps<{
+	doc: LMSBatch
+	form: BatchForm
+	studentCount?: number
+}>()
 
 const ring = (key: string) => missingRing(props.form.isMissing(key))
 
@@ -134,10 +124,20 @@ const dates = computed<[string, string] | []>({
 	},
 })
 
-const mediumOptions = [
-	{ label: __('Online'), value: 'Online' },
+const mediumOptions = computed(() => [
+	{
+		label: props.doc.zoom_account ? __('Online on Zoom') : __('Online'),
+		value: 'Online',
+	},
 	{ label: __('In person'), value: 'Offline' },
-]
+])
+
+const seatsLabel = computed<string>(() => {
+	if (!props.doc.seat_count) return __('No seat limit')
+	if (props.studentCount === undefined) return __('seats')
+	const left = Math.max(props.doc.seat_count - props.studentCount, 0)
+	return __('seats · {0} left').format(left)
+})
 
 const timezones = createResource({
 	url: 'frappe.geo.country_info.get_country_timezone_info',

@@ -123,7 +123,6 @@
 						{{ __('Clear filters') }}
 					</Button>
 				</div>
-
 				<div
 					v-if="categoryOptions.length"
 					class="flex flex-wrap gap-2"
@@ -207,6 +206,7 @@ const user = inject('$user')
 const dayjs = inject('$dayjs')
 const start = ref(0)
 const currentCategory = ref(null)
+const allCategories = { label: __('All'), value: null }
 const title = ref('')
 const certification = ref(false)
 const price = ref('')
@@ -237,7 +237,6 @@ const ratingOptions = [
 		value,
 	})),
 ]
-const allCategories = { label: __('All'), value: null }
 
 onMounted(() => {
 	setFiltersFromQuery()

@@ -4,13 +4,25 @@
 			<div class="min-w-0 space-y-10 lg:w-[70%]">
 				<BatchHeading :batch="batch.data" :doc="doc" :form="form" />
 				<div class="w-full lg:hidden">
-					<BatchEnrollCardEditor v-if="doc" :doc="doc" :form="form!" />
+					<BatchEnrollCardEditor
+						v-if="doc"
+						:doc="doc"
+						:form="form!"
+						:studentCount="batch.data.student_count"
+					/>
 					<BatchOverlay v-else :batch="batch" />
 				</div>
 
 				<BatchCourseList
 					:batchName="batch.data.name"
 					:editable="Boolean(doc)"
+					:hideProgress="isStudentView && !batch.data.is_student"
+					:category="doc?.category ?? batch.data.category"
+				/>
+
+				<BatchSchedule
+					v-if="doc || batch.data.is_student"
+					:batchName="batch.data.name"
 				/>
 
 				<section v-if="doc" class="space-y-3">
@@ -38,9 +50,7 @@
 					/>
 				</section>
 
-				<section v-if="doc">
-					<Assessments :batch="batch.data.name" :can-manage="true" />
-				</section>
+				<BatchAssessmentList v-if="doc" :batchName="batch.data.name" />
 
 				<div
 					v-if="batch.data.batch_details_raw"
@@ -52,7 +62,12 @@
 			<aside
 				class="hidden w-full shrink-0 self-start lg:sticky lg:top-5 lg:block lg:w-[30%]"
 			>
-				<BatchEnrollCardEditor v-if="doc" :doc="doc" :form="form!" />
+				<BatchEnrollCardEditor
+					v-if="doc"
+					:doc="doc"
+					:form="form!"
+					:studentCount="batch.data.student_count"
+				/>
 				<BatchOverlay v-else :batch="batch" />
 			</aside>
 		</div>
@@ -62,11 +77,12 @@
 <script setup lang="ts">
 import { computed, useId } from 'vue'
 import RichTextField from '@/components/InlineEdit/RichTextField.vue'
-import Assessments from '@/pages/Batches/components/Assessments.vue'
 import BatchOverlay from '@/pages/Batches/components/BatchOverlay.vue'
+import BatchAssessmentList from '@/pages/Batches/components/overview/BatchAssessmentList.vue'
 import BatchCourseList from '@/pages/Batches/components/overview/BatchCourseList.vue'
 import BatchEnrollCardEditor from '@/pages/Batches/components/overview/BatchEnrollCardEditor.vue'
 import BatchHeading from '@/pages/Batches/components/overview/BatchHeading.vue'
+import BatchSchedule from '@/pages/Batches/components/overview/BatchSchedule.vue'
 import { useStudentView } from '@/composables/useStudentView'
 import { injectBatchForm } from '@/pages/Batches/composables/useBatchForm'
 import type { BatchDetails, Resource } from '@/types'

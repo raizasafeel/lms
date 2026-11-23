@@ -4,7 +4,7 @@
 		:title="__('Manage')"
 		:description="__('Visibility, certificates and removal.')"
 	>
-		<SettingRow
+		<SettingAction
 			:label="published ? __('Unpublish batch') : __('Publish batch')"
 			:summary="
 				published
@@ -13,60 +13,34 @@
 					  )
 					: __('List it on the batches page so learners can find it.')
 			"
-		>
-			<template #control>
-				<Button
-					size="sm"
-					variant="subtle"
-					:loading="manage.publishing()"
-					@click="manage.togglePublish()"
-				>
-					{{ published ? __('Unpublish') : __('Publish') }}
-				</Button>
-			</template>
-		</SettingRow>
-		<SettingRow
+			:action="published ? __('Unpublish') : __('Publish')"
+			:loading="manage.publishing()"
+			@click="manage.togglePublish()"
+		/>
+		<SettingAction
 			v-if="batch.data?.certification"
 			:label="__('Generate certificates')"
 			:summary="__('Issue certificates to learners who completed the batch.')"
-		>
-			<template #control>
-				<Button
-					size="sm"
-					variant="subtle"
-					@click="manage.generateCertificates()"
-				>
-					{{ __('Generate') }}
-				</Button>
-			</template>
-		</SettingRow>
-		<SettingRow
+			:action="__('Generate')"
+			@click="manage.generateCertificates()"
+		/>
+		<SettingAction
 			:label="__('Delete batch')"
 			:summary="
 				__(
 					'Removes the batch with its students, courses, assessments, feedback and discussions.'
 				)
 			"
+			:action="__('Delete')"
 			danger
-		>
-			<template #control>
-				<Button
-					size="sm"
-					variant="subtle"
-					theme="red"
-					@click="manage.deleteBatch()"
-				>
-					{{ __('Delete') }}
-				</Button>
-			</template>
-		</SettingRow>
+			@click="manage.deleteBatch()"
+		/>
 	</SettingsGroup>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Button } from 'frappe-ui'
-import SettingRow from '@/components/InlineEdit/SettingRow.vue'
+import SettingAction from '@/components/InlineEdit/SettingAction.vue'
 import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import { injectBatchManage } from '@/pages/Batches/composables/useBatchManage'
 import type { BatchDetails, Resource } from '@/types'

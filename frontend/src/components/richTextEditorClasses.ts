@@ -3,7 +3,7 @@
  * JIT emits it; a height or variant that is not a key below has no CSS.
  */
 
-export type RichTextEditorVariant = 'outline' | 'subtle' | 'ghost'
+export type RichTextEditorVariant = 'outline' | 'subtle' | 'ghost' | 'inline'
 
 const BOX: Record<RichTextEditorVariant, { valid: string; invalid: string }> = {
 	outline: {
@@ -19,6 +19,13 @@ const BOX: Record<RichTextEditorVariant, { valid: string; invalid: string }> = {
 			'rounded-5 border border-outline-red-3 bg-surface-gray-2 transition-colors hover:bg-surface-gray-3 focus-within:border-outline-red-4 focus-within:bg-surface-base focus-within:shadow-sm',
 	},
 	ghost: { valid: '', invalid: '' },
+	// No border until the editor has focus, for text edited in place.
+	inline: {
+		valid:
+			'rounded-5 border border-transparent transition-colors hover:bg-surface-gray-2 focus-within:border-outline-gray-4 focus-within:bg-surface-base focus-within:shadow-sm',
+		invalid:
+			'rounded-5 border border-outline-red-3 transition-colors focus-within:border-outline-red-4 focus-within:shadow-sm',
+	},
 }
 
 // Sticks to the top while scrolling a long body; shows only while focused.
@@ -31,6 +38,7 @@ const TOOLBAR: Record<RichTextEditorVariant, string> = {
 	outline: 'flex-wrap border-b border-outline-gray-2 p-1',
 	subtle: 'flex-wrap border-b border-outline-gray-2 p-1',
 	ghost: 'flex-wrap pb-1',
+	inline: 'flex-wrap border-b border-outline-gray-2 p-1',
 }
 
 // Outline and subtle boxes show focus on their own border; a ghost editor has
@@ -39,6 +47,7 @@ const CONTENT: Record<RichTextEditorVariant, string> = {
 	outline: 'px-2 py-1',
 	subtle: 'px-2 py-1',
 	ghost: 'focus-visible:ring-2 focus-visible:ring-outline-gray-5',
+	inline: 'px-2 py-1',
 }
 
 export const MIN_HEIGHT = {

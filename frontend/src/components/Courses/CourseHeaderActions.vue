@@ -32,7 +32,7 @@ import type { CourseActions } from '@/composables/useCourseActions'
 import { useScreenSize } from '@/utils/composables'
 import type { CourseDetails, Resource } from '@/types'
 
-/** Course menu, Publish and Student view, on the Overview and Options tabs. */
+/** Course menu, Publish and Student view, on the Overview and Settings tabs. */
 const props = defineProps<{
 	course: Resource<CourseDetails | null>
 	actions: CourseActions

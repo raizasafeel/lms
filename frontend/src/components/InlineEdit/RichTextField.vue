@@ -6,7 +6,7 @@
 		:toolbar="TOOLBAR"
 		menuOnFocus
 		roomy
-		variant="outline"
+		variant="inline"
 		minHeight="8rem"
 		editorClass="prose-sm text-p-base text-ink-gray-8"
 		:ariaInvalid="missing || undefined"
@@ -34,7 +34,7 @@ import {
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import { missingRing } from '@/components/InlineEdit/fieldClasses'
 
-/** A long-form body in an outline box; its toolbar shows while editing. */
+/** A long-form body that shows its box and toolbar only while editing. */
 defineProps<{
 	modelValue?: string | null
 	placeholder: string

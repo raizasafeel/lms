@@ -7,8 +7,8 @@
 		:inlineCreate="true"
 		inlineCreatePlaceholder="Category name"
 		:onCreate="onCreate"
-		variant="outline"
-		class="w-44"
+		variant="ghost"
+		trigger="button"
 		@update:modelValue="(value: string) => emit('update:modelValue', value)"
 	/>
 </template>

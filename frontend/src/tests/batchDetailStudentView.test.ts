@@ -59,11 +59,11 @@ vi.mock('@/components/HeaderButton.vue', () => ({
 		template: `<button :data-label="label" @click="$emit('click')">{{ label }}</button>`,
 	},
 }))
-vi.mock('@/pages/Batches/components/BatchStudentViewBar.vue', () => ({
+vi.mock('@/components/StudentViewBar.vue', () => ({
 	default: {
-		props: ['modelValue'],
+		props: ['modelValue', 'doctype', 'name'],
 		emits: ['update:modelValue', 'exit'],
-		template: `<div class="student-bar" :data-mode="modelValue">
+		template: `<div class="student-bar" :data-mode="modelValue" :data-doctype="doctype" :data-name="name">
 			<button class="as-enrolled" @click="$emit('update:modelValue', 'enrolled')" />
 			<button class="exit" @click="$emit('exit')" />
 		</div>`,
@@ -135,6 +135,10 @@ describe("BatchDetail's student view", () => {
 		expect(wrapper.find('.student-bar').attributes('data-mode')).toBe(
 			'not-enrolled'
 		)
+		expect(wrapper.find('.student-bar').attributes('data-doctype')).toBe(
+			'LMS Batch'
+		)
+		expect(wrapper.find('.student-bar').attributes('data-name')).toBe('B1')
 		expect(visibleTabs()).toEqual([])
 		expect(captured.doc.data.can_manage).toBe(false)
 	})

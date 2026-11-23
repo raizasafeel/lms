@@ -38,6 +38,16 @@ describe('CourseCard', () => {
 		expect(thumbnail.find('img').exists()).toBe(false)
 	})
 
+	it('shows the course icon on the tint, or an open book', () => {
+		expect(
+			mountCard({ icon: 'rocket' }).find('.h-40 .lucide-rocket').exists()
+		).toBe(true)
+		expect(mountCard({}).find('.h-40 .lucide-book-open').exists()).toBe(true)
+		expect(
+			mountCard({ icon: 'unknown' }).find('.h-40 .lucide-book-open').exists()
+		).toBe(true)
+	})
+
 	it('shows the uploaded image instead of the tint', () => {
 		const thumbnail = mountCard({ image: '/files/a b.png' }).find('.h-40')
 

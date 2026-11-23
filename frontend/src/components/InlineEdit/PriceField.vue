@@ -1,18 +1,16 @@
 <template>
 	<div class="space-y-2">
-		<div class="flex items-center justify-between gap-3">
-			<span class="text-xl-semibold text-ink-gray-9">
-				{{ headline }}
-			</span>
-			<Select
-				:modelValue="paid ? 'paid' : 'free'"
-				:options="options"
-				variant="outline"
-				:aria-label="label"
-				class="w-28"
-				@update:modelValue="(value) => emit('update:paid', value === 'paid')"
-			/>
-		</div>
+		<Dropdown :options="menu">
+			<Button variant="ghost" :aria-label="label" class="!h-auto !px-1.5">
+				<span class="text-xl-semibold text-ink-gray-9">{{ headline }}</span>
+				<template #suffix>
+					<span
+						class="lucide-chevron-down size-4 text-ink-gray-5"
+						aria-hidden="true"
+					/>
+				</template>
+			</Button>
+		</Dropdown>
 		<PriceInput
 			v-if="paid"
 			:currency="currency"
@@ -25,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { Select } from 'frappe-ui'
+import { Button, Dropdown } from 'frappe-ui'
 import { computed } from 'vue'
 import PriceInput from '@/components/InlineEdit/PriceInput.vue'
 import { formatNumberIntoCurrency } from '@/utils'
@@ -48,10 +46,16 @@ const emit = defineEmits<{
 	'update:amount': [value: number]
 }>()
 
-const options = [
-	{ label: __('Free'), value: 'free' },
-	{ label: __('Paid'), value: 'paid' },
-]
+const menu = computed(() =>
+	[
+		{ label: __('Free'), paid: false },
+		{ label: __('Paid'), paid: true },
+	].map((option) => ({
+		label: option.label,
+		icon: option.paid === props.paid ? 'lucide-check' : undefined,
+		onClick: () => emit('update:paid', option.paid),
+	}))
+)
 
 const headline = computed<string>(() => {
 	if (!props.paid) return __('Free')

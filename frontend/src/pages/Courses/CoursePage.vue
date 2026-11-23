@@ -349,7 +349,7 @@ const tabs = computed<DetailTab[]>(() => [
 	},
 	{
 		key: 'settings',
-		label: __('Options'),
+		label: __('Settings'),
 		component: markRaw(CourseForm),
 		icon: 'lucide-sliders-horizontal',
 		when: isAdmin.value,

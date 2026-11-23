@@ -11,7 +11,11 @@ vi.hoisted(() => {
 })
 
 vi.mock('frappe-ui', () => ({
-	Button: { template: '<button><slot /></button>' },
+	Button: {
+		props: ['label'],
+		template:
+			'<button :aria-label="label"><slot name="icon" /><slot /></button>',
+	},
 	FileUploader: {
 		template:
 			'<div><slot :openFileSelector="() => {}" :uploading="false" /></div>',
@@ -20,6 +24,16 @@ vi.mock('frappe-ui', () => ({
 		name: 'FormControl',
 		props: ['variant'],
 		template: '<input />',
+	},
+	Dropdown: {
+		name: 'Dropdown',
+		props: ['options'],
+		template: `<div><slot /><button
+			v-for="option in options"
+			:key="option.label"
+			:data-testid="'option-' + option.label"
+			@click="option.onClick()"
+		>{{ option.label }}</button></div>`,
 	},
 	Popover: { template: '<div><slot name="trigger" /></div>' },
 	Select: {
@@ -59,14 +73,18 @@ const options = {
 }
 
 describe('the inline text field', () => {
-	it('draws frappe-ui outline chrome and rings when missing', async () => {
+	it('shows no border until focused and rings when missing', async () => {
 		const wrapper = mount(InlineText, {
 			props: { modelValue: 'Data', placeholder: 'Title' },
 		})
 		const field = wrapper.get('textarea')
 		expect(field.classes()).toEqual(
-			expect.arrayContaining(['border', 'border-outline-gray-2'])
+			expect.arrayContaining([
+				'border-transparent',
+				'focus:border-outline-gray-4',
+			])
 		)
+		expect(field.classes()).not.toContain('border-outline-gray-2')
 		expect(field.classes()).not.toContain('ring-outline-red-3')
 		await wrapper.setProps({ missing: true })
 		expect(field.classes()).toContain('ring-outline-red-3')
@@ -83,20 +101,15 @@ describe('the price field', () => {
 	const mountPrice = (props: Record<string, unknown>) =>
 		mount(PriceField, { props: { label: 'Price', ...props }, ...options })
 
-	it('reads Free and hides the amount until paid', () => {
+	it('reads Free once and hides the amount until paid', () => {
 		const wrapper = mountPrice({ paid: false })
-		expect(wrapper.text()).toContain('Free')
+		expect(wrapper.get('button').text()).toBe('Free')
 		expect(wrapper.findComponent(PriceInput).exists()).toBe(false)
-		expect(wrapper.findComponent({ name: 'Select' }).props('variant')).toBe(
-			'outline'
-		)
 	})
 
-	it('asks the parent to switch to paid', async () => {
+	it('asks the parent to switch to paid from the price menu', async () => {
 		const wrapper = mountPrice({ paid: false })
-		await wrapper
-			.findComponent({ name: 'Select' })
-			.vm.$emit('update:modelValue', 'paid')
+		await wrapper.get('[data-testid="option-Paid"]').trigger('click')
 		expect(wrapper.emitted('update:paid')).toEqual([[true]])
 	})
 
@@ -125,21 +138,54 @@ describe('the image field', () => {
 		expect(wrapper.emitted('update:tint')).toEqual([['Red']])
 	})
 
+	it('shows the course icon in the tint and on the icon button', () => {
+		const wrapper = mount(ImageField, {
+			props: { swatches: true, tint: 'Pink', icon: 'rocket' },
+			...options,
+		})
+		expect(wrapper.findAll('.lucide-rocket')).toHaveLength(2)
+		expect(wrapper.find('[aria-label="Thumbnail icon"]').exists()).toBe(true)
+	})
+
+	it('shuffles the colour and the icon together', async () => {
+		vi.spyOn(Math, 'random').mockReturnValue(0)
+		const wrapper = mount(ImageField, {
+			props: { swatches: true, tint: 'Blue', icon: 'rocket' },
+			...options,
+		})
+		await wrapper.get('[aria-label="Random colour and icon"]').trigger('click')
+		expect(wrapper.emitted('update:tint')).toEqual([['Red']])
+		expect(wrapper.emitted('update:icon')).toEqual([['boxes']])
+		vi.restoreAllMocks()
+	})
+
+	it('hides the thumbnail tools once there is an image', () => {
+		const wrapper = mount(ImageField, {
+			props: { swatches: true, image: '/files/a.png' },
+			...options,
+		})
+		expect(wrapper.find('[aria-label="Thumbnail icon"]').exists()).toBe(false)
+		expect(wrapper.find('[aria-label="Random colour and icon"]').exists()).toBe(
+			false
+		)
+	})
+
 	it('prompts for an image without swatches', () => {
 		const wrapper = mount(ImageField, options)
 		expect(wrapper.text()).toContain('Add an image')
 		expect(wrapper.find('[aria-pressed]').exists()).toBe(false)
+		expect(wrapper.find('[aria-label="Thumbnail icon"]').exists()).toBe(false)
 	})
 })
 
 describe('the rich text field', () => {
-	it('uses the outline editor with a focus-only toolbar', () => {
+	it('uses the inline editor with a focus-only toolbar', () => {
 		const wrapper = mount(RichTextField, {
 			props: { placeholder: 'About', ariaLabelledby: 'about', missing: true },
 			...options,
 		})
 		const editor = wrapper.findComponent({ name: 'RichTextEditor' })
-		expect(editor.props('variant')).toBe('outline')
+		expect(editor.props('variant')).toBe('inline')
 		expect(editor.props('menuOnFocus')).toBe(true)
 		expect(editor.props('toolbar').length).toBeGreaterThan(5)
 		expect(editor.props('ariaInvalid')).toBe(true)

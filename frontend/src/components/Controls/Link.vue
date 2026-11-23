@@ -10,6 +10,7 @@
 			:aria-label="label ? undefined : (attrs['aria-label'] as string)"
 			:autocomplete="attrs.autocomplete as string"
 			:variant="attrs.variant as ComboboxVariant"
+			:trigger="isButton ? 'button' : 'input'"
 			:align="props.align"
 			:loading="options.loading"
 			:filterable="false"
@@ -20,7 +21,7 @@
 			@update:modelValue="onSelect"
 			@update:query="onQuery"
 			@update:open="onOpen"
-			class="w-full"
+			:class="isButton ? 'w-fit' : 'w-full'"
 		>
 			<template #footer>
 				<div
@@ -133,6 +134,8 @@ const emit = defineEmits<{
 defineOptions({ inheritAttrs: false })
 
 const attrs = useAttrs()
+// A button trigger sizes to its value and moves the search into the menu.
+const isButton = computed(() => attrs.trigger === 'button')
 const valuePropPassed = computed<boolean>(() => 'value' in attrs)
 
 const creating = ref<boolean>(false)

@@ -295,6 +295,10 @@ const MANIFEST: Record<string, Privacy[]> = {
 	'components/UnsplashImageBrowser.vue': ['public'],
 	// Card images double as share images, so guests must see them.
 	'components/InlineEdit/ImageField.vue': ['public'],
+	// The course thumbnail in Settings: the same card image as ImageField.
+	'components/InlineEdit/CourseThumbnailPicker.vue': ['public'],
+	// A batch's share image; shown on link previews, so it must be public.
+	'components/InlineEdit/SettingImage.vue': ['public'],
 	// Deliberately not readable by other users.
 	'components/Assignment.vue': ['private', 'private', 'private'],
 	'components/Modals/JobApplicationModal.vue': ['private'],

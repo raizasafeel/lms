@@ -6,15 +6,13 @@
 				{{ description }}
 			</p>
 		</div>
-		<div
-			class="divide-y divide-outline-gray-2 rounded-5 border border-outline-gray-2 px-4"
-		>
+		<div class="divide-y divide-outline-gray-1">
 			<slot />
 		</div>
 	</section>
 </template>
 
 <script setup lang="ts">
-/** A titled settings section: one sentence and one bordered box of rows. */
+/** A titled settings section: one sentence, then its rows split by hairlines. */
 defineProps<{ title: string; description?: string }>()
 </script>

@@ -267,6 +267,24 @@ class TestListFilters(BaseTestUtils):
 		self.assertFalse(guest_view[0].is_enrolled)
 		self.assertEqual(guest_view[0].medium, "Online")
 
+	def test_the_in_progress_and_completed_batch_tabs_split_by_date(self):
+		running = self._make_batch(f"Filters Running Batch {self.hash}")
+		running.start_date = add_days(nowdate(), -3)
+		running.save()
+		finished = self._make_batch(f"Filters Finished Batch {self.hash}")
+		finished.start_date = add_days(nowdate(), -20)
+		finished.end_date = add_days(nowdate(), -10)
+		finished.save()
+		today = nowdate()
+		in_progress = {"start_date": ["<=", today], "end_date": [">=", today], "published": 1}
+		completed = {"end_date": ["<", today]}
+		for filters, expected in ((in_progress, running), (completed, finished)):
+			filters = {**filters, "category": self.category}
+			with self.subTest(filters=filters):
+				batches = self.as_user("Administrator", get_batches, filters=filters.copy())
+				self.assertEqual([batch.name for batch in batches], [expected.name])
+				self.assertEqual(self.as_user("Administrator", get_batch_count, filters=filters.copy()), 1)
+
 	def test_the_archived_batch_tab_is_accepted(self):
 		filters = {"start_date": ["<=", nowdate()], "category": self.category}
 		self.assertEqual(self.as_user(self.student.name, get_batches, filters=filters), [])

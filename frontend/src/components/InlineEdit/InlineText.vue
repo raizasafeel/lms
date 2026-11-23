@@ -6,7 +6,7 @@
 		:placeholder="placeholder"
 		:aria-label="label || placeholder"
 		class="block w-full resize-none overflow-hidden px-2.5 py-1.5"
-		:class="[OUTLINE_FIELD, missingRing(missing)]"
+		:class="[GHOST_FIELD, missingRing(missing)]"
 		@input="onInput"
 		@keydown.enter.prevent="emit('enter')"
 	/>
@@ -14,13 +14,10 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, useTemplateRef, watch } from 'vue'
-import {
-	OUTLINE_FIELD,
-	missingRing,
-} from '@/components/InlineEdit/fieldClasses'
+import { GHOST_FIELD, missingRing } from '@/components/InlineEdit/fieldClasses'
 
 /**
- * A one-paragraph outline field that grows with its text. frappe-ui inputs
+ * A one-paragraph ghost field that grows with its text. frappe-ui inputs
  * have a fixed type scale, so a title or intro set at page size needs this.
  */
 const props = defineProps<{

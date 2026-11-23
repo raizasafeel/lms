@@ -54,12 +54,22 @@ describe('RichTextEditor class map', () => {
 	})
 
 	it('swaps the grey border for red when invalid, never both', () => {
-		for (const variant of ['outline', 'subtle'] as const) {
+		for (const variant of ['outline', 'subtle', 'inline'] as const) {
 			const box = tokens(boxClass(variant, true, false))
 			expect(box).toContain('border-outline-red-3')
 			expect(box).toContain('focus-within:border-outline-red-4')
 			expect(box.some((c) => c.includes('outline-gray'))).toBe(false)
 		}
+	})
+
+	it('hides the inline border until the editor has focus', () => {
+		const box = tokens(boxClass('inline', false, false))
+		expect(box).toContain('border-transparent')
+		expect(box).toContain('focus-within:border-outline-gray-4')
+		expect(box.some((c) => /^(hover:)?border-outline/.test(c))).toBe(false)
+		expect(tokens(boxClass('inline', true, false))).toContain(
+			'border-outline-red-3'
+		)
 	})
 
 	it('gives ghost no chrome, only a focus ring on its content', () => {

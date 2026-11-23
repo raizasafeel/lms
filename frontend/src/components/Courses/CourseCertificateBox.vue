@@ -8,7 +8,7 @@
 			<Select
 				:modelValue="kind"
 				:options="options"
-				variant="outline"
+				variant="ghost"
 				size="sm"
 				:aria-label="__('Certificate')"
 				class="w-24"

@@ -9,7 +9,7 @@
 		:extraOptions="knownSelected"
 		:placeholder="__('Add instructors')"
 		:aria-label="__('Instructors')"
-		variant="outline"
+		variant="ghost"
 		class="rounded-4"
 		:class="missingRing(missing)"
 		:onCreate="openMemberModal"

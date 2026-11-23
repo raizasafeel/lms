@@ -6,7 +6,20 @@
 				{{ courseCount }}
 			</span>
 		</div>
-		<div class="rounded-5 border border-outline-gray-2 p-2">
+		<OverviewEmptyTile
+			v-if="!courses.data?.length"
+			icon="lucide-book-open"
+			:title="__('No courses yet')"
+			:description="__('Learners see the courses you add here, in this order.')"
+		>
+			<Button variant="subtle" @click="openPicker">
+				<template #prefix>
+					<span class="lucide-plus size-4" />
+				</template>
+				{{ __('Add course') }}
+			</Button>
+		</OverviewEmptyTile>
+		<div v-else class="rounded-5 border border-outline-gray-2 p-2">
 			<router-link
 				v-for="course in courses.data"
 				:key="course.name"
@@ -14,7 +27,12 @@
 				class="group/row flex items-center gap-3 rounded-3 px-2 py-2 hover:bg-surface-gray-1"
 			>
 				<div
-					class="grid size-10 shrink-0 place-items-center overflow-hidden rounded-3 bg-surface-gray-2"
+					class="grid size-10 shrink-0 place-items-center overflow-hidden rounded-3"
+					:class="
+						course.image
+							? 'bg-surface-gray-2'
+							: courseTint(course.card_gradient)
+					"
 				>
 					<img
 						v-if="course.image"
@@ -22,7 +40,11 @@
 						alt=""
 						class="size-full object-cover"
 					/>
-					<span v-else class="lucide-book-open size-4 text-ink-gray-5" />
+					<span
+						v-else
+						:class="[courseIcon(course.icon), 'size-4']"
+						aria-hidden="true"
+					/>
 				</div>
 				<div class="min-w-0 flex-1">
 					<div class="truncate text-p-base-medium text-ink-gray-9">
@@ -32,7 +54,7 @@
 						{{ __('{0} lessons').format(course.lessons || 0) }}
 					</div>
 				</div>
-				<template v-if="course.membership">
+				<template v-if="course.membership && !hideProgress">
 					<ProgressBar
 						:progress="Math.round(course.membership.progress || 0)"
 						class="!w-24"
@@ -54,14 +76,8 @@
 					</template>
 				</Button>
 			</router-link>
-			<div
-				v-if="!courses.data?.length"
-				class="px-2 py-6 text-center text-p-base text-ink-gray-6"
-			>
-				{{ __('Add the courses learners take in this batch.') }}
-			</div>
 			<div v-if="editable" class="px-1 pt-1">
-				<Button variant="ghost" @click="openCourseForm">
+				<Button variant="ghost" @click="openPicker">
 					<template #prefix>
 						<span class="lucide-plus size-4" />
 					</template>
@@ -69,31 +85,53 @@
 				</Button>
 			</div>
 		</div>
+		<PickerDialog
+			v-if="editable"
+			v-model:open="pickerOpen"
+			:title="__('Add courses')"
+			:items="picker.items.value"
+			:categories="picker.categories.value"
+			@add="addCourses"
+		/>
 	</section>
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, inject, ref, watch } from 'vue'
 import { Button, call, createResource, toast } from 'frappe-ui'
+import { useOnboarding } from '@framework/ui/components/Onboarding/index'
+import { useCoursePickerItems } from '@/composables/useCoursePickerItems'
+import PickerDialog from '@/components/InlineEdit/PickerDialog.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
-import { openBatchForm } from '@/composables/useBatchForms'
+import OverviewEmptyTile from '@/pages/Batches/components/overview/OverviewEmptyTile.vue'
+import { seesOnboarding } from '@/utils/onboarding'
+import { courseIcon } from '@/utils/courseIcons'
+import { courseTint } from '@/utils/courseTints'
 import { safeUrl } from '@/utils/safeUrl'
 
 interface BatchCourseCard {
 	name: string
 	title: string
 	image?: string
+	card_gradient?: string
 	lessons?: number
 	batch_course: string
 	membership?: { progress?: number } | null
 }
 
 /** The batch's courses; editors add and remove them in place. */
-const props = defineProps<{ batchName?: string; editable?: boolean }>()
+const props = defineProps<{
+	batchName?: string
+	editable?: boolean
+	/** A not-enrolled student view hides the instructor's own progress. */
+	hideProgress?: boolean
+	/** The batch's category; courses in it are suggested first. */
+	category?: string | null
+}>()
 
-const route = useRoute()
-const router = useRouter()
+const pickerOpen = ref<boolean>(false)
+const user = inject<{ data?: Parameters<typeof seesOnboarding>[0] }>('$user')
+const { updateOnboardingStep } = useOnboarding('learning')
 
 const courses = createResource({
 	url: 'lms.lms.utils.get_batch_courses',
@@ -111,21 +149,55 @@ watch(
 	{ immediate: true }
 )
 
-// The add form is a child route; refresh once it closes.
-watch(
-	() => route.name,
-	(current, previous) => {
-		if (previous === 'NewBatchCourse' && current !== previous) courses.reload()
-	}
-)
-
 const courseCount = computed(() => {
 	const count = courses.data?.length ?? 0
 	return count === 1 ? __('1 course') : __('{0} courses').format(count)
 })
 
-function openCourseForm(): void {
-	openBatchForm(router, 'NewBatchCourse', props.batchName ?? '', route.hash)
+const selectedCourses = computed<string[]>(() =>
+	(courses.data || []).map((course: BatchCourseCard) => course.name)
+)
+
+const errorMessage = (error: { messages?: string[] }, fallback: string) =>
+	error.messages?.[0] || fallback
+
+function insertCourse(course: string) {
+	return call('frappe.client.insert', {
+		doc: {
+			doctype: 'Batch Course',
+			course,
+			parent: props.batchName,
+			parenttype: 'LMS Batch',
+			parentfield: 'courses',
+		},
+	})
+}
+
+async function addCourses(names: string[]): Promise<void> {
+	// One at a time: each insert appends a row to the same batch.
+	try {
+		for (const name of names) await insertCourse(name)
+		if (seesOnboarding(user?.data)) updateOnboardingStep('add_batch_course')
+	} catch (error) {
+		toast.error(
+			errorMessage(
+				error as { messages?: string[] },
+				__('Could not add the course')
+			)
+		)
+	}
+	pickerOpen.value = false
+	courses.reload()
+}
+
+const picker = useCoursePickerItems(
+	() => selectedCourses.value,
+	() => props.category
+)
+
+function openPicker(): void {
+	pickerOpen.value = true
+	picker.load()
 }
 
 function removeCourse(course: BatchCourseCard): void {
@@ -138,7 +210,7 @@ function removeCourse(course: BatchCourseCard): void {
 			courses.reload()
 		})
 		.catch((error: { messages?: string[] }) => {
-			toast.error(error.messages?.[0] || __('Could not remove the course'))
+			toast.error(errorMessage(error, __('Could not remove the course')))
 		})
 }
 </script>

@@ -151,7 +151,7 @@ describe('the certificate box', () => {
 		const wrapper = mountWithForm(CourseCertificateBox, form, {
 			paymentsAppMissing: false,
 		})
-		expect(select(wrapper).props('variant')).toBe('outline')
+		expect(select(wrapper).props('variant')).toBe('ghost')
 		expect(
 			select(wrapper)
 				.props('options')

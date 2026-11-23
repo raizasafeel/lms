@@ -1,13 +1,17 @@
 <template>
 	<NotFound v-if="(batch.fetched || batch.error) && !batch.data?.name" />
 	<div v-else class="flex h-full flex-col">
-		<BatchStudentViewBar
+		<StudentViewBar
 			v-if="studentMode"
 			v-model="studentMode"
+			doctype="LMS Batch"
+			:name="batchName"
 			@exit="studentMode = null"
+			@change="refreshStudentView"
 		/>
 		<TabbedDetailPage
 			ref="page"
+			:key="studentViewVersion"
 			class="min-h-0 flex-1"
 			:tabs="tabs"
 			:breadcrumbs="breadcrumbs"
@@ -42,6 +46,17 @@
 				<SkeletonLoader v-else variant="course-page" />
 			</template>
 
+			<template #overlay="{ tab }">
+				<div
+					v-if="isAdmin && isFormTab(tab?.key) && !isMobile"
+					class="pointer-events-none absolute end-0 top-0 z-10 flex h-12 items-center px-5"
+				>
+					<div class="pointer-events-auto">
+						<BatchSaveButton :form="form" />
+					</div>
+				</div>
+			</template>
+
 			<template #tab-body-discussions>
 				<div class="w-[90%] lg:w-[75%] mx-auto mt-5">
 					<Discussions
@@ -71,12 +86,14 @@ import LiveClass from '@/pages/Batches/components/LiveClass.vue'
 import Announcements from '@/pages/Batches/components/Announcements.vue'
 import BatchForm from '@/pages/Batches/BatchForm.vue'
 import BatchHeaderActions from '@/pages/Batches/components/BatchHeaderActions.vue'
-import BatchStudentViewBar from '@/pages/Batches/components/BatchStudentViewBar.vue'
+import BatchSaveButton from '@/pages/Batches/components/BatchSaveButton.vue'
+import StudentViewBar from '@/components/StudentViewBar.vue'
 import Discussions from '@/components/Discussions.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import TabbedDetailPage from '@/components/Layouts/pages/TabbedDetailPage.vue'
 import NotFound from '@/pages/NotFound.vue'
 import { canReadDiscussions } from '@/utils/doctypePermissions'
+import { useScreenSize } from '@/utils/composables'
 import { provideStudentView } from '@/composables/useStudentView'
 import {
 	useKeyboardShortcuts,
@@ -90,6 +107,8 @@ import {
 } from '@/pages/Batches/composables/batchStudentView'
 
 const route = useRoute()
+const { isMobile } = useScreenSize()
+const isFormTab = (key) => !key || ['overview', 'settings'].includes(key)
 const { brand } = sessionStore()
 const user = inject('$user')
 
@@ -126,6 +145,13 @@ provideStudentView(user, () => Boolean(studentMode.value))
 provide(BATCH_PREVIEW, {
 	enroll: () => (studentMode.value = 'enrolled'),
 })
+
+// Remounts the page so course progress refetches after enrolling or a reset.
+const studentViewVersion = ref(0)
+const refreshStudentView = () => {
+	batch.reload()
+	studentViewVersion.value++
+}
 
 const canManage = computed(() => {
 	// is_moderator/is_evaluator are session-wide roles; can_manage is this

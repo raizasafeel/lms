@@ -2,8 +2,6 @@ import { inject } from 'vue'
 import type { InjectionKey } from 'vue'
 import type { BatchDetails, Resource } from '@/types'
 
-export type StudentMode = 'not-enrolled' | 'enrolled'
-
 export interface BatchPreview {
 	/** Stands in for enrolling while an instructor previews the page. */
 	enroll: () => void
