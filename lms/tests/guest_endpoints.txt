@@ -7,7 +7,9 @@
 # get_job_details, get_sidebar_settings -- already carries a finding in the
 # 2026-08-06 audit (apps/lms-security-audit.md). This file freezes the surface so a
 # NEW one cannot arrive unreviewed; it does not close the open ones.
+lms.lms.api.download_certificate_pdf
 lms.lms.api.get_branding
+lms.lms.api.get_certificate
 lms.lms.api.get_chart_details
 lms.lms.api.get_job_details
 lms.lms.api.get_job_opportunities

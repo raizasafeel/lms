@@ -4,6 +4,7 @@ wkhtmltopdf, Chromium and the sandboxed preview iframe cannot all fetch them whi
 import base64
 import functools
 import io
+from contextlib import contextmanager
 from pathlib import Path
 
 import frappe
@@ -227,19 +228,32 @@ def as_screen_document(html: str) -> str:
 	return html.replace("</head>", SCREEN_RESET + "</head>", 1)
 
 
-def render_certificate(certificate: str, print_format: str) -> str | None:
-	"""A saved certificate as HTML. The caller has already decided the viewer may see it."""
+@contextmanager
+def print_permissions_checked():
+	"""For callers that have already decided the viewer may see the certificate."""
 	previous = frappe.flags.ignore_print_permissions
 	frappe.flags.ignore_print_permissions = True
 	try:
-		return as_screen_document(
-			frappe.get_print("LMS Certificate", certificate, print_format, no_letterhead=1)
-		)
+		yield
+	finally:
+		frappe.flags.ignore_print_permissions = previous
+
+
+def render_certificate(certificate: str, print_format: str) -> str | None:
+	"""A saved certificate as HTML. The caller has already decided the viewer may see it."""
+	try:
+		with print_permissions_checked():
+			html = frappe.get_print("LMS Certificate", certificate, print_format, no_letterhead=1)
 	except Exception:
 		frappe.log_error(title=f"Certificate render failed: {certificate}")
 		return None
-	finally:
-		frappe.flags.ignore_print_permissions = previous
+	return as_screen_document(html)
+
+
+def get_certificate_pdf(certificate: str, print_format: str) -> bytes:
+	"""A saved certificate as PDF. The caller has already decided the viewer may see it."""
+	with print_permissions_checked():
+		return frappe.get_print("LMS Certificate", certificate, print_format, as_pdf=True, no_letterhead=1)
 
 
 PREVIEW_OPTIONS = ("long", "batch", "expiry", "no_logo", "rtl")
@@ -265,17 +279,13 @@ def render_certificate_preview(print_format: str, course: str, options: dict) ->
 	"""`print_format` rendered for an unsaved certificate of `course` with sample data. A custom
 	design that cannot render sample data returns None instead of a traceback."""
 	doc = build_preview_certificate(course, options)
-	previous = frappe.flags.ignore_print_permissions
-	frappe.flags.ignore_print_permissions = True
 	try:
-		return as_screen_document(
-			frappe.get_print("LMS Certificate", None, print_format, doc=doc, no_letterhead=1)
-		)
+		with print_permissions_checked():
+			html = frappe.get_print("LMS Certificate", None, print_format, doc=doc, no_letterhead=1)
 	except Exception:
 		frappe.log_error(title=f"Certificate design preview failed: {print_format}")
 		return None
-	finally:
-		frappe.flags.ignore_print_permissions = previous
+	return as_screen_document(html)
 
 
 def build_preview_certificate(course: str, options: dict):

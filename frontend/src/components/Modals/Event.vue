@@ -195,6 +195,7 @@ import { formatTimezone } from '@/utils/timezone'
 import { getDateFormat } from '@/utils/format'
 import Link from '@/components/Controls/Link.vue'
 import { openExternal } from '@/utils/openExternal'
+import { getLmsRoute } from '@/utils/basePath'
 
 const show = defineModel()
 const user = inject('$user')
@@ -379,9 +380,7 @@ watch(show, () => {
 
 const openCertificate = (certificate) => {
 	openExternal(
-		`/api/method/frappe.utils.print_format.download_pdf?doctype=LMS+Certificate&name=${
-			certificate.name
-		}&format=${encodeURIComponent(certificate.template)}&no_letterhead=1`
+		getLmsRoute(`certificates/${encodeURIComponent(certificate.name)}`)
 	)
 }
 

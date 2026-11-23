@@ -10,7 +10,7 @@
             <div>
                 {{ _("Issued on") }} : {{ frappe.utils.format_date(certificate.issue_date, "medium") }}
             </div>
-            <a class="stretched-link" href="/courses/{{ course.name }}/{{ certificate.name }}"></a>
+            <a class="stretched-link" href="/certificates/{{ certificate.name }}"></a>
         </div>
     {% endfor %}
 </div>

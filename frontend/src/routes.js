@@ -223,6 +223,12 @@ export const routes = [
 		component: () => import('@/pages/CertifiedParticipants.vue'),
 	},
 	{
+		path: '/certificates/:certificateId',
+		name: 'CertificateVerification',
+		component: () => import('@/pages/CertificateVerification.vue'),
+		props: true,
+	},
+	{
 		path: '/quizzes',
 		name: 'Quizzes',
 		component: () => import('@/pages/Quizzes.vue'),

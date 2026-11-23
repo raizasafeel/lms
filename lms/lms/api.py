@@ -57,6 +57,11 @@ from lms.lms.bulk_enrollment import (
 	search_users,
 )
 from lms.lms.certificate_designs import PREVIEW_OPTIONS, render_certificate_preview
+from lms.lms.certificate_verification import (
+	get_certificate_details,
+	get_viewable_certificate,
+	send_certificate_pdf,
+)
 from lms.lms.code_runner import code_to_store, run_test_cases
 from lms.lms.course_import_export import (
 	export_course_zip,
@@ -1323,7 +1328,22 @@ def get_certified_participant_details(member: str):
 		as_dict=1,
 	)
 	details["certificate_count"] = count
+	details["latest_certificate"] = get_latest_published_certificate(member)
 	return details
+
+
+def get_latest_published_certificate(member: str) -> dict | None:
+	"""The certificate a certified member's card shows."""
+	certificate = frappe.db.get_value(
+		"LMS Certificate",
+		{"member": member, "published": 1},
+		["name", "course_title", "batch_title"],
+		order_by="issue_date desc, creation desc",
+		as_dict=True,
+	)
+	if not certificate:
+		return None
+	return {"name": certificate.name, "title": certificate.course_title or certificate.batch_title}
 
 
 def get_certification_query(filters: dict = None):
@@ -4637,8 +4657,22 @@ def get_user_certificates(username: str) -> list:
 	return frappe.get_list(
 		"LMS Certificate",
 		filters={"member": member},
-		fields=["name", "course_title", "batch_title", "issue_date", "template"],
+		fields=["name", "course", "course_title", "batch_title", "issue_date", "published"],
+		order_by="issue_date desc",
 	)
+
+
+@frappe.whitelist(allow_guest=True)
+def get_certificate(certificate: str) -> dict:
+	"""A certificate's verification page: its details and the rendered design."""
+	return get_certificate_details(get_viewable_certificate(certificate))
+
+
+@frappe.whitelist(allow_guest=True, methods=["GET"])
+@frappe.concurrent_limit()
+def download_certificate_pdf(certificate: str) -> None:
+	"""The certificate as a PDF, for whoever may see its verification page."""
+	send_certificate_pdf(get_viewable_certificate(certificate))
 
 
 @frappe.whitelist(methods=["POST"])

@@ -1,0 +1,176 @@
+from unittest.mock import patch
+
+import frappe
+from frappe.utils import add_days, nowdate
+from frappe.website.path_resolver import resolve_redirect
+from werkzeug.exceptions import HTTPException
+
+from lms.lms.api import download_certificate_pdf, get_certificate, get_certified_participants
+from lms.lms.certificate_verification import redirect_raw_certificate_prints
+from lms.lms.test_helpers import BaseTestUtils
+from lms.lms.utils import get_lms_route
+from lms.www import certificate as certificate_page
+
+
+class CertificateVerificationFixture(BaseTestUtils):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		suffix = frappe.generate_hash(length=6).lower()
+		cls.author = cls._create_user(
+			f"verify-author-{suffix}@example.com", "Ada", "Author", ["Course Creator"]
+		)
+		cls.member = cls._create_user(
+			f"verify-member-{suffix}@example.com", "Maya", "Fernandes", ["LMS Student"]
+		)
+		cls.stranger = cls._create_user(
+			f"verify-stranger-{suffix}@example.com", "Sam", "Stranger", ["LMS Student"]
+		)
+		cls._require_no_moderators(cls.member.name, cls.stranger.name)
+		cls.course = cls._create_course(title=f"Verify Course {suffix}", instructor=cls.author.name)
+		cls._create_enrollment(cls.member.name, cls.course.name)
+
+	def setUp(self):
+		super().setUp()
+		self.certificate = self._create_certificate(self.course.name, self.member.name)
+
+	def set_certificate(self, **values):
+		frappe.db.set_value("LMS Certificate", self.certificate.name, values)
+
+
+class TestGetCertificate(CertificateVerificationFixture):
+	def test_a_guest_sees_a_published_certificate(self):
+		frappe.set_user("Guest")
+		details = get_certificate(self.certificate.name)
+		self.assertEqual(details["status"], "valid")
+		self.assertEqual(details["kind"], "course")
+		self.assertEqual(details["title"], self.course.title)
+		self.assertEqual(details["member"]["full_name"], "Maya Fernandes")
+		self.assertEqual(details["member"]["username"], self.member.username)
+		self.assertFalse(details["is_member"])
+		self.assertTrue(details["html"])
+
+	def test_the_payload_carries_no_email(self):
+		frappe.set_user("Guest")
+		details = get_certificate(self.certificate.name)
+		self.assertNotIn(self.member.name, frappe.as_json(details))
+
+	def test_the_card_links_the_published_course(self):
+		details = get_certificate(self.certificate.name)
+		self.assertEqual(details["awarded_for"]["name"], self.course.name)
+		self.assertEqual(details["awarded_for"]["description"], self.course.short_introduction)
+
+	def test_an_unpublished_course_gets_no_card(self):
+		frappe.db.set_value("LMS Course", self.course.name, "published", 0)
+		self.assertIsNone(get_certificate(self.certificate.name)["awarded_for"])
+
+	def test_an_unknown_certificate_is_not_found(self):
+		frappe.set_user("Guest")
+		with self.assertRaises(frappe.DoesNotExistError):
+			get_certificate("no-such-certificate")
+
+	def test_an_expired_certificate_says_so(self):
+		self.set_certificate(expiry_date=add_days(nowdate(), -1))
+		self.assertEqual(get_certificate(self.certificate.name)["status"], "expired")
+
+	def test_the_member_sees_their_unpublished_certificate(self):
+		self.set_certificate(published=0)
+		frappe.set_user(self.member.name)
+		details = get_certificate(self.certificate.name)
+		self.assertEqual(details["status"], "unpublished")
+		self.assertTrue(details["is_member"])
+
+	def test_others_cannot_see_an_unpublished_certificate(self):
+		self.set_certificate(published=0)
+		for user in ("Guest", self.stranger.name):
+			frappe.set_user(user)
+			with self.assertRaises(frappe.PermissionError):
+				get_certificate(self.certificate.name)
+
+
+class TestDownloadCertificatePdf(CertificateVerificationFixture):
+	def download(self):
+		with patch(
+			"lms.lms.certificate_verification.get_certificate_pdf", return_value=b"%PDF-1.4"
+		) as get_pdf:
+			download_certificate_pdf(self.certificate.name)
+		return get_pdf
+
+	def test_a_guest_downloads_a_published_certificate(self):
+		frappe.set_user("Guest")
+		get_pdf = self.download()
+		get_pdf.assert_called_once_with(self.certificate.name, self.certificate.template)
+		self.assertEqual(frappe.local.response.type, "pdf")
+		self.assertEqual(frappe.local.response.filecontent, b"%PDF-1.4")
+		self.assertEqual(frappe.local.response.filename, f"{self.certificate.name}.pdf")
+
+	def test_a_stranger_cannot_download_an_unpublished_certificate(self):
+		self.set_certificate(published=0)
+		frappe.set_user(self.stranger.name)
+		with self.assertRaises(frappe.PermissionError):
+			self.download()
+
+
+class TestRawCertificateRoutes(CertificateVerificationFixture):
+	def setUp(self):
+		super().setUp()
+		self.page = get_lms_route(f"certificates/{self.certificate.name}")
+
+	def tearDown(self):
+		frappe.local.request = None
+		frappe.form_dict.clear()
+		super().tearDown()
+
+	def request(self, path, **form):
+		frappe.local.request = frappe._dict(path=path)
+		frappe.form_dict.clear()
+		frappe.form_dict.update(form)
+
+	def assert_redirects(self):
+		with self.assertRaises(HTTPException) as raised:
+			redirect_raw_certificate_prints()
+		self.assertEqual(raised.exception.response.headers["Location"], self.page)
+
+	def test_the_pdf_url_opens_the_verification_page(self):
+		for path in (
+			"/api/method/frappe.utils.print_format.download_pdf",
+			"/api/v2/method/frappe.utils.print_format.download_pdf",
+		):
+			self.request(path, doctype="LMS Certificate", name=self.certificate.name, format="x")
+			self.assert_redirects()
+
+	def test_the_print_view_opens_the_verification_page(self):
+		self.request("/printview", doctype="LMS Certificate", name=self.certificate.name)
+		self.assert_redirects()
+
+	def test_other_doctypes_print_as_before(self):
+		self.request("/printview", doctype="LMS Course", name=self.course.name)
+		self.assertIsNone(redirect_raw_certificate_prints())
+
+	def test_other_paths_are_left_alone(self):
+		self.request("/api/method/lms.lms.api.get_certificate", doctype="LMS Certificate", name="x")
+		self.assertIsNone(redirect_raw_certificate_prints())
+
+	def test_the_old_course_url_opens_the_verification_page(self):
+		frappe.form_dict.certificate_id = self.certificate.name
+		with self.assertRaises(frappe.Redirect):
+			certificate_page.get_context(frappe._dict())
+		self.assertEqual(frappe.local.flags.redirect_location, self.page)
+
+	def test_the_printed_qr_url_opens_the_verification_page(self):
+		frappe.cache.delete_value("website_redirects")
+		with self.assertRaises(frappe.Redirect):
+			resolve_redirect(f"certificates/{self.certificate.name}")
+		self.assertEqual(frappe.flags.redirect_location, self.page)
+
+
+class TestCertifiedParticipantsCertificate(CertificateVerificationFixture):
+	def test_each_member_carries_their_latest_certificate(self):
+		participants = get_certified_participants(
+			filters={"member_name": ["like", "%Maya Fernandes%"]}, page_length=500
+		)
+		row = next(row for row in participants if row["username"] == self.member.username)
+		self.assertEqual(
+			row["latest_certificate"],
+			{"name": self.certificate.name, "title": self.course.title},
+		)

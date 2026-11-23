@@ -255,6 +255,9 @@ scheduler_events = {
 
 # before_tests = "lms.install.before_tests"
 
+# Raw print and PDF URLs of a certificate open its verification page.
+before_request = ["lms.lms.certificate_verification.redirect_raw_certificate_prints"]
+
 # Overriding Methods
 # ------------------------------
 #
@@ -289,6 +292,8 @@ website_route_rules = [
 
 website_redirects = [
 	{"source": "/update-profile", "target": "/edit-profile"},
+	# The verification URL printed as a QR code on every certificate.
+	{"source": r"/certificates/([^/]+)", "target": rf"/{get_lms_path()}/certificates/\1"},
 	{"source": "/courses", "target": f"/{get_lms_path()}/courses"},
 	{
 		"source": r"^/courses/.*$",

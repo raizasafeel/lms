@@ -1,7 +1,10 @@
 <template>
 	<Button
 		v-if="certification.data && certification.data.certificate"
-		@click="downloadCertificate"
+		:route="{
+			name: 'CertificateVerification',
+			params: { certificateId: certification.data.certificate.name },
+		}"
 	>
 		<template #prefix>
 			<span class="lucide-graduation-cap size-4" />
@@ -53,7 +56,6 @@
 import { Button, createResource } from 'frappe-ui'
 import { inject } from 'vue'
 import type { CertificationInfo, Resource, SessionUser } from '@/types'
-import { openExternal } from '@/utils/openExternal'
 
 const user = inject<SessionUser>('$user')!
 
@@ -70,14 +72,4 @@ const certification = createResource({
 	},
 	auto: user.data ? true : false,
 }) as Resource<CertificationInfo | null>
-
-const downloadCertificate = () => {
-	const cert = certification.data?.certificate
-	if (!cert) return
-	openExternal(
-		`/api/method/frappe.utils.print_format.download_pdf?doctype=LMS+Certificate&name=${
-			cert.name
-		}&format=${encodeURIComponent(cert.template)}&no_letterhead=1`
-	)
-}
 </script>

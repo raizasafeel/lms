@@ -1,10 +1,7 @@
-from urllib.parse import parse_qs, urlsplit
-
 import frappe
 
 from lms.lms.doctype.lms_certificate.lms_certificate import get_default_certificate_template
 from lms.lms.test_helpers import BaseTestUtils
-from lms.www import certificate as certificate_page
 
 
 class TestCertificatePdfUrl(BaseTestUtils):
@@ -29,24 +26,11 @@ class TestCertificatePdfUrl(BaseTestUtils):
 		# nosemgrep: lms-unjustified-ignore-permissions - fixture seeding, not the permission under test
 		letter_head.insert(ignore_permissions=True)
 
-	def _redirect_params(self):
-		frappe.form_dict.certificate_id = self.certificate.name
-		with self.assertRaises(frappe.Redirect):
-			certificate_page.get_context(frappe._dict())
-		return {
-			key: values[0]
-			for key, values in parse_qs(urlsplit(frappe.local.flags.redirect_location).query).items()
-		}
-
 	def test_the_certificate_renders_under_an_unsafe_default_letter_head(self):
 		# Regression: a default letter head using frappe._dict() 500'd the certificate PDF
 		# (#3031, fixed in #3039).
-		params = self._redirect_params()
 		html = frappe.get_print(
-			params["doctype"],
-			params["name"],
-			params["format"],
-			no_letterhead=params.get("no_letterhead"),
+			"LMS Certificate", self.certificate.name, self.certificate.template, no_letterhead=1
 		)
 		self.assertTrue(html)
 

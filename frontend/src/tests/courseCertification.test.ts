@@ -157,16 +157,17 @@ describe('CourseCertification', () => {
 		expect(evaluations(wrapper).exists()).toBe(false)
 	})
 
-	// Regression: certificate PDF 500 under a frappe._dict() letter head (#3031, fixed in #3039).
-	it('opens the certificate PDF without the site letter head', async () => {
+	it('opens the certificate on its verification page', async () => {
 		const { wrapper, resource } = mountPage()
 		resource.data = CERTIFIED
 		await flushPromises()
 
 		await wrapper.find('button').trigger('click')
-		const url = new URL(openExternalMock.mock.calls[0][0], 'http://lms.test')
-		expect(url.searchParams.get('name')).toBe('CERT-0001')
-		expect(url.searchParams.get('no_letterhead')).toBe('1')
+		expect(pushMock).toHaveBeenCalledWith({
+			name: 'CertificateVerification',
+			params: { certificateId: 'CERT-0001' },
+		})
+		expect(openExternalMock).not.toHaveBeenCalled()
 	})
 
 	it('sends a learner without a purchased certificate back to the course', () => {

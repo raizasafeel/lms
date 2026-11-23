@@ -39,7 +39,6 @@ import type { FrappeResourceError } from 'frappe-ui'
 import { useRouter } from 'vue-router'
 import { sessionStore } from '../../stores/session'
 import UpcomingEvaluations from '@/components/UpcomingEvaluations.vue'
-import { openExternal } from '@/utils/openExternal'
 import { resourceErrorMessage } from '@/utils/resource'
 import type dayjsType from 'dayjs'
 import type { CertificationInfo, Resource, SessionUser } from '@/types'
@@ -112,11 +111,10 @@ const courses = computed(() => {
 const openCertificate = () => {
 	const cert = certificate.value
 	if (!cert) return
-	openExternal(
-		`/api/method/frappe.utils.print_format.download_pdf?doctype=LMS+Certificate&name=${
-			cert.name
-		}&format=${encodeURIComponent(cert.template)}&no_letterhead=1`
-	)
+	router.push({
+		name: 'CertificateVerification',
+		params: { certificateId: cert.name },
+	})
 }
 
 const breadcrumbs = computed(() => [

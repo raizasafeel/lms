@@ -32,7 +32,8 @@
 		</template>
 
 		<template #name>
-			{{ __('{0} Certified Members').format(memberCount) }}
+			{{ __('All certified members') }}
+			<span class="ms-1 text-ink-gray-6">{{ memberCount }}</span>
 		</template>
 
 		<template #filters>
@@ -70,41 +71,51 @@
 			<component
 				:is="row.username ? 'router-link' : 'div'"
 				:to="profileRoute(row.username, 'ProfileAbout')"
-				class="flex flex-col rounded-6 border p-3 text-ink-gray-9"
+				class="flex flex-col overflow-hidden rounded-6 border border-outline-gray-2 text-start transition"
 				:class="
-					row.username ? 'cursor-pointer hover:border-outline-gray-3' : ''
+					row.username ? 'hover:border-outline-gray-3 hover:shadow-sm' : ''
 				"
 			>
-				<div class="flex items-center gap-x-4 mb-4">
-					<UserAvatar :user="row" size="2xl" />
-					<div class="flex flex-col">
-						<div class="line-clamp-1 font-semibold">
-							{{ row.full_name }}
-						</div>
-						<div class="line-clamp-1 text-sm leading-5">
-							{{
-								row.headline ||
-								__('Joined {0}').format(serverTime(row.creation).fromNow())
-							}}
-						</div>
-					</div>
+				<div class="flex justify-center bg-surface-gray-1 p-4">
+					<CertificateThumbnail
+						v-if="row.latest_certificate"
+						:certificate="row.latest_certificate.name"
+						:title="row.latest_certificate.title"
+						class="w-52 max-w-full"
+					/>
 				</div>
-				<div class="mt-auto space-y-2 text-ink-gray-7">
-					<div>
-						<Badge size="lg">
-							<template #prefix>
-								<span class="lucide-graduation-cap size-3" />
-							</template>
-							{{
-								row.certificate_count > 1
-									? __('{0} certificates').format(row.certificate_count)
-									: __('1 certificate')
-							}}
-						</Badge>
+				<div class="flex flex-1 flex-col gap-2 p-3">
+					<div class="flex items-center gap-2.5">
+						<Avatar :label="row.full_name" :image="row.user_image" size="md" />
+						<div class="min-w-0">
+							<div class="truncate text-p-sm-medium text-ink-gray-9">
+								{{ row.full_name }}
+							</div>
+							<div class="truncate text-p-xs text-ink-gray-6">
+								{{
+									row.headline ||
+									__('Joined {0}').format(serverTime(row.creation).fromNow())
+								}}
+							</div>
+						</div>
 					</div>
-					<div class="flex items-center gap-x-1">
-						<span class="lucide-calendar me-1 h-4 w-4" />
-						<span>{{ dayjs(row.issue_date).format('DD MMM YYYY') }}</span>
+					<div
+						v-if="row.latest_certificate"
+						class="mt-auto flex max-w-full items-center gap-1.5 text-p-xs text-ink-gray-6"
+					>
+						<span
+							class="lucide-circle-check size-3.5 shrink-0"
+							aria-hidden="true"
+						/>
+						<span class="min-w-0 truncate">{{
+							row.latest_certificate.title
+						}}</span>
+						<span
+							v-if="row.open_to === 'Work'"
+							class="shrink-0 text-ink-green-6"
+						>
+							· {{ __('Open to work') }}
+						</span>
 					</div>
 				</div>
 			</component>
@@ -113,7 +124,7 @@
 </template>
 <script setup>
 import {
-	Badge,
+	Avatar,
 	Button,
 	call,
 	createListResource,
@@ -127,7 +138,7 @@ import { sessionStore } from '../stores/session'
 import { useRouter } from 'vue-router'
 import { openFormRoute } from '@/composables/useFormRoute'
 import { setFormSource } from '@/composables/formTracking'
-import UserAvatar from '@/components/UserAvatar.vue'
+import CertificateThumbnail from '@/components/Certificates/CertificateThumbnail.vue'
 import ListPage from '@/components/Layouts/pages/ListPage.vue'
 import EmptyStateActions from '@/components/EmptyStateActions.vue'
 import { profileRoute } from '@/utils/routes'
@@ -140,7 +151,6 @@ const openToWork = ref(false)
 const hiring = ref(false)
 const { brand } = sessionStore()
 const memberCount = ref(0)
-const dayjs = inject('$dayjs')
 const user = inject('$user')
 const router = useRouter()
 
