@@ -55,3 +55,41 @@ export function validateCourse(input: CourseValidationInput): string | null {
 	}
 	return null
 }
+
+export interface MissingField {
+	key: 'title' | 'short_introduction' | 'description' | 'instructors' | 'price'
+	label: string
+}
+
+// Every unmet requirement, so the Save tooltip can name them all and each
+// inline field can ring itself.
+export function missingCourseFields(
+	input: CourseValidationInput
+): MissingField[] {
+	const { doc, instructors } = input
+	if (!doc) return []
+	const missing: MissingField[] = []
+	if (!hasText(doc.title)) missing.push({ key: 'title', label: __('a title') })
+	if (!hasText(doc.short_introduction)) {
+		missing.push({ key: 'short_introduction', label: __('an introduction') })
+	}
+	if (!hasText(doc.description)) {
+		missing.push({ key: 'description', label: __('a description') })
+	}
+	if (!instructors.length) {
+		missing.push({ key: 'instructors', label: __('an instructor') })
+	}
+	const charges = doc.paid_course || doc.paid_certificate
+	if (charges && (!doc.currency || !(Number(doc.course_price) > 0))) {
+		missing.push({ key: 'price', label: __('a price') })
+	}
+	return missing
+}
+
+export function joinLabels(labels: string[]): string {
+	if (labels.length < 2) return labels[0] ?? ''
+	return __('{0} and {1}').format(
+		labels.slice(0, -1).join(', '),
+		labels[labels.length - 1]
+	)
+}

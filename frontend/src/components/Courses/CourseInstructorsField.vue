@@ -7,10 +7,12 @@
 		:searchParams="{ roles: JSON.stringify(ROLES) }"
 		:transform="transformUsers"
 		:extraOptions="resolvedSelected"
-		:label="__('Instructors')"
-		:placeholder="__('Select instructors')"
-		:required="true"
-		variant="outline"
+		:placeholder="__('Add instructors')"
+		variant="ghost"
+		class="rounded-4"
+		:class="
+			isMissing?.('instructors') && 'bg-surface-red-1 ring-2 ring-outline-red-3'
+		"
 		:onCreate="openMemberModal"
 		@update:modelValue="markDirty()"
 	>
@@ -26,14 +28,13 @@
 					:label="m.label"
 					size="sm"
 				/>
-				<span
-					v-if="overflowCount > 0"
-					class="z-10 grid size-5 place-items-center rounded-full bg-surface-gray-3 text-xs-medium text-ink-gray-7"
-				>
-					+{{ overflowCount }}
-				</span>
 			</div>
-			<span v-else class="lucide-users size-4 text-ink-gray-5" />
+			<span v-else class="lucide-user-plus size-4 text-ink-gray-5" />
+		</template>
+		<template #summary>
+			<span :class="instructors.length ? 'text-ink-gray-7' : 'text-ink-gray-4'">
+				{{ summary }}
+			</span>
 		</template>
 		<template #item-prefix="{ item }">
 			<Avatar :image="item.image" :label="item.label" size="sm" />
@@ -73,7 +74,8 @@ interface RawUserHit {
 	description?: string
 }
 
-const { instructors, markDirty } = inject<CourseFormContext>('courseForm')!
+const { instructors, markDirty, isMissing } =
+	inject<CourseFormContext>('courseForm')!
 
 const ROLES = ['Course Creator', 'Batch Evaluator']
 const MAX_VISIBLE_AVATARS = 3
@@ -161,9 +163,18 @@ const visibleAvatars = computed<InstructorOption[]>(() =>
 		.filter((o): o is InstructorOption => Boolean(o))
 )
 
-const overflowCount = computed<number>(() =>
-	Math.max(0, instructors.value.length - MAX_VISIBLE_AVATARS)
-)
+const firstName = (value: string): string =>
+	(optionByValue.value.get(value)?.label || value).split(' ')[0]
+
+const summary = computed<string>(() => {
+	const [first, ...others] = instructors.value
+	if (!first) return __('Add instructors')
+	if (!others.length) return optionByValue.value.get(first)?.label || first
+	if (others.length === 1) {
+		return __('{0} and {1}').format(firstName(first), firstName(others[0]))
+	}
+	return __('{0} and {1} others').format(firstName(first), others.length)
+})
 
 function openMemberModal(close: () => void) {
 	close()

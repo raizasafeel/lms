@@ -17,7 +17,9 @@
 			</template>
 			<template v-else>
 				<Breadcrumbs class="h-7 min-w-0" :items="breadcrumbs" />
-				<Badge v-if="published" theme="green">{{ __('Published') }}</Badge>
+				<slot name="status">
+					<Badge v-if="published" theme="green">{{ __('Published') }}</Badge>
+				</slot>
 			</template>
 		</div>
 		<div class="flex shrink-0 items-center gap-2">

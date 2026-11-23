@@ -8,6 +8,9 @@
 			:published="published"
 			:loading="loading"
 		>
+			<template v-if="$slots.status" #status>
+				<slot name="status" />
+			</template>
 			<template #actions>
 				<slot name="actions" :tab="activeTab" :instance="activeInstance" />
 			</template>
@@ -99,6 +102,7 @@ const props = withDefaults(
 
 defineSlots<{
 	actions?: (props: { tab?: DetailTab; instance: unknown }) => any
+	status?: () => any
 	solo?: () => any
 	overlay?: (props: { tab?: DetailTab }) => any
 	[body: `tab-body-${string}`]: (props: { tab: DetailTab; doc: unknown }) => any

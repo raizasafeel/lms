@@ -369,7 +369,7 @@ const saveCourse = () => {
 				saveAndReplace({
 					name: 'CourseDetail',
 					params: { courseName: data.name },
-					hash: '#settings',
+					hash: '#overview',
 				})
 				if (seesOnboarding(user.data)) {
 					updateOnboardingStep('create_first_course', true, false, () => {

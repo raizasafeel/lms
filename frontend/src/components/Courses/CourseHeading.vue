@@ -1,0 +1,147 @@
+<template>
+	<section class="space-y-4">
+		<h1 v-if="doc" class="sr-only">{{ doc.title || __('Untitled course') }}</h1>
+		<InlineText
+			v-if="doc"
+			v-model="doc.title"
+			:placeholder="__('Course title')"
+			:missing="isMissing?.('title')"
+			class="text-4xl-semibold text-ink-gray-9"
+			@update:modelValue="markDirty?.()"
+			@enter="intro?.focus()"
+		/>
+		<h1 v-else class="text-4xl-semibold text-ink-gray-9">
+			{{ course.title }}
+		</h1>
+
+		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-ink-gray-7">
+			<div v-if="doc" class="flex items-center gap-1">
+				<span class="lucide-tag size-4 shrink-0" />
+				<Link
+					v-model="doc.category"
+					doctype="LMS Category"
+					:placeholder="__('Add category')"
+					:aria-label="__('Category')"
+					:inlineCreate="true"
+					inlineCreatePlaceholder="Category name"
+					:onCreate="onCreateCategory"
+					variant="ghost"
+					class="w-40"
+					@update:modelValue="markDirty?.()"
+				/>
+			</div>
+			<router-link
+				v-else-if="course.category"
+				:to="{ name: 'Courses', query: { category: course.category } }"
+				class="flex items-center gap-1.5 font-medium hover:text-ink-gray-9"
+			>
+				<span class="lucide-tag size-4" />
+				<span>{{ course.category }}</span>
+			</router-link>
+			<template v-if="Number(course.rating) > 0">
+				<span class="lucide-dot size-5" />
+				<div class="flex items-center gap-1">
+					<LucideStar class="size-4 text-transparent fill-ink-amber-7" />
+					<span class="font-medium text-ink-gray-9">
+						{{ formatRating(course.rating) }}
+					</span>
+					<span v-if="course.rating_count">
+						({{ formatAmount(course.rating_count) }})
+					</span>
+				</div>
+			</template>
+			<template v-if="course.enrollments">
+				<span class="lucide-dot size-5" />
+				<div class="flex items-center gap-1.5">
+					<span class="lucide-users-round size-4" />
+					<span>
+						{{ formatAmount(course.enrollments) }} {{ __('Students') }}
+					</span>
+				</div>
+			</template>
+			<span
+				v-if="doc || course.instructors?.length"
+				class="lucide-dot size-5"
+			/>
+			<CourseInstructorsField v-if="doc" />
+			<div v-else-if="course.instructors?.length" class="flex items-center">
+				<span
+					class="h-6 me-1"
+					:class="{ 'avatar-group overlap': course.instructors.length > 1 }"
+				>
+					<UserAvatar
+						v-for="instructor in course.instructors"
+						:key="instructor.username"
+						:user="instructor"
+					/>
+				</span>
+				<CourseInstructors :instructors="course.instructors" />
+			</div>
+		</div>
+
+		<CourseTagsField v-if="doc" />
+		<div v-else-if="course.tags" class="flex flex-wrap gap-2">
+			<Badge
+				v-for="tag in course.tags.split(', ')"
+				:key="tag"
+				theme="gray"
+				size="lg"
+			>
+				{{ tag }}
+			</Badge>
+		</div>
+
+		<InlineText
+			v-if="doc"
+			ref="introField"
+			v-model="doc.short_introduction"
+			:placeholder="
+				__('Short introduction: one line on what learners get out of it')
+			"
+			:missing="isMissing?.('short_introduction')"
+			class="leading-6 text-ink-gray-7"
+			@update:modelValue="markDirty?.()"
+		/>
+		<p v-else-if="course.short_introduction" class="text-ink-gray-7 leading-6">
+			{{ course.short_introduction }}
+		</p>
+	</section>
+</template>
+
+<script setup lang="ts">
+import { Badge } from 'frappe-ui'
+import { computed, inject, useTemplateRef } from 'vue'
+import { createLMSCategory, formatAmount, formatRating } from '@/utils/'
+import { createHandler } from '@/utils/createHandler'
+import Link from '@/components/Controls/Link.vue'
+import CourseInstructors from '@/components/CourseInstructors.vue'
+import CourseInstructorsField from '@/components/Courses/CourseInstructorsField.vue'
+import CourseTagsField from '@/components/Courses/CourseTagsField.vue'
+import InlineText from '@/components/Courses/InlineText.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
+import type { CourseDetails, CourseFormContext } from '@/types'
+
+/** Title, meta row, tags and intro: inline fields when `editable`. */
+const props = defineProps<{
+	course: CourseDetails
+	editable?: boolean
+}>()
+
+const form = inject<CourseFormContext | null>('courseForm', null)
+const markDirty = form?.markDirty
+const isMissing = form?.isMissing
+const intro = useTemplateRef<{ focus: () => void }>('introField')
+
+const doc = computed(() => (props.editable ? form?.resource.doc : null))
+
+function onCreateCategory(value: string | null, done?: () => void): void {
+	createHandler(value, done, (name) =>
+		createLMSCategory(name).then((category: string | undefined) => {
+			if (!category || !doc.value) return
+			doc.value.category = category
+			done?.()
+			markDirty?.()
+		})
+	)
+}
+</script>

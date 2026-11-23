@@ -83,6 +83,14 @@ vi.mock('@/pages/Courses/CourseDashboard.vue', stub)
 vi.mock('@/pages/Courses/CourseForm.vue', stub)
 vi.mock('@/components/SkeletonLoader.vue', stub)
 vi.mock('@/components/LessonHelp.vue', stub)
+
+// The form owns a document resource; these tests are about the page shell.
+vi.mock('@/composables/useCourseForm', () => ({
+	useCourseForm: () => ({ isDirty: { value: false }, submitCourse: vi.fn() }),
+}))
+vi.mock('@/components/Courses/CourseHeaderActions.vue', stub)
+vi.mock('@/components/Courses/CourseSaveButton.vue', stub)
+vi.mock('@/components/Courses/CourseStudentView.vue', stub)
 vi.mock('@/components/ShortcutTooltip.vue', stub)
 vi.mock('@/components/HeaderButton.vue', stub)
 

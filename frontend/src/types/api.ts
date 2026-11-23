@@ -160,6 +160,10 @@ export interface CourseFormContext {
 	relatedCourses: Ref<string[]>
 	meta: CourseFormMeta
 	markDirty: () => void
+	isDirty?: Ref<boolean>
+	/** Ring the empty required fields: Save is hovered, or a save had gaps. */
+	showRequired?: Ref<boolean>
+	isMissing?: (key: string) => boolean
 }
 
 export interface EvaluatorCalendar {

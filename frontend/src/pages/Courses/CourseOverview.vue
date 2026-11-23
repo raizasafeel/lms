@@ -5,104 +5,16 @@
 			class="flex flex-col md:flex-row items-start justify-between w-full gap-x-8 gap-y-8"
 		>
 			<div class="md:w-2/3 space-y-10 min-w-0">
-				<section class="space-y-4">
-					<h1 class="text-4xl-semibold text-ink-gray-9">
-						{{ course.data.title }}
-					</h1>
-					<div
-						class="flex flex-wrap items-center gap-x-3 gap-y-2 text-ink-gray-7"
-					>
-						<template v-if="course.data.category">
-							<router-link
-								:to="{
-									name: 'Courses',
-									query: { category: course.data.category },
-								}"
-								class="flex items-center gap-1.5 font-medium hover:text-ink-gray-9"
-							>
-								<span class="lucide-tag size-4" />
-								<span>{{ course.data.category }}</span>
-							</router-link>
-						</template>
-						<template v-if="Number(course.data.rating) > 0">
-							<div class="flex items-center gap-1">
-								<span
-									v-if="course.data.category"
-									aria-hidden="true"
-									class="lucide-dot size-5 shrink-0 me-2"
-								/>
-								<LucideStar class="size-4 text-transparent fill-ink-amber-7" />
-								<span class="font-medium text-ink-gray-9">{{
-									formatRating(course.data.rating)
-								}}</span>
-								<span v-if="course.data.rating_count">
-									({{ formatAmount(course.data.rating_count) }})
-								</span>
-							</div>
-						</template>
-						<template v-if="course.data.enrollments">
-							<div class="flex items-center gap-1.5">
-								<span
-									v-if="course.data.category || Number(course.data.rating) > 0"
-									aria-hidden="true"
-									class="lucide-dot size-5 shrink-0 me-1.5"
-								/>
-								<span class="lucide-users-round size-4" />
-								<span>{{
-									__('{0} students').format(
-										formatAmount(course.data.enrollments)
-									)
-								}}</span>
-							</div>
-						</template>
-						<div
-							v-if="course.data.instructors?.length"
-							class="flex items-center"
-						>
-							<span
-								v-if="
-									course.data.category ||
-									Number(course.data.rating) > 0 ||
-									course.data.enrollments
-								"
-								aria-hidden="true"
-								class="lucide-dot size-5 shrink-0 me-3"
-							/>
-							<span
-								class="h-6 me-1"
-								:class="{
-									'avatar-group overlap': course.data.instructors.length > 1,
-								}"
-							>
-								<UserAvatar
-									v-for="instructor in course.data.instructors"
-									:key="instructor.username"
-									:user="instructor"
-								/>
-							</span>
-							<CourseInstructors :instructors="course.data.instructors" />
-						</div>
-					</div>
-					<div v-if="course.data.tags" class="flex flex-wrap gap-2">
-						<Badge
-							v-for="tag in course.data.tags.split(', ')"
-							:key="tag"
-							theme="gray"
-							size="lg"
-						>
-							{{ tag }}
-						</Badge>
-					</div>
-					<p
-						v-if="course.data.short_introduction"
-						class="text-ink-gray-7 leading-6"
-					>
-						{{ course.data.short_introduction }}
-					</p>
-					<div class="md:hidden">
-						<CourseCardOverlay :course="course" />
-					</div>
-				</section>
+				<CourseHeading :course="course.data" :editable="editable" />
+				<div class="md:hidden">
+					<CourseEditCard v-if="editable" :course="course" />
+					<CourseCardOverlay
+						v-else
+						:course="course"
+						:preview="preview"
+						@enroll="emit('enroll')"
+					/>
+				</div>
 
 				<section>
 					<div class="flex items-baseline justify-between gap-4 mb-4">
@@ -131,12 +43,37 @@
 							v-else
 							:courseName="course.data.name"
 							:getProgress="course.data.membership ? true : false"
-							:editorLinks="isCourseAdmin"
+							:editorLinks="isCourseAdmin && !preview"
 						/>
 					</div>
 				</section>
 
-				<section v-if="course.data.description" class="space-y-3">
+				<section v-if="editable && form?.resource.doc" class="space-y-3">
+					<h2 :id="aboutHeadingId" class="text-3xl-semibold text-ink-gray-9">
+						{{ __('About this course') }}
+					</h2>
+					<div
+						class="-mx-2.5 rounded-5 px-2.5 py-1.5 hover:bg-surface-gray-2 focus-within:hover:bg-transparent"
+						:class="
+							form.isMissing?.('description') &&
+							'bg-surface-red-1 ring-2 ring-outline-red-3'
+						"
+					>
+						<RichTextEditor
+							:ariaLabelledby="aboutHeadingId"
+							:content="form.resource.doc.description"
+							variant="ghost"
+							:placeholder="
+								__(
+									'Describe what the course covers, who it is for and what learners can do at the end.'
+								)
+							"
+							minHeight="5rem"
+							@change="setDescription"
+						/>
+					</div>
+				</section>
+				<section v-else-if="course.data.description" class="space-y-3">
 					<h2 class="text-3xl-semibold text-ink-gray-9">
 						{{ __('About this course') }}
 					</h2>
@@ -156,21 +93,47 @@
 			<aside
 				class="hidden md:flex w-80 shrink-0 flex-col space-y-6 self-start sticky top-5"
 			>
-				<CourseCardOverlay :course="course" />
-				<CourseCreatorCard :instructors="course.data.instructors || []" />
+				<CourseEditCard v-if="editable" :course="course" />
+				<template v-else>
+					<CourseCardOverlay
+						:course="course"
+						:preview="preview"
+						@enroll="emit('enroll')"
+					/>
+					<CourseCreatorCard :instructors="course.data.instructors || []" />
+				</template>
 			</aside>
 		</div>
 
-		<RelatedCourses :courseName="course.data.name" class="mt-12" />
+		<section v-if="editable && form" class="mt-12 space-y-4">
+			<div class="flex items-baseline justify-between gap-4">
+				<h2 class="text-3xl-semibold text-ink-gray-9">
+					{{ __('Related courses') }}
+				</h2>
+				<span class="text-p-sm text-ink-gray-6">
+					{{ __('Shown to learners below the course') }}
+				</span>
+			</div>
+			<MultiLink
+				v-model="form.relatedCourses.value"
+				doctype="LMS Course"
+				:filters="{ name: ['!=', course.data.name], published: 1 }"
+				:placeholder="__('Add related courses')"
+				:emptyText="__('No other published courses available')"
+				variant="outline"
+				@update:modelValue="form.markDirty()"
+			/>
+		</section>
+		<RelatedCourses v-else :courseName="course.data.name" class="mt-12" />
 	</div>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, watch } from 'vue'
-import { createResource, Badge } from 'frappe-ui'
-import { formatAmount, formatRating } from '@/utils/'
+import { computed, inject, useId, watch } from 'vue'
+import { createResource } from 'frappe-ui'
 import type {
 	CourseDetails,
+	CourseFormContext,
 	OutlineChapter,
 	Resource,
 	SessionUser,
@@ -179,26 +142,41 @@ import CourseCardOverlay from '@/components/CourseCardOverlay.vue'
 import CourseOutline from '@/components/CourseOutline.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import CourseReviews from '@/components/CourseReviews.vue'
-import CourseInstructors from '@/components/CourseInstructors.vue'
 import CourseCreatorCard from '@/components/CourseCreatorCard.vue'
-import UserAvatar from '@/components/UserAvatar.vue'
 import RelatedCourses from '@/components/RelatedCourses.vue'
+import RichTextEditor from '@/components/RichTextEditor.vue'
+import MultiLink from '@/components/Controls/MultiLink.vue'
+import CourseEditCard from '@/components/Courses/CourseEditCard.vue'
+import CourseHeading from '@/components/Courses/CourseHeading.vue'
+import { isInstructorOf } from '@/utils/instructors'
 
+/** The course page. Instructors edit it in place; learners and previews read it. */
 const props = defineProps<{
 	course: Resource<CourseDetails | null>
+	preview?: 'not-enrolled' | 'enrolled' | null
 }>()
 
-const user = inject<SessionUser>('$user')
+const emit = defineEmits<{ enroll: [] }>()
 
-const isCourseInstructor = computed<boolean>(() =>
-	(props.course.data?.instructors || []).some(
-		(i) => i.name === user?.data?.name
-	)
+const user = inject<SessionUser>('$user')
+const form = inject<CourseFormContext | null>('courseForm', null)
+const aboutHeadingId = useId()
+
+const editable = computed<boolean>(
+	() => !props.preview && Boolean(form?.resource.doc)
 )
 
 const isCourseAdmin = computed<boolean>(
-	() => Boolean(user?.data?.is_moderator) || isCourseInstructor.value
+	() =>
+		Boolean(user?.data?.is_moderator) ||
+		isInstructorOf(props.course.data?.instructors, user?.data?.username)
 )
+
+function setDescription(value: string): void {
+	if (!form?.resource.doc) return
+	form.resource.doc.description = value
+	form.markDirty()
+}
 
 const outline = createResource({
 	url: 'lms.lms.utils.get_course_outline',
