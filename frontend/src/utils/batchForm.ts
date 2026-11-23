@@ -68,3 +68,41 @@ export function validateBatch(input: BatchValidationInput): string | null {
 	}
 	return null
 }
+
+export interface MissingBatchField {
+	key: string
+	label: string
+}
+
+/** Every empty required field, keyed the way the overview rings them. */
+export function missingBatchFields(
+	input: BatchValidationInput
+): MissingBatchField[] {
+	const { doc, instructors } = input
+	if (!doc) return []
+	const required: [string, string, unknown][] = [
+		['title', __('title'), doc.title],
+		['instructors', __('instructors'), instructors.length ? 'set' : ''],
+		['description', __('short description'), doc.description],
+		['dates', __('dates'), doc.start_date && doc.end_date],
+		['times', __('class times'), doc.start_time && doc.end_time],
+		['timezone', __('timezone'), doc.timezone],
+		['batch_details', __('batch details'), doc.batch_details],
+	]
+	if (doc.paid_batch) {
+		required.push(['currency', __('currency'), doc.currency])
+		required.push(['amount', __('price'), Number(doc.amount) > 0 ? 'set' : ''])
+	}
+	return required
+		.filter(([, , value]) => !hasText(value ? String(value) : ''))
+		.map(([key, label]) => ({ key, label }))
+}
+
+/** "a", "a and b", "a, b and c". */
+export function joinFieldLabels(labels: string[]): string {
+	if (labels.length < 2) return labels[0] ?? ''
+	return __('{0} and {1}').format(
+		labels.slice(0, -1).join(', '),
+		labels[labels.length - 1]
+	)
+}

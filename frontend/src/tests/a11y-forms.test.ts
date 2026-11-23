@@ -74,8 +74,8 @@ const EDITOR_FILES = [
 	'components/DiscussionReplies.vue',
 	'pages/Forms/NewCourseForm.vue',
 	'pages/Forms/NewBatchForm.vue',
-	'pages/Batches/BatchForm.vue',
-	'components/Courses/CourseOverviewSection.vue',
+	'pages/Batches/BatchOverview.vue',
+	'pages/Courses/CourseOverview.vue',
 	'pages/Forms/JobForm.vue',
 	'pages/Forms/EmailTemplateForm.vue',
 	'components/ContactUsEmail.vue',
@@ -131,7 +131,7 @@ const FILTERS: Array<[string, string, string]> = [
 	['pages/QuizSubmissions.vue', 'Link', 'Filter by Course'],
 	['pages/ProgrammingExercises/ProgrammingExercises.vue', 'Select', 'Type'],
 	['components/Programs/ProgramProgressSummary.vue', 'FormControl', 'Search'],
-	['pages/Courses/Courses.vue', 'ClearableCombobox', 'Category'],
+	['pages/Courses/Courses.vue', 'FormControl', 'Search courses'],
 	['pages/Batches/Batches.vue', 'ClearableCombobox', 'Category'],
 	['pages/CertifiedParticipants.vue', 'ClearableCombobox', 'Category'],
 ]
@@ -180,9 +180,10 @@ describe('named controls and focus outlines', () => {
 			(e) => e.tag === 'FormControl' && attr(e, 'type') === 'number'
 		)!
 		expect(attr(marks, 'aria-label')).toContain("__('Marks for question {0}')")
-		const file = 'components/Courses/CourseDetailsSection.vue'
-		const tags = elements(file).find((el) => el.tag === 'button')!
-		expectIdsDeclared(file, attr(tags, 'aria-labelledby') ?? '')
+		const tagButtons = elements('components/Courses/CourseTagsField.vue')
+			.filter((el) => el.tag === 'button')
+			.map((el) => attr(el, 'aria-label') ?? '')
+		expect(tagButtons).toContain("__('Add tag')")
 		const h1 = elements('pages/Forms/JobForm.vue').find((e) => e.tag === 'h1')!
 		expect(attr(h1, 'class')).toContain('sr-only')
 	})

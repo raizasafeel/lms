@@ -1,72 +1,36 @@
 <template>
-	<div v-if="batch.data" class="border-2 rounded-5 lg:w-72">
+	<div
+		v-if="batch.data"
+		class="space-y-4 rounded-6 border border-outline-gray-2 p-2 pb-4"
+	>
 		<VideoPreview
 			:video-link="batch.data.video_link"
-			:fallback-image="batch.data.image"
+			:fallback-image="batch.data.meta_image"
+			class="overflow-hidden rounded-5"
 		/>
-		<div class="p-5">
-			<Badge
-				v-if="batch.data.seat_count && batch.data.seats_left > 0"
-				variant="subtle"
-				theme="green"
-				size="md"
-				:class="
-					batch.data.amount || batch.data.courses.length
-						? 'float-end'
-						: 'w-fit mb-4'
-				"
-				:label="
-					batch.data.seats_left > 1
-						? __('{0} seats left').format(batch.data.seats_left)
-						: __('1 seat left')
-				"
-			/>
-			<Badge
-				v-else-if="batch.data.seat_count && batch.data.seats_left <= 0"
-				variant="subtle"
-				theme="red"
-				size="md"
-				class="float-end"
-				:label="__('Sold Out')"
-			/>
-			<div
-				v-if="batch.data.amount"
-				class="text-lg-semibold mb-5 text-ink-gray-9"
-			>
-				{{ formatNumberIntoCurrency(batch.data.amount, batch.data.currency) }}
-			</div>
-			<div
-				v-if="batch.data.courses.length"
-				class="flex items-center mb-3 text-ink-gray-7"
-			>
-				<span class="lucide-book-open h-4 w-4 me-2" />
-				<span>{{ __('{0} courses').format(batch.data.courses.length) }}</span>
-			</div>
-			<div class="flex items-center mb-3 text-ink-gray-7">
-				<span class="lucide-calendar h-4 w-4 me-2" />
-				<span>
+		<div class="space-y-4 px-3" :class="{ 'pt-2': !hasMedia }">
+			<div class="flex items-center justify-between gap-2">
+				<span class="text-xl-semibold text-ink-gray-9">
 					{{
-						getFormattedDateRange(batch.data.start_date, batch.data.end_date)
+						batch.data.paid_batch && batch.data.amount
+							? formatNumberIntoCurrency(batch.data.amount, batch.data.currency)
+							: __('Free')
 					}}
 				</span>
-			</div>
-			<div class="flex items-center mb-3 text-ink-gray-7">
-				<span class="lucide-clock h-4 w-4 me-2" />
-				<span dir="auto">
-					{{ formatTime(batch.data.start_time) }} -
-					{{ formatTime(batch.data.end_time) }}
-				</span>
-			</div>
-			<div v-if="batch.data.timezone" class="flex items-center text-ink-gray-7">
-				<span class="lucide-globe h-4 w-4 me-2" />
-				<span>
-					{{
-						formatTimezone(
-							batch.data.timezone,
-							nextOccurrence(batch.data.start_date, batch.data.end_date)
-						)
-					}}
-				</span>
+				<Badge
+					v-if="batch.data.seat_count && batch.data.seats_left > 0"
+					theme="green"
+					:label="
+						batch.data.seats_left +
+						' ' +
+						(batch.data.seats_left > 1 ? __('Seats Left') : __('Seat Left'))
+					"
+				/>
+				<Badge
+					v-else-if="batch.data.seat_count && batch.data.seats_left <= 0"
+					theme="red"
+					:label="__('Sold Out')"
+				/>
 			</div>
 
 			<div v-if="!readOnlyMode && !canAccessBatch">
@@ -76,29 +40,24 @@
 						hasSeatsLeft &&
 						batch.data.accept_enrollments
 					"
-					class="w-full mt-4"
+					class="w-full"
 					variant="solid"
-					:route="{
-						name: 'Billing',
-						params: { type: 'batch', name: batch.data.name },
-					}"
+					:route="preview ? undefined : billingRoute"
+					@click="preview?.enroll()"
 				>
 					<template #prefix>
 						<span class="lucide-credit-card size-4" />
 					</template>
-					<span>
-						{{ __('Register Now') }}
-					</span>
+					{{ __('Register Now') }}
 				</Button>
 				<Button
-					variant="solid"
-					class="w-full mt-2"
 					v-else-if="
 						batch.data.allow_self_enrollment &&
 						hasSeatsLeft &&
 						batch.data.accept_enrollments
 					"
-					:loading="enroll.loading"
+					variant="solid"
+					class="w-full"
 					@click="enrollInBatch()"
 				>
 					<template #prefix>
@@ -106,39 +65,48 @@
 					</template>
 					{{ __('Enroll Now') }}
 				</Button>
-				<Badge
+				<p
 					v-else-if="!batch.data.accept_enrollments"
-					theme="blue"
-					size="lg"
-					class="mt-4"
-					:label="__('Enrollment for this batch is closed')"
-				/>
-				<Alert
+					class="text-center text-p-sm text-ink-gray-6"
+				>
+					{{ __('Enrollment for this batch is closed') }}
+				</p>
+				<p
 					v-else-if="hasSeatsLeft"
-					class="mt-4"
-					:icon="false"
-					:description="
-						__('Contact the Administrator to enroll for this batch')
-					"
-				/>
+					class="text-center text-p-sm text-ink-gray-6"
+				>
+					{{ __('Contact the Administrator to enroll for this batch') }}
+				</p>
+			</div>
+			<Button v-else-if="isStudent" variant="subtle" class="w-full" disabled>
+				<template #prefix>
+					<span class="lucide-check size-4" />
+				</template>
+				{{ __('You’re enrolled') }}
+			</Button>
+
+			<div class="space-y-2.5 border-t border-outline-gray-1 pt-4">
+				<div class="text-p-base-medium text-ink-gray-9">
+					{{ __('This batch includes') }}
+				</div>
+				<BatchFacts :batch="batch.data" />
 			</div>
 		</div>
 	</div>
 </template>
 <script setup>
 import { inject, computed } from 'vue'
-import { Alert, Badge, Button, createResource, toast } from 'frappe-ui'
-import {
-	formatNumberIntoCurrency,
-	formatTime,
-	getFormattedDateRange,
-} from '@/utils'
-import { formatTimezone, nextOccurrence } from '@/utils/timezone'
-import { redirectToLogin } from '@/utils/login'
+import { Badge, Button, createResource, toast } from 'frappe-ui'
+import { formatNumberIntoCurrency } from '@/utils'
 import VideoPreview from '@/components/VideoPreview.vue'
+import BatchFacts from '@/pages/Batches/components/overview/BatchFacts.vue'
+import { useStudentView } from '@/composables/useStudentView'
+import { injectBatchPreview } from '@/pages/Batches/composables/batchStudentView'
 
 const user = inject('$user')
 const readOnlyMode = window.read_only_mode
+const isStudentView = useStudentView()
+const batchPreview = injectBatchPreview()
 
 const props = defineProps({
 	batch: {
@@ -147,9 +115,21 @@ const props = defineProps({
 	},
 })
 
+/** Set while an instructor previews: enrolling only switches the preview. */
+const preview = computed(() => (isStudentView.value ? batchPreview : null))
+
+const hasMedia = computed(() =>
+	Boolean(props.batch.data?.video_link || props.batch.data?.meta_image)
+)
+
+const billingRoute = computed(() => ({
+	name: 'Billing',
+	params: { type: 'batch', name: props.batch.data.name },
+}))
+
 const enroll = createResource({
 	url: 'lms.lms.utils.enroll_in_batch',
-	makeParams(values) {
+	makeParams() {
 		return {
 			batch: props.batch.data.name,
 		}
@@ -157,7 +137,10 @@ const enroll = createResource({
 })
 
 const enrollInBatch = () => {
-	if (enroll.loading) return
+	if (preview.value) {
+		preview.value.enroll()
+		return
+	}
 	if (!user.data) {
 		redirectToLogin()
 		return
@@ -165,11 +148,10 @@ const enrollInBatch = () => {
 	enroll.submit(
 		{},
 		{
-			onSuccess(data) {
+			onSuccess() {
 				toast.success(__('You have been enrolled in this batch'))
-				// BatchOverlay lives on the batch detail page, so navigating there is a
-				// no-op. Refetch the batch instead: once `students` includes the user,
-				// BatchDetail swaps the enroll view for the enrolled one reactively.
+				// Refetch the batch: once `students` includes the user, BatchDetail
+				// swaps the enroll view for the enrolled one reactively.
 				props.batch.reload()
 			},
 			onError(err) {
@@ -188,29 +170,17 @@ const isStudent = computed(() => {
 	return user.data ? Boolean(props.batch.data?.is_student) : false
 })
 
-const isModerator = computed(() => {
-	return user.data?.is_moderator
-})
-
-const isEvaluator = computed(() => {
-	return user.data?.is_evaluator
-})
-
 const canAccessBatch = computed(() => {
 	if (!user.data) {
 		return false
 	}
 	// can_manage is per-batch: a Course Creator only manages a batch they are
-	// tagged an instructor/evaluator on, unlike the global isModerator/isEvaluator.
+	// tagged an instructor/evaluator on, unlike the global moderator/evaluator.
 	return (
-		isModerator.value ||
+		user.data?.is_moderator ||
 		isStudent.value ||
-		isEvaluator.value ||
+		user.data?.is_evaluator ||
 		Boolean(props.batch.data?.can_manage)
 	)
-})
-
-const isAdmin = computed(() => {
-	return isModerator.value || isEvaluator.value
 })
 </script>

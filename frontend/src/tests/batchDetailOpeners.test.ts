@@ -28,6 +28,12 @@ const { batchResource, createResourceMock } = vi.hoisted(() => ({
 
 vi.mock('frappe-ui', () => ({
 	createResource: createResourceMock,
+	createDocumentResource: () => ({
+		doc: null,
+		reload: vi.fn(),
+		setValue: { submit: vi.fn() },
+	}),
+	call: vi.fn(() => Promise.resolve([])),
 	usePageMeta: () => {},
 	toast: { success: vi.fn(), error: vi.fn() },
 	Badge: { template: `<span><slot /></span>` },
@@ -151,7 +157,7 @@ describe("BatchDetail's form openers", () => {
 		await router.push('/batches/B1#announcements')
 		const wrapper = await mountPage(router)
 
-		await wrapper.find('[data-label="Make Announcement"]').trigger('click')
+		await wrapper.find('[data-label="Make announcement"]').trigger('click')
 		await flushPromises()
 		expect(router.currentRoute.value.fullPath).toBe(
 			'/batches/B1/announcement/new#announcements'
@@ -167,7 +173,7 @@ describe("BatchDetail's form openers", () => {
 			.findComponent({ name: 'Dropdown' })
 			.props('options') as { label: string; onClick: () => void }[]
 		const generate = options.find(
-			(option) => option.label === 'Generate Certificates'
+			(option) => option.label === 'Generate certificates'
 		)
 		expect(generate).toBeDefined()
 		generate?.onClick()

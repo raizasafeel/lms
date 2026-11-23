@@ -35,6 +35,9 @@ vi.mock('@/utils/timezone', () => ({
 vi.mock('@/components/VideoPreview.vue', () => ({
 	default: { render: () => null },
 }))
+vi.mock('@/pages/Batches/components/overview/BatchFacts.vue', () => ({
+	default: { render: () => null },
+}))
 
 function mountOverlay(data: Record<string, unknown>) {
 	return mount(BatchOverlay, {

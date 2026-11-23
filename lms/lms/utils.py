@@ -2358,6 +2358,8 @@ def get_batch_details(batch: str):
 			"conferencing_provider",
 			"google_meet_account",
 			"video_link",
+			"meta_image",
+			"medium",
 		],
 		as_dict=True,
 	)
