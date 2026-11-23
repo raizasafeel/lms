@@ -5,16 +5,24 @@
 				<span class="lucide-award size-4" />
 				{{ __('Certificate') }}
 			</span>
-			<Dropdown :options="options" align="end">
-				<Button size="sm" variant="subtle">
-					{{ labels[kind] }}
-					<template #suffix>
-						<span class="lucide-chevron-down size-3.5" />
-					</template>
-				</Button>
-			</Dropdown>
+			<Select
+				:modelValue="kind"
+				:options="options"
+				variant="outline"
+				size="sm"
+				:aria-label="__('Certificate')"
+				class="w-24"
+				@update:modelValue="(value) => setKind(value as CertificateKind)"
+			/>
 		</div>
-		<CoursePriceRow v-if="kind === 'paid'" />
+		<PriceInput
+			v-if="kind === 'paid' && resource.doc"
+			:currency="resource.doc.currency"
+			:amount="resource.doc.course_price"
+			:missing="isMissing?.('price')"
+			@update:currency="(value) => setPrice('currency', value)"
+			@update:amount="(value) => setPrice('course_price', value)"
+		/>
 		<router-link
 			v-if="kind !== 'none'"
 			:to="{ hash: '#settings' }"
@@ -39,9 +47,9 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Dropdown } from 'frappe-ui'
+import { Select } from 'frappe-ui'
 import { computed, inject } from 'vue'
-import CoursePriceRow from '@/components/Courses/CoursePriceRow.vue'
+import PriceInput from '@/components/InlineEdit/PriceInput.vue'
 import type { CourseFormContext } from '@/types'
 
 type CertificateKind = 'none' | 'free' | 'paid'
@@ -50,7 +58,8 @@ type CertificateKind = 'none' | 'free' | 'paid'
 const props = defineProps<{ paymentsAppMissing: boolean }>()
 const emit = defineEmits<{ needsPayments: [] }>()
 
-const { resource, markDirty } = inject<CourseFormContext>('courseForm')!
+const { resource, markDirty, isMissing } =
+	inject<CourseFormContext>('courseForm')!
 
 const labels: Record<CertificateKind, string> = {
 	none: __('None'),
@@ -69,11 +78,7 @@ const options = computed(() => {
 	const kinds: CertificateKind[] = resource.doc?.paid_course
 		? ['none', 'free']
 		: ['none', 'free', 'paid']
-	return kinds.map((value) => ({
-		label: labels[value],
-		icon: value === kind.value ? 'lucide-check' : undefined,
-		onClick: () => setKind(value),
-	}))
+	return kinds.map((value) => ({ label: labels[value], value }))
 })
 
 const evaluatorLabel = computed<string>(() => {
@@ -83,6 +88,12 @@ const evaluatorLabel = computed<string>(() => {
 		? __('Evaluated by {0}').format(evaluator)
 		: __('No evaluator yet')
 })
+
+function setPrice(field: 'currency' | 'course_price', value: unknown): void {
+	if (!resource.doc) return
+	;(resource.doc as Record<string, unknown>)[field] = value
+	markDirty()
+}
 
 function setKind(value: CertificateKind): void {
 	const doc = resource.doc

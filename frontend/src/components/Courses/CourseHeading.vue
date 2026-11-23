@@ -15,18 +15,10 @@
 		</h1>
 
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-ink-gray-7">
-			<div v-if="doc" class="flex items-center gap-1">
+			<div v-if="doc" class="flex items-center gap-1.5">
 				<span class="lucide-tag size-4 shrink-0" />
-				<Link
+				<CategoryField
 					v-model="doc.category"
-					doctype="LMS Category"
-					:placeholder="__('Add category')"
-					:aria-label="__('Category')"
-					:inlineCreate="true"
-					inlineCreatePlaceholder="Category name"
-					:onCreate="onCreateCategory"
-					variant="ghost"
-					class="w-40"
 					@update:modelValue="markDirty?.()"
 				/>
 			</div>
@@ -63,7 +55,13 @@
 				v-if="doc || course.instructors?.length"
 				class="lucide-dot size-5"
 			/>
-			<CourseInstructorsField v-if="doc" />
+			<InstructorsField
+				v-if="doc && form"
+				v-model="form.instructors.value"
+				memberRole="course_creator"
+				:missing="isMissing?.('instructors')"
+				@update:modelValue="markDirty?.()"
+			/>
 			<div v-else-if="course.instructors?.length" class="flex items-center">
 				<span
 					class="h-6 me-1"
@@ -111,13 +109,12 @@
 <script setup lang="ts">
 import { Badge } from 'frappe-ui'
 import { computed, inject, useTemplateRef } from 'vue'
-import { createLMSCategory, formatAmount, formatRating } from '@/utils/'
-import { createHandler } from '@/utils/createHandler'
-import Link from '@/components/Controls/Link.vue'
+import { formatAmount, formatRating } from '@/utils/'
 import CourseInstructors from '@/components/CourseInstructors.vue'
-import CourseInstructorsField from '@/components/Courses/CourseInstructorsField.vue'
 import CourseTagsField from '@/components/Courses/CourseTagsField.vue'
-import InlineText from '@/components/Courses/InlineText.vue'
+import CategoryField from '@/components/InlineEdit/CategoryField.vue'
+import InlineText from '@/components/InlineEdit/InlineText.vue'
+import InstructorsField from '@/components/InlineEdit/InstructorsField.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import type { CourseDetails, CourseFormContext } from '@/types'
 
@@ -133,15 +130,4 @@ const isMissing = form?.isMissing
 const intro = useTemplateRef<{ focus: () => void }>('introField')
 
 const doc = computed(() => (props.editable ? form?.resource.doc : null))
-
-function onCreateCategory(value: string | null, done?: () => void): void {
-	createHandler(value, done, (name) =>
-		createLMSCategory(name).then((category: string | undefined) => {
-			if (!category || !doc.value) return
-			doc.value.category = category
-			done?.()
-			markDirty?.()
-		})
-	)
-}
 </script>

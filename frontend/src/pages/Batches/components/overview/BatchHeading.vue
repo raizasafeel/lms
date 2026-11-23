@@ -13,19 +13,9 @@
 		</h1>
 
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-ink-gray-7">
-			<div v-if="doc" class="flex items-center gap-1">
+			<div v-if="doc" class="flex items-center gap-1.5">
 				<span class="lucide-tag size-4 shrink-0" />
-				<Link
-					v-model="doc.category"
-					doctype="LMS Category"
-					:placeholder="__('Add category')"
-					:aria-label="__('Category')"
-					:inlineCreate="true"
-					inlineCreatePlaceholder="Category name"
-					:onCreate="onCreateCategory"
-					variant="ghost"
-					class="w-40"
-				/>
+				<CategoryField v-model="doc.category" />
 			</div>
 			<span
 				v-else-if="batch.category"
@@ -38,10 +28,11 @@
 				v-if="doc || batch.category || batch.instructors?.length"
 				class="lucide-dot size-5"
 			/>
-			<BatchInstructorsField
-				v-if="doc && batch.can_change_instructors"
-				v-model="form!.instructors.value"
-				:missing="form?.isMissing('instructors')"
+			<InstructorsField
+				v-if="doc && form && batch.can_change_instructors"
+				v-model="form.instructors.value"
+				memberRole="batch_evaluator"
+				:missing="form.isMissing('instructors')"
 			/>
 			<div v-else-if="batch.instructors?.length" class="flex items-center">
 				<span
@@ -85,18 +76,16 @@
 
 <script setup lang="ts">
 import { useTemplateRef } from 'vue'
-import { createLMSCategory } from '@/utils'
-import { createHandler } from '@/utils/createHandler'
-import Link from '@/components/Controls/Link.vue'
 import CourseInstructors from '@/components/CourseInstructors.vue'
-import InlineText from '@/components/Courses/InlineText.vue'
+import CategoryField from '@/components/InlineEdit/CategoryField.vue'
+import InlineText from '@/components/InlineEdit/InlineText.vue'
+import InstructorsField from '@/components/InlineEdit/InstructorsField.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
-import BatchInstructorsField from '@/pages/Batches/components/overview/BatchInstructorsField.vue'
 import type { BatchForm } from '@/pages/Batches/composables/useBatchForm'
 import type { LMSBatch } from '@/types/lms/LMSBatch'
 
 /** Title, meta row and short description: inline fields when `doc` is set. */
-const props = defineProps<{
+defineProps<{
 	batch: Record<string, any>
 	doc: LMSBatch | null
 	form: BatchForm | null
@@ -105,14 +94,4 @@ const props = defineProps<{
 const descriptionField = useTemplateRef<{ focus: () => void }>(
 	'descriptionField'
 )
-
-function onCreateCategory(value: string | null, done?: () => void): void {
-	createHandler(value, done, (name) =>
-		createLMSCategory(name).then((category: string | undefined) => {
-			if (!category || !props.doc) return
-			props.doc.category = category
-			done?.()
-		})
-	)
-}
 </script>

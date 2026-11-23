@@ -52,26 +52,17 @@
 					<h2 :id="aboutHeadingId" class="text-3xl-semibold text-ink-gray-9">
 						{{ __('About this course') }}
 					</h2>
-					<div
-						class="-mx-2.5 rounded-5 px-2.5 py-1.5 hover:bg-surface-gray-2 focus-within:hover:bg-transparent"
-						:class="
-							form.isMissing?.('description') &&
-							'bg-surface-red-1 ring-2 ring-outline-red-3'
+					<RichTextField
+						:modelValue="form.resource.doc.description"
+						:ariaLabelledby="aboutHeadingId"
+						:placeholder="
+							__(
+								'Describe what the course covers, who it is for and what learners can do at the end.'
+							)
 						"
-					>
-						<RichTextEditor
-							:ariaLabelledby="aboutHeadingId"
-							:content="form.resource.doc.description"
-							variant="ghost"
-							:placeholder="
-								__(
-									'Describe what the course covers, who it is for and what learners can do at the end.'
-								)
-							"
-							minHeight="5rem"
-							@change="setDescription"
-						/>
-					</div>
+						:missing="form.isMissing?.('description')"
+						@update:modelValue="setDescription"
+					/>
 				</section>
 				<section v-else-if="course.data.description" class="space-y-3">
 					<h2 class="text-3xl-semibold text-ink-gray-9">
@@ -144,10 +135,10 @@ import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import CourseReviews from '@/components/CourseReviews.vue'
 import CourseCreatorCard from '@/components/CourseCreatorCard.vue'
 import RelatedCourses from '@/components/RelatedCourses.vue'
-import RichTextEditor from '@/components/RichTextEditor.vue'
 import MultiLink from '@/components/Controls/MultiLink.vue'
 import CourseEditCard from '@/components/Courses/CourseEditCard.vue'
 import CourseHeading from '@/components/Courses/CourseHeading.vue'
+import RichTextField from '@/components/InlineEdit/RichTextField.vue'
 import { isInstructorOf } from '@/utils/instructors'
 
 /** The course page. Instructors edit it in place; learners and previews read it. */

@@ -1,5 +1,8 @@
 <template>
-	<div data-testid="rich-text-editor" :class="boxClasses">
+	<div
+		data-testid="rich-text-editor"
+		:class="[boxClasses, menuOnFocus && 'group/editor']"
+	>
 		<Editor
 			ref="editorRef"
 			v-model="html"
@@ -13,9 +16,9 @@
 		>
 			<template #default>
 				<EditorFixedMenu
-					v-if="fixedMenu"
+					v-if="fixedMenu || menuOnFocus"
 					:class="toolbarClasses"
-					:items="toolbar"
+					:items="toolbar ?? FULL_TOOLBAR"
 				/>
 				<EditorContent
 					:id="id"
@@ -65,7 +68,11 @@ import {
 	Strike,
 	Undo,
 } from 'frappe-ui/editor'
-import type { MentionSuggestionItem, UploadFunction } from 'frappe-ui/editor'
+import type {
+	MentionSuggestionItem,
+	MenuItem,
+	UploadFunction,
+} from 'frappe-ui/editor'
 import {
 	boxClass,
 	contentClass,
@@ -82,6 +89,11 @@ const props = withDefaults(
 		content?: string | null
 		editable?: boolean
 		fixedMenu?: boolean
+		/** A sticky toolbar that shows only while the editor has focus. */
+		menuOnFocus?: boolean
+		toolbar?: MenuItem[]
+		/** Document-like padding inside a boxed editor. */
+		roomy?: boolean
 		variant?: RichTextEditorVariant
 		minHeight?: RichTextEditorMinHeight | null
 		maxHeight?: RichTextEditorMaxHeight | null
@@ -103,6 +115,9 @@ const props = withDefaults(
 		content: '',
 		editable: true,
 		fixedMenu: false,
+		menuOnFocus: false,
+		toolbar: undefined,
+		roomy: false,
 		variant: 'outline',
 		minHeight: null,
 		maxHeight: null,
@@ -127,9 +142,17 @@ const emit = defineEmits<{
 const boxClasses = computed(() =>
 	boxClass(props.variant, props.ariaInvalid === true, props.fill)
 )
-const toolbarClasses = computed(() => toolbarClass(props.variant))
+const toolbarClasses = computed(() =>
+	toolbarClass(props.variant, props.menuOnFocus)
+)
 const contentClasses = computed(() =>
-	contentClass(props.variant, props.minHeight, props.maxHeight, props.fill)
+	contentClass(
+		props.variant,
+		props.minHeight,
+		props.maxHeight,
+		props.fill,
+		props.roomy
+	)
 )
 
 const editorRef = useTemplateRef<InstanceType<typeof Editor>>('editorRef')
@@ -138,7 +161,7 @@ defineExpose({
 	focus: () => editorRef.value?.editor?.commands.focus('end'),
 })
 
-const toolbar = [
+const FULL_TOOLBAR: MenuItem[] = [
 	HeadingGroup,
 	Separator,
 	Bold,

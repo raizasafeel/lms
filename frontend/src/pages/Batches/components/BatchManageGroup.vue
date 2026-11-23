@@ -66,8 +66,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Button } from 'frappe-ui'
-import SettingRow from '@/components/Courses/settings/SettingRow.vue'
-import SettingsGroup from '@/components/Courses/settings/SettingsGroup.vue'
+import SettingRow from '@/components/InlineEdit/SettingRow.vue'
+import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import { injectBatchManage } from '@/pages/Batches/composables/useBatchManage'
 import type { BatchDetails, Resource } from '@/types'
 

@@ -21,6 +21,12 @@ const BOX: Record<RichTextEditorVariant, { valid: string; invalid: string }> = {
 	ghost: { valid: '', invalid: '' },
 }
 
+// Sticks to the top while scrolling a long body; shows only while focused.
+const FOCUS_TOOLBAR =
+	'sticky top-0 z-[1] hidden flex-wrap rounded-t-5 border-b border-outline-gray-1 bg-surface-base px-2 py-1.5 group-focus-within/editor:flex has-[[data-state=open]]:flex'
+
+const ROOMY_CONTENT = 'px-3 py-2.5'
+
 const TOOLBAR: Record<RichTextEditorVariant, string> = {
 	outline: 'flex-wrap border-b border-outline-gray-2 p-1',
 	subtle: 'flex-wrap border-b border-outline-gray-2 p-1',
@@ -37,6 +43,7 @@ const CONTENT: Record<RichTextEditorVariant, string> = {
 
 export const MIN_HEIGHT = {
 	'5rem': 'min-h-[5rem]',
+	'8rem': 'min-h-[8rem]',
 	'6rem': 'min-h-[6rem]',
 	'7rem': 'min-h-[7rem]',
 	'10rem': 'min-h-[10rem]',
@@ -70,18 +77,22 @@ export function boxClass(
 	]
 }
 
-export function toolbarClass(variant: RichTextEditorVariant): string {
-	return TOOLBAR[variant]
+export function toolbarClass(
+	variant: RichTextEditorVariant,
+	onFocus = false
+): string {
+	return onFocus ? FOCUS_TOOLBAR : TOOLBAR[variant]
 }
 
 export function contentClass(
 	variant: RichTextEditorVariant,
 	minHeight: RichTextEditorMinHeight | null,
 	maxHeight: RichTextEditorMaxHeight | null,
-	fill: boolean
+	fill: boolean,
+	roomy = false
 ): string[] {
 	return [
-		CONTENT[variant],
+		roomy && variant !== 'ghost' ? ROOMY_CONTENT : CONTENT[variant],
 		minHeight ? MIN_HEIGHT[minHeight] : '',
 		maxHeight ? MAX_HEIGHT[maxHeight] : '',
 		fill ? 'flex-1 overflow-y-auto' : '',

@@ -3,22 +3,27 @@
 		class="w-full overflow-hidden rounded-6 border border-outline-gray-2 bg-surface-base"
 	>
 		<div class="p-2 pb-0">
-			<CourseThumbnailField />
+			<ImageField
+				swatches
+				:image="doc.image"
+				:videoLink="doc.video_link"
+				:tint="doc.card_gradient"
+				@update:image="(value) => setField('image', value)"
+				@update:videoLink="(value) => setField('video_link', value)"
+				@update:tint="(value) => setField('card_gradient', value)"
+			/>
 		</div>
 		<div class="space-y-4 p-5">
-			<div class="space-y-2">
-				<Dropdown :options="priceOptions" align="start">
-					<button
-						type="button"
-						class="-mx-1 flex items-center gap-1 rounded-3 px-1 text-3xl-semibold text-ink-gray-9 hover:bg-surface-gray-2"
-						:aria-label="__('Course price')"
-					>
-						{{ doc.paid_course ? __('Paid') : __('Free') }}
-						<span class="lucide-chevron-down size-4 text-ink-gray-5" />
-					</button>
-				</Dropdown>
-				<CoursePriceRow v-if="doc.paid_course" />
-			</div>
+			<PriceField
+				:paid="Boolean(doc.paid_course)"
+				:currency="doc.currency"
+				:amount="doc.course_price"
+				:label="__('Course price')"
+				:missing="isMissing?.('price')"
+				@update:paid="setPaidCourse"
+				@update:currency="(value) => setField('currency', value)"
+				@update:amount="(value) => setField('course_price', value)"
+			/>
 			<div class="space-y-2">
 				<Button variant="solid" size="md" class="w-full" disabled>
 					<template #prefix>
@@ -82,20 +87,22 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Dialog, Dropdown } from 'frappe-ui'
+import { Button, Dialog } from 'frappe-ui'
 import { computed, inject, ref } from 'vue'
 import CourseCertificateBox from '@/components/Courses/CourseCertificateBox.vue'
 import CourseIncludes from '@/components/Courses/CourseIncludes.vue'
-import CoursePriceRow from '@/components/Courses/CoursePriceRow.vue'
-import CourseThumbnailField from '@/components/Courses/CourseThumbnailField.vue'
+import ImageField from '@/components/InlineEdit/ImageField.vue'
+import PriceField from '@/components/InlineEdit/PriceField.vue'
 import { useSettings } from '@/stores/settings'
 import type { CourseDetails, CourseFormContext, Resource } from '@/types'
+import type { LMSCourse } from '@/types/lms/LMSCourse'
 import { openExternal } from '@/utils/openExternal'
 
 /** The enrol card as instructors edit it: learners see the same card. */
 defineProps<{ course: Resource<CourseDetails | null> }>()
 
-const { resource, markDirty } = inject<CourseFormContext>('courseForm')!
+const { resource, markDirty, isMissing } =
+	inject<CourseFormContext>('courseForm')!
 const settingsStore = useSettings()
 
 const doc = computed(() => resource.doc!)
@@ -113,18 +120,10 @@ const certificate = computed<'free' | 'paid' | null>(() => {
 	return doc.value.enable_certification ? 'free' : null
 })
 
-const priceOptions = computed(() => [
-	{
-		label: __('Free'),
-		icon: doc.value.paid_course ? undefined : 'lucide-check',
-		onClick: () => setPaidCourse(false),
-	},
-	{
-		label: __('Paid'),
-		icon: doc.value.paid_course ? 'lucide-check' : undefined,
-		onClick: () => setPaidCourse(true),
-	},
-])
+function setField(field: keyof LMSCourse, value: unknown): void {
+	;(doc.value as Record<string, unknown>)[field] = value
+	markDirty()
+}
 
 function setPaidCourse(paid: boolean): void {
 	if (paid && paymentsAppMissing.value) {

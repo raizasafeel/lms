@@ -10,14 +10,14 @@ const { marker } = vi.hoisted(() => ({
 
 vi.mock('@/utils', () => ({ createLMSCategory: vi.fn() }))
 vi.mock('@/components/Controls/Link.vue', marker('CATEGORY PICKER'))
-vi.mock('@/components/Courses/InlineText.vue', () => ({
+vi.mock('@/components/InlineEdit/InlineText.vue', () => ({
 	default: {
 		props: ['modelValue', 'placeholder', 'missing'],
 		template: `<input :value="modelValue" :placeholder="placeholder" :data-missing="String(Boolean(missing))" />`,
 	},
 }))
 vi.mock(
-	'@/pages/Batches/components/overview/BatchInstructorsField.vue',
+	'@/components/InlineEdit/InstructorsField.vue',
 	marker('INSTRUCTOR PICKER')
 )
 vi.mock('@/components/CourseInstructors.vue', marker('INSTRUCTOR NAMES'))

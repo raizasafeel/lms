@@ -17,26 +17,16 @@
 					<h2 :id="aboutHeadingId" class="text-3xl-semibold text-ink-gray-9">
 						{{ __('About this batch') }}
 					</h2>
-					<div
-						class="-mx-2.5 rounded-5 px-2.5 py-1.5 hover:bg-surface-gray-2 focus-within:hover:bg-transparent"
-						:class="
-							form?.isMissing('batch_details') &&
-							'bg-surface-red-1 ring-2 ring-outline-red-3'
+					<RichTextField
+						v-model="doc.batch_details"
+						:ariaLabelledby="aboutHeadingId"
+						:placeholder="
+							__(
+								'What learners will do, who it is for and how evaluation works.'
+							)
 						"
-					>
-						<RichTextEditor
-							:ariaLabelledby="aboutHeadingId"
-							:content="doc.batch_details"
-							variant="ghost"
-							:placeholder="
-								__(
-									'What learners will do, who it is for and how evaluation works.'
-								)
-							"
-							minHeight="5rem"
-							@change="(value: string) => (doc!.batch_details = value)"
-						/>
-					</div>
+						:missing="form?.isMissing('batch_details')"
+					/>
 				</section>
 				<section v-else-if="batch.data.batch_details" class="space-y-3">
 					<h2 class="text-3xl-semibold text-ink-gray-9">
@@ -71,7 +61,7 @@
 
 <script setup lang="ts">
 import { computed, useId } from 'vue'
-import RichTextEditor from '@/components/RichTextEditor.vue'
+import RichTextField from '@/components/InlineEdit/RichTextField.vue'
 import Assessments from '@/pages/Batches/components/Assessments.vue'
 import BatchOverlay from '@/pages/Batches/components/BatchOverlay.vue'
 import BatchCourseList from '@/pages/Batches/components/overview/BatchCourseList.vue'

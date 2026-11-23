@@ -1,5 +1,6 @@
 <template>
 	<MultiLink
+		ref="picker"
 		v-model="instructors"
 		doctype="User"
 		url="lms.lms.api.search_users_by_role"
@@ -8,9 +9,9 @@
 		:extraOptions="knownSelected"
 		:placeholder="__('Add instructors')"
 		:aria-label="__('Instructors')"
-		variant="ghost"
+		variant="outline"
 		class="rounded-4"
-		:class="missing && 'bg-surface-red-1 ring-2 ring-outline-red-3'"
+		:class="missingRing(missing)"
 		:onCreate="openMemberModal"
 	>
 		<template #prefix>
@@ -36,21 +37,26 @@
 		<template #item-prefix="{ item }">
 			<Avatar :image="item.image" :label="item.label" size="sm" />
 		</template>
+		<template #item-label="{ item }">
+			<div class="flex min-w-0 justify-between gap-2">
+				<div class="truncate">{{ item.label }}</div>
+				<div class="truncate text-p-xs text-ink-gray-6">{{ item.value }}</div>
+			</div>
+		</template>
 	</MultiLink>
 	<NewMemberModal
 		v-model="showMemberModal"
-		:defaultRoles="['batch_evaluator']"
-		@created="
-			(user: { name: string }) => (instructors = [...instructors, user.name])
-		"
+		:defaultRoles="[memberRole]"
+		@created="onMemberCreated"
 	/>
 </template>
 
 <script setup lang="ts">
 import { Avatar, createResource } from 'frappe-ui'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, useTemplateRef, watch } from 'vue'
 import MultiLink from '@/components/Controls/MultiLink.vue'
 import NewMemberModal from '@/components/Modals/NewMemberModal.vue'
+import { missingRing } from '@/components/InlineEdit/fieldClasses'
 import { summarisePeople } from '@/utils/peopleSummary'
 
 interface PersonOption {
@@ -66,11 +72,20 @@ interface UserHit {
 	description?: string
 }
 
-/** The batch's instructors as avatars and a name summary, picked in place. */
-defineProps<{ missing?: boolean }>()
+/**
+ * Instructors as avatars and a name summary, picked in place. `memberRole`
+ * is the role a member created from the picker starts with.
+ */
+defineProps<{
+	memberRole: 'course_creator' | 'batch_evaluator'
+	missing?: boolean
+}>()
 const instructors = defineModel<string[]>({ required: true })
 
-const ROLES = ['Batch Evaluator', 'Course Creator']
+const ROLES = ['Course Creator', 'Batch Evaluator']
+const MAX_VISIBLE_AVATARS = 3
+
+const picker = useTemplateRef<{ reload: () => void }>('picker')
 const showMemberModal = ref(false)
 const known = ref(new Map<string, PersonOption>())
 
@@ -114,7 +129,7 @@ const knownSelected = computed(() =>
 	instructors.value.filter((id) => known.value.has(id)).map(describe)
 )
 const visibleAvatars = computed(() =>
-	instructors.value.slice(0, 3).map(describe)
+	instructors.value.slice(0, MAX_VISIBLE_AVATARS).map(describe)
 )
 const summary = computed(() =>
 	instructors.value.length
@@ -125,5 +140,10 @@ const summary = computed(() =>
 function openMemberModal(close: () => void): void {
 	close()
 	showMemberModal.value = true
+}
+
+function onMemberCreated(user: { name: string }): void {
+	instructors.value = [...instructors.value, user.name]
+	picker.value?.reload()
 }
 </script>

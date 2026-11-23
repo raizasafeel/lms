@@ -4,7 +4,7 @@
 			<span class="lucide-calendar size-4 shrink-0 text-ink-gray-5" />
 			<DateRangePicker
 				v-model="dates"
-				variant="ghost"
+				variant="outline"
 				format="D MMM YYYY"
 				:placeholder="__('Start and end dates')"
 				:aria-label="__('Batch dates')"
@@ -15,7 +15,7 @@
 			<span class="lucide-clock size-4 shrink-0 text-ink-gray-5" />
 			<TimePicker
 				v-model="doc.start_time"
-				variant="ghost"
+				variant="outline"
 				format="h:mm a"
 				:interval="30"
 				:placeholder="__('Start')"
@@ -25,7 +25,7 @@
 			<span class="text-ink-gray-6">–</span>
 			<TimePicker
 				v-model="doc.end_time"
-				variant="ghost"
+				variant="outline"
 				format="h:mm a"
 				:interval="30"
 				:placeholder="__('End')"
@@ -40,7 +40,7 @@
 				:options="timezoneOptions"
 				:placeholder="__('Timezone')"
 				:aria-label="__('Timezone')"
-				variant="ghost"
+				variant="outline"
 				class="flex-1"
 			/>
 		</div>
@@ -49,14 +49,14 @@
 				class="size-4 shrink-0 text-ink-gray-5"
 				:class="doc.medium === 'Offline' ? 'lucide-map-pin' : 'lucide-video'"
 			/>
-			<Dropdown :options="mediumOptions">
-				<Button variant="ghost">
-					{{ doc.medium === 'Offline' ? __('In person') : __('Online') }}
-					<template #suffix>
-						<span class="lucide-chevron-down size-3.5 text-ink-gray-5" />
-					</template>
-				</Button>
-			</Dropdown>
+			<Select
+				:modelValue="doc.medium === 'Offline' ? 'Offline' : 'Online'"
+				:options="mediumOptions"
+				variant="outline"
+				:aria-label="__('Medium')"
+				class="w-36"
+				@update:modelValue="(value) => (doc.medium = value as LMSBatch['medium'])"
+			/>
 		</div>
 		<div class="flex items-center gap-2.5">
 			<span class="lucide-armchair size-4 shrink-0 text-ink-gray-5" />
@@ -64,7 +64,7 @@
 				:modelValue="doc.seat_count || ''"
 				type="number"
 				min="1"
-				variant="subtle"
+				variant="outline"
 				placeholder="–"
 				:aria-label="__('Seat count')"
 				class="w-20"
@@ -94,7 +94,7 @@
 			}}</span>
 			<DatePicker
 				v-model="doc.evaluation_end_date"
-				variant="ghost"
+				variant="outline"
 				format="D MMM YYYY"
 				:min="doc.end_date"
 				:placeholder="__('Evaluation end date')"
@@ -107,15 +107,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import {
-	Button,
 	Combobox,
 	createResource,
 	DatePicker,
 	DateRangePicker,
-	Dropdown,
 	FormControl,
+	Select,
 	TimePicker,
 } from 'frappe-ui'
+import { missingRing } from '@/components/InlineEdit/fieldClasses'
 import BatchSwitchFact from '@/pages/Batches/components/overview/BatchSwitchFact.vue'
 import type { BatchForm } from '@/pages/Batches/composables/useBatchForm'
 import type { LMSBatch } from '@/types/lms/LMSBatch'
@@ -123,8 +123,7 @@ import type { LMSBatch } from '@/types/lms/LMSBatch'
 /** The enrol card's facts as inline fields. */
 const props = defineProps<{ doc: LMSBatch; form: BatchForm }>()
 
-const ring = (key: string) =>
-	props.form.isMissing(key) && 'bg-surface-red-1 ring-2 ring-outline-red-3'
+const ring = (key: string) => missingRing(props.form.isMissing(key))
 
 const dates = computed<[string, string] | []>({
 	get: () =>
@@ -136,16 +135,8 @@ const dates = computed<[string, string] | []>({
 })
 
 const mediumOptions = [
-	{
-		label: __('Online'),
-		icon: 'lucide-video',
-		onClick: () => (props.doc.medium = 'Online'),
-	},
-	{
-		label: __('In person'),
-		icon: 'lucide-map-pin',
-		onClick: () => (props.doc.medium = 'Offline'),
-	},
+	{ label: __('Online'), value: 'Online' },
+	{ label: __('In person'), value: 'Offline' },
 ]
 
 const timezones = createResource({

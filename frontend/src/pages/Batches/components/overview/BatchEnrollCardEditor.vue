@@ -1,8 +1,20 @@
 <template>
 	<div class="space-y-4 rounded-6 border border-outline-gray-2 p-2 pb-4">
-		<BatchImageField :doc="doc" />
+		<ImageField
+			v-model:image="doc.meta_image"
+			v-model:videoLink="doc.video_link"
+		/>
 		<div class="space-y-4 px-3">
-			<BatchPriceField :doc="doc" :form="form" />
+			<PriceField
+				:paid="Boolean(doc.paid_batch)"
+				:currency="doc.currency"
+				:amount="doc.amount"
+				:label="__('Batch price')"
+				:missing="form.isMissing('currency') || form.isMissing('amount')"
+				@update:paid="setPaid"
+				@update:currency="(value) => (doc.currency = value)"
+				@update:amount="(value) => (doc.amount = value)"
+			/>
 			<div>
 				<Button variant="subtle" class="w-full" disabled>
 					<template #prefix>
@@ -32,14 +44,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Button } from 'frappe-ui'
+import ImageField from '@/components/InlineEdit/ImageField.vue'
+import PriceField from '@/components/InlineEdit/PriceField.vue'
 import BatchFactsEditor from '@/pages/Batches/components/overview/BatchFactsEditor.vue'
-import BatchImageField from '@/pages/Batches/components/overview/BatchImageField.vue'
-import BatchPriceField from '@/pages/Batches/components/overview/BatchPriceField.vue'
 import type { BatchForm } from '@/pages/Batches/composables/useBatchForm'
 import type { LMSBatch } from '@/types/lms/LMSBatch'
 
 /** The enrol card as instructors edit it: same layout learners see. */
 const props = defineProps<{ doc: LMSBatch; form: BatchForm }>()
+
+// The form keeps checkboxes as booleans, so the dirty check sees no change
+// after switching back.
+const setPaid = (paid: boolean): void => {
+	;(props.doc as Record<string, unknown>).paid_batch = paid
+}
 
 const isSelfEnroll = computed(
 	() =>

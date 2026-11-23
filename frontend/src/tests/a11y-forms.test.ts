@@ -87,7 +87,9 @@ describe('rich text editors', () => {
 	// Guards: unnamed rich text editors with no focus ring. Introduced in #2565
 	// and #2662; test added with the a11y audit remediation.
 	it.each(EDITOR_FILES)('%s names every editor', (file) => {
-		const editors = elements(file).filter((el) => el.tag === 'RichTextEditor')
+		const editors = elements(file).filter((el) =>
+			['RichTextEditor', 'RichTextField'].includes(el.tag ?? '')
+		)
 		expect(editors.length).toBeGreaterThan(0)
 		for (const el of editors) {
 			const label = attr(el, 'ariaLabel')
@@ -132,7 +134,7 @@ const FILTERS: Array<[string, string, string]> = [
 	['pages/ProgrammingExercises/ProgrammingExercises.vue', 'Select', 'Type'],
 	['components/Programs/ProgramProgressSummary.vue', 'FormControl', 'Search'],
 	['pages/Courses/Courses.vue', 'FormControl', 'Search courses'],
-	['pages/Batches/Batches.vue', 'ClearableCombobox', 'Category'],
+	['pages/Batches/Batches.vue', 'FormControl', 'Search batches'],
 	['pages/CertifiedParticipants.vue', 'ClearableCombobox', 'Category'],
 ]
 

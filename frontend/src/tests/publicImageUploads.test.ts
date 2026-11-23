@@ -293,7 +293,8 @@ const MANIFEST: Record<string, Privacy[]> = {
 	'components/Controls/VideoPreviewField.vue': ['public', 'public'],
 	'components/Modals/EditCoverImage.vue': ['public'],
 	'components/UnsplashImageBrowser.vue': ['public'],
-	'components/Courses/CourseThumbnailField.vue': ['public'],
+	// Card images double as share images, so guests must see them.
+	'components/InlineEdit/ImageField.vue': ['public'],
 	// Deliberately not readable by other users.
 	'components/Assignment.vue': ['private', 'private', 'private'],
 	'components/Modals/JobApplicationModal.vue': ['private'],
@@ -330,12 +331,10 @@ const MANIFEST: Record<string, Privacy[]> = {
 	// Moved out of AnnouncementForm.vue when it adopted FormLayout: the
 	// `<RichTextEditor>` tag now lives in this reusable field adapter instead.
 	'components/FormLayout/RichTextEditorField.vue': ['undeclared'],
-	'pages/Batches/BatchOverview.vue': ['undeclared'],
-	// The enrol card image doubles as the share image, so guests must see it.
-	'pages/Batches/components/overview/BatchImageField.vue': ['public'],
+	// The course and batch "About" bodies.
+	'components/InlineEdit/RichTextField.vue': ['undeclared'],
 	'pages/Forms/EmailTemplateForm.vue': ['undeclared'],
 	'pages/Forms/NewBatchForm.vue': ['undeclared'],
-	'pages/Courses/CourseOverview.vue': ['undeclared'],
 	'pages/Forms/NewCourseForm.vue': ['undeclared'],
 	'pages/JobApplications.vue': ['undeclared'],
 	'pages/Forms/JobForm.vue': ['undeclared'],

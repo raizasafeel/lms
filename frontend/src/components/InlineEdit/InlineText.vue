@@ -4,9 +4,9 @@
 		:value="modelValue ?? ''"
 		rows="1"
 		:placeholder="placeholder"
-		:aria-label="placeholder"
-		class="-mx-1.5 block w-[calc(100%+0.75rem)] resize-none overflow-hidden rounded-4 border-0 bg-transparent px-1.5 py-0.5 placeholder:text-ink-gray-4 hover:bg-surface-gray-2 focus:bg-transparent focus:ring-2 focus:ring-outline-gray-3"
-		:class="missing && 'bg-surface-red-1 ring-2 ring-outline-red-3'"
+		:aria-label="label || placeholder"
+		class="block w-full resize-none overflow-hidden px-2.5 py-1.5"
+		:class="[OUTLINE_FIELD, missingRing(missing)]"
 		@input="onInput"
 		@keydown.enter.prevent="emit('enter')"
 	/>
@@ -14,11 +14,19 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, useTemplateRef, watch } from 'vue'
+import {
+	OUTLINE_FIELD,
+	missingRing,
+} from '@/components/InlineEdit/fieldClasses'
 
-/** A single-line field that reads as finished text until hovered. */
+/**
+ * A one-paragraph outline field that grows with its text. frappe-ui inputs
+ * have a fixed type scale, so a title or intro set at page size needs this.
+ */
 const props = defineProps<{
 	modelValue?: string | null
 	placeholder: string
+	label?: string
 	missing?: boolean
 }>()
 
@@ -33,7 +41,7 @@ function fitHeight(): void {
 	const element = textarea.value
 	if (!element) return
 	element.style.height = 'auto'
-	element.style.height = `${element.scrollHeight}px`
+	element.style.height = `${element.scrollHeight + 2}px`
 }
 
 function onInput(event: Event): void {

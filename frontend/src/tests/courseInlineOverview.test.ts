@@ -22,7 +22,16 @@ vi.mock('frappe-ui', () => ({
 		props: ['options'],
 		template: '<div><slot /></div>',
 	},
-	FormControl: { props: ['size'], template: '<input />' },
+	FormControl: {
+		name: 'FormControl',
+		props: ['variant'],
+		template: '<input />',
+	},
+	Select: {
+		name: 'Select',
+		props: ['modelValue', 'options', 'variant'],
+		template: '<div />',
+	},
 	MultiSelect: { template: '<div><slot name="trigger" /></div>' },
 	Tooltip: {
 		name: 'Tooltip',
@@ -36,9 +45,9 @@ vi.mock('@framework/ui/telemetry/index', () => ({}))
 vi.mock('@framework/ui/components/Onboarding/index', () => ({}))
 
 import CourseCertificateBox from '@/components/Courses/CourseCertificateBox.vue'
-import CoursePriceRow from '@/components/Courses/CoursePriceRow.vue'
 import CourseSaveButton from '@/components/Courses/CourseSaveButton.vue'
 import CourseTagsField from '@/components/Courses/CourseTagsField.vue'
+import PriceInput from '@/components/InlineEdit/PriceInput.vue'
 import { joinLabels, missingCourseFields } from '@/utils/courseForm'
 import type { CourseForm } from '@/composables/useCourseForm'
 
@@ -134,46 +143,41 @@ describe('the Save button', () => {
 })
 
 describe('the certificate box', () => {
-	const optionLabels = (wrapper: ReturnType<typeof mountWithForm>) =>
-		wrapper
-			.findComponent({ name: 'Dropdown' })
-			.props('options')
-			.map((o: { label: string }) => o.label)
+	const select = (wrapper: ReturnType<typeof mountWithForm>) =>
+		wrapper.findComponent({ name: 'Select' })
 
 	it('offers only a free certificate on a paid course', () => {
 		const form = formWith({ ...fullDoc, paid_course: 1 })
 		const wrapper = mountWithForm(CourseCertificateBox, form, {
 			paymentsAppMissing: false,
 		})
-		expect(optionLabels(wrapper)).toEqual(['None', 'Free'])
+		expect(select(wrapper).props('variant')).toBe('outline')
+		expect(
+			select(wrapper)
+				.props('options')
+				.map((o: { label: string }) => o.label)
+		).toEqual(['None', 'Free'])
 	})
 
-	it('sets the flags for a paid certificate', () => {
+	it('sets the flags for a paid certificate', async () => {
 		const doc: Record<string, unknown> = { ...fullDoc, enable_certification: 1 }
 		const form = formWith(doc)
 		const wrapper = mountWithForm(CourseCertificateBox, form, {
 			paymentsAppMissing: false,
 		})
-		const paid = wrapper
-			.findComponent({ name: 'Dropdown' })
-			.props('options')
-			.find((o: { label: string }) => o.label === 'Paid')
-		paid.onClick()
+		await select(wrapper).vm.$emit('update:modelValue', 'paid')
 		expect(doc.paid_certificate).toBe(1)
 		expect(doc.enable_certification).toBe(0)
 		expect(form.markDirty).toHaveBeenCalled()
+		expect(wrapper.findComponent(PriceInput).exists()).toBe(true)
 	})
 
-	it('asks for the Payments app before selling a certificate', () => {
+	it('asks for the Payments app before selling a certificate', async () => {
 		const doc: Record<string, unknown> = { ...fullDoc }
 		const wrapper = mountWithForm(CourseCertificateBox, formWith(doc), {
 			paymentsAppMissing: true,
 		})
-		wrapper
-			.findComponent({ name: 'Dropdown' })
-			.props('options')
-			.find((o: { label: string }) => o.label === 'Paid')
-			.onClick()
+		await select(wrapper).vm.$emit('update:modelValue', 'paid')
 		expect(doc.paid_certificate).toBe(0)
 		expect(wrapper.emitted('needsPayments')).toBeTruthy()
 	})
@@ -181,9 +185,9 @@ describe('the certificate box', () => {
 
 // Regression: currency picker 403 for Moderator and Course Creator, LMS roles
 // cannot read Currency (#3023, fixed in #3038).
-describe('the price row', () => {
+describe('the price input', () => {
 	it('searches currencies through the LMS query', () => {
-		const wrapper = mountWithForm(CoursePriceRow, formWith(fullDoc))
+		const wrapper = mountWithForm(PriceInput, formWith(fullDoc))
 		const picker = wrapper
 			.findAllComponents({ name: 'Link' })
 			.find((link) => link.props('doctype') === 'Currency')

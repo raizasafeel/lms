@@ -27,6 +27,7 @@
 			>
 				<template #control>
 					<Link
+						variant="outline"
 						ref="emailTemplateLink"
 						v-model="doc.confirmation_email_template"
 						doctype="Email Template"
@@ -49,6 +50,7 @@
 			<SettingRow :label="__('Video calls')" :summary="conferencingSummary">
 				<template #control>
 					<Select
+						variant="outline"
 						v-model="doc.conferencing_provider"
 						:options="conferencingOptions"
 						:aria-label="__('Conferencing provider')"
@@ -56,6 +58,7 @@
 					/>
 				</template>
 				<Link
+					variant="outline"
 					v-if="doc.conferencing_provider === 'Zoom'"
 					v-model="doc.zoom_account"
 					doctype="LMS Zoom Settings"
@@ -65,6 +68,7 @@
 					"
 				/>
 				<Link
+					variant="outline"
 					v-else-if="doc.conferencing_provider === 'Google Meet'"
 					v-model="doc.google_meet_account"
 					doctype="LMS Google Meet Settings"
@@ -88,6 +92,7 @@
 				:summary="__('Leave empty to use the short description.')"
 			>
 				<FormControl
+					variant="outline"
 					v-model="form!.meta.description"
 					type="textarea"
 					:placeholder="doc.description"
@@ -96,6 +101,7 @@
 			</SettingRow>
 			<SettingRow :label="__('Keywords')">
 				<FormControl
+					variant="outline"
 					v-model="form!.meta.keywords"
 					:placeholder="__('Comma separated keywords')"
 					:aria-label="__('Meta keywords')"
@@ -113,8 +119,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { FormControl, Switch } from 'frappe-ui'
 import Link from '@/components/Controls/Link.vue'
 import Select from '@/components/Controls/Select.vue'
-import SettingRow from '@/components/Courses/settings/SettingRow.vue'
-import SettingsGroup from '@/components/Courses/settings/SettingsGroup.vue'
+import SettingRow from '@/components/InlineEdit/SettingRow.vue'
+import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import BatchManageGroup from '@/pages/Batches/components/BatchManageGroup.vue'
 import { openBatchForm } from '@/composables/useBatchForms'
 import { injectBatchForm } from '@/pages/Batches/composables/useBatchForm'

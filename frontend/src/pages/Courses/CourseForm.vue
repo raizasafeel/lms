@@ -95,8 +95,8 @@
 import { Button, FormControl } from 'frappe-ui'
 import { inject } from 'vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
-import SettingRow from '@/components/Courses/settings/SettingRow.vue'
-import SettingsGroup from '@/components/Courses/settings/SettingsGroup.vue'
+import SettingRow from '@/components/InlineEdit/SettingRow.vue'
+import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import CoursePublishSettings from '@/pages/Courses/CoursePublishSettings.vue'
 import { COURSE_ACTIONS } from '@/composables/useCourseActions'
 import type {
