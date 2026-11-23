@@ -84,6 +84,8 @@
 			</EmptyStateLayout>
 		</div>
 
+		<slot name="after" />
+
 		<template #footer>
 			<ListFooter
 				v-model="pageLength"

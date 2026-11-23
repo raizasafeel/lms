@@ -84,10 +84,14 @@ const { coursesResource, categories, requests, mobile, countAborts } =
 
 vi.mock('frappe-ui', () => ({
 	usePageMeta: vi.fn(),
-	createResource: () =>
+	// The footer's total. It is aborted and resubmitted alongside the list, so
+	// the counter below is what proves the two stay in step.
+	createResource: (options: { url: string }) =>
 		reactive({
-			data: 0,
-			abort: vi.fn(),
+			data: options.url.includes('get_course_count') ? 0 : null,
+			abort: () => {
+				if (options.url.includes('get_course_count')) countAborts.value += 1
+			},
 			submit: vi.fn(),
 		}),
 	createListResource: (options: { url: string }) => {
@@ -101,7 +105,24 @@ vi.mock('frappe-ui', () => ({
 		}
 		return coursesResource.current
 	},
-	Button: { template: '<button><slot name="prefix" /><slot /></button>' },
+	Button: {
+		template:
+			'<button><slot name="prefix" /><slot /><slot name="suffix" /></button>',
+	},
+	Badge: { props: ['label'], template: '<span>{{ label }}</span>' },
+	// Renders each tab as a button so a test can pick one by its label.
+	TabButtons: {
+		props: ['options', 'modelValue'],
+		emits: ['update:modelValue'],
+		template: `<div>
+			<button
+				v-for="option in options"
+				:key="option.value"
+				:data-testid="'option-' + option.label"
+				@click="$emit('update:modelValue', option.value)"
+			>{{ option.label }}</button>
+		</div>`,
+	},
 	// Renders its menu inline so a test can pick an option by its label.
 	Dropdown: {
 		props: ['options'],
@@ -192,8 +213,21 @@ async function mountCourses(user: { data: Record<string, unknown> | null }) {
 }
 
 const cards = (wrapper: any) => wrapper.findAll('article').length
+const openFilters = async (wrapper: any) => {
+	if (wrapper.find('[data-testid="certification-chip"]').exists()) return
+	await wrapper.find('[data-testid="filters-button"]').trigger('click')
+	await nextTick()
+}
 const pick = async (wrapper: any, label: string) => {
+	if (!wrapper.find(`[data-testid="option-${label}"]`).exists()) {
+		await openFilters(wrapper)
+	}
 	await wrapper.find(`[data-testid="option-${label}"]`).trigger('click')
+	await nextTick()
+}
+const toggleCertification = async (wrapper: any) => {
+	await openFilters(wrapper)
+	await wrapper.find('[data-testid="certification-chip"]').trigger('click')
 	await nextTick()
 }
 
@@ -214,7 +248,7 @@ describe('Courses list filters', () => {
 		expect(requests.current).toHaveLength(1)
 		expect(requests.current[0].filters).toMatchObject({ published: 1, live: 1 })
 
-		await pick(wrapper, 'Unpublished')
+		await pick(wrapper, 'Drafts')
 		expect(requests.current).toHaveLength(2)
 		expect(requests.current[1].filters).toMatchObject({ published: 0 })
 
@@ -227,7 +261,7 @@ describe('Courses list filters', () => {
 		requests.current[0].respond(PUBLISHED_COURSES)
 		await nextTick()
 
-		expect(wrapper.text()).toContain('Unpublished')
+		expect(wrapper.text()).toContain('Drafts')
 		expect(cards(wrapper)).toBe(0)
 	})
 
@@ -235,7 +269,7 @@ describe('Courses list filters', () => {
 		const user = reactive({ data: { ...MODERATOR } as Record<string, unknown> })
 		const wrapper = await mountCourses(user)
 
-		await pick(wrapper, 'Unpublished')
+		await pick(wrapper, 'Drafts')
 		const requestsAfterTabChange = requests.current.length
 
 		// A second resolution of get_user_info rebuilds `courseTabs`.
@@ -249,7 +283,7 @@ describe('Courses list filters', () => {
 	it('sends one request with the new value from the certification chip', async () => {
 		const wrapper = await mountCourses({ data: { ...MODERATOR } })
 
-		await pick(wrapper, 'With certificate')
+		await toggleCertification(wrapper)
 
 		expect(requests.current).toHaveLength(2)
 		expect(requests.current[1].filters).toMatchObject({ certification: 1 })
@@ -268,7 +302,7 @@ describe('Courses list filters', () => {
 		})
 		expect(window.location.search).toBe('?price=free&rating=4')
 		expect(wrapper.find('[data-testid="filters-button"]').text()).toBe(
-			'Filters · 2'
+			'Filters 2'
 		)
 
 		await pick(wrapper, 'Any price')
@@ -337,15 +371,13 @@ describe('Courses list filters', () => {
 		})
 	})
 
-	it('folds the chips away on a phone until Filters is pressed', async () => {
-		mobile.value = true
+	it('folds the chips away until Filters is pressed', async () => {
 		const wrapper = await mountCourses({ data: { ...MODERATOR } })
-		expect(
-			wrapper.find('[data-testid="option-With certificate"]').exists()
-		).toBe(false)
+		expect(wrapper.find('[data-testid="certification-chip"]').exists()).toBe(
+			false
+		)
 
-		await wrapper.find('[data-testid="filters-button"]').trigger('click')
-		await pick(wrapper, 'With certificate')
+		await toggleCertification(wrapper)
 
 		expect(requests.current).toHaveLength(2)
 		expect(requests.current[1].filters).toMatchObject({ certification: 1 })
@@ -398,7 +430,8 @@ describe('Courses list filters', () => {
 		const wrapper = await mountCourses({ data: { ...MODERATOR } })
 
 		expect(requests.current[0].filters).not.toHaveProperty('certification')
-		expect(wrapper.text()).toContain('Certification')
-		expect(wrapper.text()).not.toContain('Filters · 1')
+		expect(wrapper.find('[data-testid="filters-button"]').text()).toBe(
+			'Filters'
+		)
 	})
 })

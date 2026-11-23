@@ -1460,7 +1460,17 @@ COURSE_LIST_FILTERS = frozenset(
 )
 COURSE_LIST_ORDERS = frozenset({"enrollments desc", "rating desc", "published_on desc", "title asc"})
 BATCH_LIST_FILTERS = frozenset(
-	{"title", "category", "certification", "enrolled", "start_date", "end_date", "published"}
+	{
+		"title",
+		"category",
+		"certification",
+		"enrolled",
+		"start_date",
+		"end_date",
+		"published",
+		"paid_batch",
+		"medium",
+	}
 )
 BATCH_LIST_ORDERS = frozenset({"start_date", "start_date asc", "start_date desc"})
 LIST_FILTER_OPERATORS = frozenset({"=", "!=", "<", "<=", ">", ">=", "like", "not like", "is"})
@@ -3920,6 +3930,8 @@ def get_batches(
 			"timezone",
 			"published",
 			"category",
+			"certification",
+			"medium",
 		],
 		order_by=order_by,
 		start=start,
@@ -4045,8 +4057,10 @@ def _filter_operator(value) -> str:
 
 
 def get_batch_card_details(batches: list) -> list:
+	enrolled = get_enrolled_batches([batch.name for batch in batches])
 	for batch in batches:
 		batch.instructors = get_public_instructors("LMS Batch", batch.name)
+		batch.is_enrolled = batch.name in enrolled
 		students_count = frappe.db.count("LMS Batch Enrollment", {"batch": batch.name})
 
 		if batch.seat_count:
@@ -4059,6 +4073,19 @@ def get_batch_card_details(batches: list) -> list:
 			batch.price = fmt_money(batch.amount, 0, batch.currency)
 
 	return batches
+
+
+def get_enrolled_batches(batches: list) -> set:
+	"""Which of `batches` the current user is enrolled in."""
+	if frappe.session.user == "Guest" or not batches:
+		return set()
+	return set(
+		frappe.get_all(
+			"LMS Batch Enrollment",
+			{"member": frappe.session.user, "batch": ["in", batches]},
+			pluck="batch",
+		)
+	)
 
 
 def get_palette(full_name: str) -> list:

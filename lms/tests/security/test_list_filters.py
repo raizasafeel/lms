@@ -99,6 +99,7 @@ class TestListFilters(BaseTestUtils):
 				"start_time": "10:00:00",
 				"end_time": "11:00:00",
 				"timezone": "Asia/Kolkata",
+				"medium": "Online",
 				"description": "description",
 				"batch_details": "details",
 				"instructors": [{"instructor": cls.instructor.name}],
@@ -252,6 +253,19 @@ class TestListFilters(BaseTestUtils):
 					self.assert_lists_batch(user, {**filters, "category": self.category}, order_by)
 
 		self.assert_lists_batch(self.student.name, {"enrolled": 1}, "start_date desc")
+
+	def test_the_batch_list_filters_by_price_and_mode_and_marks_enrollment(self):
+		filters = {"published": 1, "category": self.category}
+		self.assert_lists_batch("Guest", {**filters, "paid_batch": 0, "medium": "Online"}, "start_date")
+		self.assertEqual(
+			self.as_user("Guest", get_batches, filters={**filters, "paid_batch": 1}),
+			[],
+		)
+		student_view = self.as_user(self.student.name, get_batches, filters=filters)
+		guest_view = self.as_user("Guest", get_batches, filters=filters)
+		self.assertTrue(student_view[0].is_enrolled)
+		self.assertFalse(guest_view[0].is_enrolled)
+		self.assertEqual(guest_view[0].medium, "Online")
 
 	def test_the_archived_batch_tab_is_accepted(self):
 		filters = {"start_date": ["<=", nowdate()], "category": self.category}

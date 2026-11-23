@@ -123,11 +123,11 @@ describe('Batches page header', () => {
 		openFormRouteMock.mockReset()
 	})
 
-	it('offers New Batch as a button, with Import beside it', async () => {
+	it('offers New batch as a button, with Import beside it', async () => {
 		const { wrapper, router } = await mountBatches()
 		const buttons = wrapper.find('header').findAll('button')
 
-		expect(buttons.map((b) => b.text())).toEqual(['Import', 'New Batch'])
+		expect(buttons.map((b) => b.text())).toEqual(['Import', 'New batch'])
 
 		await buttons[1].trigger('click')
 		expect(openFormRouteMock).toHaveBeenCalledWith(expect.anything(), {

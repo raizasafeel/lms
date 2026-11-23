@@ -56,7 +56,7 @@
 					<FormControl
 						v-model="title"
 						type="text"
-						class="w-full max-w-xs"
+						class="w-full max-w-sm"
 						:placeholder="__('Search courses')"
 						:aria-label="__('Search courses')"
 					>
@@ -65,16 +65,14 @@
 						</template>
 					</FormControl>
 					<span class="flex-1" />
-					<Dropdown align="end" :options="sortMenu">
-						<Button variant="ghost" data-testid="sort-button">
-							<template #prefix>
-								<span class="lucide-arrow-down-up size-4" />
-							</template>
-							{{ sortLabel }}
-						</Button>
-					</Dropdown>
+					<TabButtons
+						v-model="currentTab"
+						:options="courseTabs"
+						class="!w-fit shrink-0"
+						data-testid="status-tabs"
+					/>
 					<Button
-						:variant="showFilters ? 'subtle' : 'outline'"
+						:variant="showFilters ? 'outline' : 'subtle'"
 						:aria-expanded="showFilters"
 						data-testid="filters-button"
 						@click="showFilters = !showFilters"
@@ -82,11 +80,22 @@
 						<template #prefix>
 							<span class="lucide-list-filter size-4" />
 						</template>
-						{{ filtersLabel }}
+						{{ __('Filters') }}
+						<template v-if="activeFilterCount" #suffix>
+							<Badge :label="String(activeFilterCount)" />
+						</template>
 					</Button>
 				</div>
 
 				<div v-if="showFilters" class="flex flex-wrap items-center gap-2">
+					<Dropdown :options="sortMenu">
+						<Button variant="subtle" data-testid="sort-button">
+							<template #prefix>
+								<span class="lucide-arrow-down-up size-4" />
+							</template>
+							{{ sortLabel }}
+						</Button>
+					</Dropdown>
 					<FilterSelect
 						v-model="price"
 						:label="__('Price')"
@@ -94,17 +103,10 @@
 						:options="priceOptions"
 					/>
 					<FilterSelect
-						v-model="currentTab"
-						:label="__('Status')"
-						icon="lucide-circle-dashed"
-						:options="courseTabs"
-						empty-value="live"
-					/>
-					<FilterSelect
 						v-model="certification"
+						data-testid="certification-chip"
 						:label="__('Certification')"
-						icon="lucide-badge-check"
-						:options="certificationOptions"
+						icon="lucide-circle-check"
 						:empty-value="false"
 					/>
 					<FilterSelect
@@ -118,7 +120,7 @@
 						variant="ghost"
 						@click="clearFilters"
 					>
-						{{ __('Clear') }}
+						{{ __('Clear filters') }}
 					</Button>
 				</div>
 
@@ -154,17 +156,39 @@
 				:to="{ name: 'CourseDetail', params: { courseName: row.name } }"
 			/>
 		</template>
+
+		<template #after>
+			<section
+				v-if="currentTab === 'live' && upcomingCourses.data?.length"
+				class="px-5 pb-5"
+				data-testid="coming-soon"
+			>
+				<h2 class="mb-3 text-lg-semibold text-ink-gray-9">
+					{{ __('Coming soon') }}
+				</h2>
+				<div class="grid grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-5">
+					<CourseCard
+						v-for="course in upcomingCourses.data"
+						:key="course.name"
+						:course="course"
+						:to="{ name: 'CourseDetail', params: { courseName: course.name } }"
+					/>
+				</div>
+			</section>
+		</template>
 	</ListPage>
 
 	<router-view />
 </template>
 <script setup>
 import {
+	Badge,
 	Button,
 	createListResource,
 	createResource,
 	Dropdown,
 	FormControl,
+	TabButtons,
 	usePageMeta,
 } from 'frappe-ui'
 import FilterSelect from '@/components/Controls/FilterSelect.vue'
@@ -173,7 +197,6 @@ import EmptyStateActions from '@/components/EmptyStateActions.vue'
 import { computed, inject, onMounted, ref, watch } from 'vue'
 import { sessionStore } from '@/stores/session'
 import { canCreateCourse } from '@/utils'
-import { useScreenSize } from '@/utils/composables'
 import CourseCard from '@/components/CourseCard.vue'
 import { useRouter } from 'vue-router'
 import { openFormRoute } from '@/composables/useFormRoute'
@@ -193,8 +216,7 @@ const filters = ref({})
 const currentTab = ref('live')
 const { brand } = sessionStore()
 const router = useRouter()
-const { isMobile } = useScreenSize()
-const showFilters = ref(!isMobile.value)
+const showFilters = ref(false)
 
 const sortOptions = [
 	{ label: __('Most popular'), value: 'popular', orderBy: 'enrollments desc' },
@@ -206,10 +228,6 @@ const priceOptions = [
 	{ label: __('Any price'), value: '' },
 	{ label: __('Free'), value: 'free' },
 	{ label: __('Paid'), value: 'paid' },
-]
-const certificationOptions = [
-	{ label: __('Any'), value: false },
-	{ label: __('With certificate'), value: true },
 ]
 // `rating` is a text field; one-decimal strings compare correctly against it.
 const ratingOptions = [
@@ -223,6 +241,9 @@ const allCategories = { label: __('All'), value: null }
 
 onMounted(() => {
 	setFiltersFromQuery()
+	showFilters.value = Boolean(
+		activeFilterCount.value || sort.value !== 'popular'
+	)
 	updateCourses()
 	// Watched after query hydration so the hydration itself does not refetch.
 	watch(
@@ -275,6 +296,33 @@ const courseCountResource = createResource({
 	},
 })
 
+const upcomingCourses = createResource({
+	url: 'lms.lms.utils.get_courses',
+	makeParams: () => ({
+		filters: { ...fieldFilters(), published: 1, upcoming: 1 },
+		limit_page_length: 12,
+	}),
+})
+
+// Upcoming courses get their own section under the live ones.
+const loadUpcomingCourses = () => {
+	upcomingCourses.abort()
+	if (currentTab.value === 'live') upcomingCourses.submit()
+}
+
+const fieldFilters = () => {
+	const { category, title, certification, paid_course, rating } = filters.value
+	return Object.fromEntries(
+		Object.entries({
+			category,
+			title,
+			certification,
+			paid_course,
+			rating,
+		}).filter(([, value]) => value !== undefined)
+	)
+}
+
 const courseCount = computed(() => courseCountResource.data ?? null)
 
 const getCourseCount = () => {
@@ -323,12 +371,6 @@ const activeFilterCount = computed(
 	() => [price.value, certification.value, rating.value].filter(Boolean).length
 )
 
-const filtersLabel = computed(() =>
-	activeFilterCount.value
-		? __('Filters · {0}').format(activeFilterCount.value)
-		: __('Filters')
-)
-
 const sortLabel = computed(
 	() => sortOptions.find((option) => option.value === sort.value).label
 )
@@ -363,6 +405,7 @@ const updateCourses = () => {
 	})
 	reloadCourses()
 	getCourseCount()
+	loadUpcomingCourses()
 }
 
 const updateFilters = () => {
@@ -475,8 +518,7 @@ const courseTabs = computed(() => {
 		user.data?.is_instructor ||
 		user.data?.is_evaluator
 	) {
-		tabs.push({ label: __('Created'), value: 'created' })
-		tabs.push({ label: __('Unpublished'), value: 'unpublished' })
+		tabs.push({ label: __('Drafts'), value: 'unpublished' })
 	} else if (user.data) {
 		tabs.push({ label: __('Enrolled'), value: 'enrolled' })
 	}

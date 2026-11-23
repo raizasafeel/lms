@@ -22,21 +22,18 @@
 				v-if="course.featured"
 				class="absolute end-2 top-2 flex items-center gap-1 rounded-full bg-surface-base px-2 py-0.5 text-p-xs text-ink-gray-8 shadow-sm"
 			>
-				<span
-					class="lucide-sparkle size-3 text-ink-amber-5"
-					aria-hidden="true"
-				/>
+				<span class="lucide-award size-3 text-ink-gray-6" aria-hidden="true" />
 				{{ __('Featured') }}
 			</span>
 		</div>
 
 		<div class="flex flex-1 flex-col gap-1.5 px-2 pb-1.5 pt-3">
-			<h3 class="line-clamp-2 text-lg-semibold leading-snug text-ink-gray-9">
+			<h3 class="line-clamp-2 text-base-semibold leading-snug text-ink-gray-9">
 				<CardLink :to="to" :external="external">{{ course.title }}</CardLink>
 			</h3>
 			<p
 				v-if="course.short_introduction"
-				class="line-clamp-2 text-p-base text-ink-gray-6"
+				class="line-clamp-2 text-p-sm text-ink-gray-6"
 			>
 				{{ course.short_introduction }}
 			</p>
@@ -48,12 +45,6 @@
 				>
 					<span v-if="course.category" class="truncate">
 						{{ course.category }}
-					</span>
-					<span
-						v-if="tag"
-						class="rounded-2 bg-surface-gray-2 px-1 normal-case tracking-normal text-ink-gray-7"
-					>
-						{{ tag }}
 					</span>
 				</span>
 				<span class="flex -space-x-1.5">
@@ -91,26 +82,27 @@
 				</template>
 				<template v-else>
 					<span v-if="hasRating" class="flex items-center gap-1">
-						<LucideStar
-							class="size-4 text-transparent fill-ink-amber-4"
-							aria-hidden="true"
-						/>
+						<span class="lucide-star size-4" aria-hidden="true" />
 						<span aria-hidden="true">{{ formatRating(course.rating) }}</span>
 						<span class="sr-only">
 							{{ __('Rated {0} out of 5').format(formatRating(course.rating)) }}
 						</span>
 					</span>
-					<span v-if="course.lessons" class="flex items-center gap-1">
-						<span class="lucide-book-open size-4" aria-hidden="true" />
-						<span aria-hidden="true">{{ course.lessons }}</span>
-						<span class="sr-only">{{ lessonCount }}</span>
-					</span>
 					<span v-if="hasCertificate" class="flex min-w-0 items-center gap-1">
-						<span class="lucide-badge-check size-4" aria-hidden="true" />
+						<span class="lucide-circle-check size-4" aria-hidden="true" />
 						<span class="truncate">{{ __('Certificate') }}</span>
 					</span>
 					<Badge v-if="isDraft" theme="amber" :label="__('Draft')" />
-					<span class="ms-auto shrink-0 text-ink-gray-8">{{ priceLabel }}</span>
+					<span
+						class="ms-auto shrink-0"
+						:class="
+							course.paid_course
+								? 'text-sm-semibold text-ink-gray-9'
+								: 'text-ink-gray-7'
+						"
+					>
+						{{ priceLabel }}
+					</span>
 				</template>
 			</div>
 		</div>
@@ -146,8 +138,6 @@ const props = defineProps({
 
 const thumbnailTint = computed(() => courseTint(props.course.card_gradient))
 
-const tag = computed(() => props.course.tags?.split(',')[0].trim())
-
 const instructors = computed(() => (props.course.instructors || []).slice(0, 3))
 
 const progress = computed(() =>
@@ -166,12 +156,6 @@ const isDraft = computed(
 
 const priceLabel = computed(() =>
 	props.course.paid_course ? props.course.price : __('Free')
-)
-
-const lessonCount = computed(() =>
-	props.course.lessons == 1
-		? __('1 lesson')
-		: __('{0} lessons').format(props.course.lessons)
 )
 </script>
 <style>

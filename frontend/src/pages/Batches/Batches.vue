@@ -1,7 +1,7 @@
 <template>
 	<ListPage
 		:breadcrumbs="breadcrumbs"
-		:title="pageTitle"
+		grid-class="grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]"
 		:rows="batches.data || []"
 		:loading="batches.list.loading"
 		:total-count="batchCount"
@@ -12,56 +12,118 @@
 		:empty-title="emptyState?.title"
 		:empty-description="emptyState?.description"
 		:search-query="title"
-		:filtered="Boolean(currentCategory || certification)"
+		:filtered="Boolean(currentCategory || activeFilterCount)"
 		@load-more="batches.next()"
 		@clear-filters="clearFilters"
 	>
 		<template #actions>
 			<div v-if="canCreateBatch()" class="flex items-center gap-2">
-				<Button variant="subtle" @click="openBatchImport">
+				<Button variant="outline" @click="openBatchImport">
+					<template #prefix>
+						<span class="lucide-upload size-4" />
+					</template>
 					{{ __('Import') }}
 				</Button>
 				<Button variant="solid" @click="openNewBatch">
 					<template #prefix>
 						<span class="lucide-plus size-4" />
 					</template>
-					{{ __('New Batch') }}
+					{{ __('New batch') }}
 				</Button>
 			</div>
 		</template>
 
-		<template #filters>
-			<TabButtons
-				v-if="user.data"
-				:options="batchTabs"
-				v-model="currentTab"
-				class="!w-fit shrink-0"
-			/>
-			<FormControl
-				v-model="title"
-				:placeholder="__('Search')"
-				:aria-label="__('Search')"
-				type="text"
-			>
-				<template #prefix>
-					<span class="lucide-search size-4 text-ink-gray-5" />
-				</template>
-			</FormControl>
-			<ClearableCombobox
-				v-if="categories.length"
-				v-model="currentCategory"
-				:options="categories.filter((c) => c.value)"
-				:placeholder="__('Category')"
-				:ariaLabel="__('Category')"
-				@update:modelValue="updateBatches()"
-			/>
-			<ToggleFilter
-				:modelValue="certification"
-				:label="__('Certification')"
-				:mobileLabel="__('Certification available')"
-				:tooltip="__('Only show batches that offer a certificate')"
-				@update:modelValue="setCertification"
-			/>
+		<template #toolbar>
+			<div class="space-y-3 px-5 pb-5 pt-4">
+				<div class="flex items-center gap-2">
+					<FormControl
+						v-model="title"
+						type="text"
+						class="w-full max-w-sm"
+						:placeholder="__('Search batches')"
+						:aria-label="__('Search batches')"
+					>
+						<template #prefix>
+							<span class="lucide-search size-4 text-ink-gray-5" />
+						</template>
+					</FormControl>
+					<span class="flex-1" />
+					<TabButtons
+						v-if="user.data"
+						v-model="currentTab"
+						:options="batchTabs"
+						class="!w-fit shrink-0"
+						data-testid="status-tabs"
+					/>
+					<Button
+						:variant="showFilters ? 'outline' : 'subtle'"
+						:aria-expanded="showFilters"
+						data-testid="filters-button"
+						@click="showFilters = !showFilters"
+					>
+						<template #prefix>
+							<span class="lucide-list-filter size-4" />
+						</template>
+						{{ __('Filters') }}
+						<template v-if="activeFilterCount" #suffix>
+							<Badge :label="String(activeFilterCount)" />
+						</template>
+					</Button>
+				</div>
+
+				<div v-if="showFilters" class="flex flex-wrap items-center gap-2">
+					<FilterSelect
+						v-model="price"
+						:label="__('Price')"
+						icon="lucide-tag"
+						:options="priceOptions"
+					/>
+					<FilterSelect
+						v-model="medium"
+						:label="__('Mode')"
+						icon="lucide-map-pin"
+						:options="mediumOptions"
+					/>
+					<FilterSelect
+						v-model="certification"
+						data-testid="certification-chip"
+						:label="__('Certification')"
+						icon="lucide-circle-check"
+						:empty-value="false"
+					/>
+					<Button
+						v-if="activeFilterCount"
+						variant="ghost"
+						@click="clearFilters"
+					>
+						{{ __('Clear filters') }}
+					</Button>
+				</div>
+
+				<div
+					v-if="categoryOptions.length"
+					class="flex flex-wrap gap-2"
+					role="group"
+					:aria-label="__('Category')"
+				>
+					<button
+						v-for="option in [allCategories, ...categoryOptions]"
+						:key="String(option.value)"
+						type="button"
+						class="rounded-4 border px-2.5 py-1 text-p-sm outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+						:class="
+							currentCategory === option.value
+								? 'border-transparent bg-surface-gray-2 text-ink-gray-9'
+								: 'border-outline-gray-2 text-ink-gray-7 hover:border-outline-gray-3'
+						"
+						:aria-pressed="currentCategory === option.value"
+						:data-testid="'category-' + option.label"
+						@click="currentCategory = option.value"
+					>
+						{{ option.label }}
+					</button>
+				</div>
+			</div>
 		</template>
 
 		<template v-if="emptyState" #empty-actions>
@@ -86,6 +148,7 @@
 </template>
 <script setup>
 import {
+	Badge,
 	Button,
 	createListResource,
 	createResource,
@@ -93,8 +156,7 @@ import {
 	TabButtons,
 	usePageMeta,
 } from 'frappe-ui'
-import ClearableCombobox from '@/components/Controls/ClearableCombobox.vue'
-import ToggleFilter from '@/components/Controls/ToggleFilter.vue'
+import FilterSelect from '@/components/Controls/FilterSelect.vue'
 import { computed, inject, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { sessionStore } from '@/stores/session'
@@ -112,7 +174,22 @@ const categories = ref([])
 const currentCategory = ref(null)
 const title = ref('')
 const certification = ref(false)
+const price = ref('')
+const medium = ref('')
+const showFilters = ref(false)
 const filters = ref({})
+const allCategories = { label: __('All'), value: null }
+const priceOptions = [
+	{ label: __('Any price'), value: '' },
+	{ label: __('Free'), value: 'free' },
+	{ label: __('Paid'), value: 'paid' },
+]
+const mediumOptions = [
+	{ label: __('Any mode'), value: '' },
+	{ label: __('Online'), value: 'Online' },
+	{ label: __('In person'), value: 'Offline' },
+]
+const is_student = computed(() => user.data?.is_student)
 const isAdmin = computed(() =>
 	['is_moderator', 'is_instructor', 'is_evaluator'].some(
 		(role) => user.data?.[role]
@@ -129,9 +206,12 @@ const router = useRouter()
 
 onMounted(() => {
 	setFiltersFromQuery()
+	showFilters.value = Boolean(activeFilterCount.value)
 	updateBatches()
 	// TextInput emits on input and change; watched after query hydration to avoid a refetch.
-	watch(title, () => updateBatches())
+	watch([title, currentCategory, certification, price, medium], () =>
+		updateBatches()
+	)
 	categories.value = [
 		{
 			label: '',
@@ -146,7 +226,21 @@ const setFiltersFromQuery = () => {
 	currentCategory.value = queries.get('category') || null
 	// `|| false` would keep the raw string, so ?certification=false read as on.
 	certification.value = queries.get('certification') === 'true'
+	price.value = ['free', 'paid'].includes(queries.get('price'))
+		? queries.get('price')
+		: ''
+	medium.value = ['Online', 'Offline'].includes(queries.get('mode'))
+		? queries.get('mode')
+		: ''
 }
+
+const activeFilterCount = computed(
+	() => [price.value, medium.value, certification.value].filter(Boolean).length
+)
+
+const categoryOptions = computed(() =>
+	categories.value.filter((category) => category.value)
+)
 
 const batches = createListResource({
 	doctype: 'LMS Batch',
@@ -165,11 +259,6 @@ const pageLength = computed({
 		batches.reload()
 	},
 })
-
-const setCertification = (value) => {
-	certification.value = value
-	updateBatches()
-}
 
 const setCategories = (data) => {
 	let allCategories = data.map((batch) => batch.category)
@@ -194,12 +283,13 @@ const batchCountResource = createResource({
 
 const batchCount = computed(() => batchCountResource.data ?? null)
 
+// The watcher refetches once for however many of these change together.
 const clearFilters = () => {
 	currentCategory.value = null
 	certification.value = false
-	// The title watcher reloads on its own; reloading here as well fetches twice.
-	if (title.value) title.value = ''
-	else updateBatches()
+	price.value = ''
+	medium.value = ''
+	title.value = ''
 }
 
 const updateBatches = () => {
@@ -221,6 +311,7 @@ const updateFilters = () => {
 	updateCategoryFilter()
 	updateTitleFilter()
 	updateCertificationFilter()
+	updatePriceAndModeFilters()
 	updateTabFilter()
 	updateStudentFilter()
 	setQueryParams()
@@ -248,6 +339,13 @@ const updateCertificationFilter = () => {
 	} else {
 		delete filters.value['certification']
 	}
+}
+
+const updatePriceAndModeFilters = () => {
+	if (price.value) filters.value['paid_batch'] = Number(price.value === 'paid')
+	else delete filters.value['paid_batch']
+	if (medium.value) filters.value['medium'] = medium.value
+	else delete filters.value['medium']
 }
 
 const updateTabFilter = () => {
@@ -302,6 +400,8 @@ const setQueryParams = () => {
 		title: title.value,
 		category: currentCategory.value,
 		certification: certification.value,
+		price: price.value,
+		mode: medium.value,
 	}
 
 	Object.keys(filterKeys).forEach((key) => {
@@ -339,22 +439,10 @@ watch(currentTab, () => {
 const batchTabs = computed(() => {
 	if (isAdmin.value) {
 		return [
-			{ label: __('Active'), title: __('Active Batches'), value: 'active' },
-			{
-				label: __('Upcoming'),
-				title: __('Upcoming Batches'),
-				value: 'upcoming',
-			},
-			{
-				label: __('Archived'),
-				title: __('Archived Batches'),
-				value: 'archived',
-			},
-			{
-				label: __('Unpublished'),
-				title: __('Unpublished Batches'),
-				value: 'unpublished',
-			},
+			{ label: __('Active'), value: 'active' },
+			{ label: __('Upcoming'), value: 'upcoming' },
+			{ label: __('Archived'), value: 'archived' },
+			{ label: __('Drafts'), value: 'unpublished' },
 		]
 	}
 	const tabs = [
@@ -375,11 +463,6 @@ watch(batchTabs, (tabs) => {
 	if (!tabs.some((tab) => tab.value === currentTab.value)) {
 		currentTab.value = tabs[0].value
 	}
-})
-
-const pageTitle = computed(() => {
-	const tab = batchTabs.value.find((t) => t.value === currentTab.value)
-	return tab?.title
 })
 
 const canCreateBatch = () => {

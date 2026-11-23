@@ -45,7 +45,7 @@ describe('CourseCard', () => {
 		expect(thumbnail.classes()).not.toContain('bg-surface-blue-2')
 	})
 
-	it('reads the category, first tag, certificate and price', () => {
+	it('reads the category, certificate and price, but not the tags', () => {
 		const wrapper = mountCard({
 			category: 'ERPNext',
 			tags: 'V15, Accounting',
@@ -55,8 +55,8 @@ describe('CourseCard', () => {
 			published: 1,
 		})
 
-		expect(wrapper.text()).toContain('V15')
-		expect(wrapper.text()).not.toContain('Accounting')
+		expect(wrapper.text()).toContain('ERPNext')
+		expect(wrapper.text()).not.toContain('V15')
 		expect(wrapper.text()).toContain('Certificate')
 		expect(wrapper.text()).toContain('₹2,999')
 		expect(wrapper.text()).not.toContain('Draft')
