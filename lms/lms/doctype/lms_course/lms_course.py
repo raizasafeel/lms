@@ -38,6 +38,28 @@ COURSE_OWNED_DOCTYPES = (
 	"Related Courses",
 )
 
+# Lucide icon names a course thumbnail can show; frontend/src/utils/courseIcons.ts mirrors this order.
+COURSE_ICONS = (
+	"boxes",
+	"layout-template",
+	"award",
+	"code-xml",
+	"database",
+	"calculator",
+	"factory",
+	"package",
+	"users",
+	"handshake",
+	"graduation-cap",
+	"book-open",
+	"palette",
+	"chart-line",
+	"briefcase",
+	"rocket",
+	"wrench",
+	"globe",
+)
+
 
 class LMSCourse(Document):
 	def validate(self):
@@ -54,6 +76,7 @@ class LMSCourse(Document):
 		validate_attachable_file(self, "image")
 		self.image = validate_image(self.image)
 		self.validate_card_gradient()
+		self.validate_icon()
 
 	def validate_published(self):
 		if not self.published:
@@ -156,6 +179,11 @@ class LMSCourse(Document):
 				"Purple",
 			]
 			self.card_gradient = random.choice(colors)
+
+	def validate_icon(self):
+		self.icon = (self.icon or "").strip()
+		if self.icon and self.icon not in COURSE_ICONS:
+			frappe.throw(_("{0} is not a course icon.").format(frappe.bold(self.icon)))
 
 	def on_update(self):
 		if not self.upcoming and self.has_value_changed("upcoming"):

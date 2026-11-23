@@ -1769,6 +1769,7 @@ def get_course_fields():
 		"image",
 		"video_link",
 		"card_gradient",
+		"icon",
 		"short_introduction",
 		"description",
 		"published",
