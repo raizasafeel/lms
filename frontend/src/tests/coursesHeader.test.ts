@@ -3,8 +3,6 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { defineComponent, h } from 'vue'
 
-vi.stubGlobal('__', (text: string) => text)
-
 const { state, openFormRouteMock, captureMock } = vi.hoisted(() => ({
 	// Whether the user may create courses.
 	state: { canCreate: true },
@@ -58,7 +56,6 @@ vi.mock('frappe-ui', () => ({
 				]),
 	}),
 	FormControl: defineComponent({ setup: () => () => h('input') }),
-	TabButtons: defineComponent({ setup: () => () => h('div') }),
 	createListResource: vi.fn(() => inertList),
 	createResource: vi.fn(() => ({
 		data: 0,
@@ -78,12 +75,6 @@ vi.mock('@framework/ui/telemetry/index', () => ({
 	useTelemetry: () => ({ capture: captureMock }),
 }))
 vi.mock('@/stores/session', () => ({ sessionStore: () => ({ brand: {} }) }))
-vi.mock('@/components/Controls/ClearableCombobox.vue', () => ({
-	default: defineComponent({ setup: () => () => h('div') }),
-}))
-vi.mock('@/components/Controls/ToggleFilter.vue', () => ({
-	default: defineComponent({ setup: () => () => h('div') }),
-}))
 
 const mountCourses = async () => {
 	const { default: Courses } = await import('@/pages/Courses/Courses.vue')
@@ -100,7 +91,7 @@ const mountCourses = async () => {
 				$user: { data: { name: 'a@b.c', is_moderator: 1 } },
 				$dayjs: () => ({ format: () => '' }),
 			},
-			mocks: { __: (text: string) => text },
+			mocks: { __: globalThis.__ },
 		},
 	})
 	await flushPromises()
@@ -114,13 +105,13 @@ describe('Courses page header', () => {
 		captureMock.mockReset()
 	})
 
-	it('offers New Course as a button, with the imports behind Import', async () => {
+	it('offers New course as a button, with the imports behind Import', async () => {
 		const wrapper = await mountCourses()
 		const header = wrapper.find('header')
 
 		expect(header.findAll('button').map((b) => b.text())).toEqual([
 			'Import',
-			'New Course',
+			'New course',
 		])
 		expect(header.find('[data-testid="create-menu"]').text()).toBe(
 			'Import from a spreadsheetImport via ZIP'

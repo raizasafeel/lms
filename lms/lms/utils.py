@@ -1454,8 +1454,11 @@ COURSE_LIST_FILTERS = frozenset(
 		"published",
 		"published_on",
 		"upcoming",
+		"paid_course",
+		"rating",
 	}
 )
+COURSE_LIST_ORDERS = frozenset({"enrollments desc", "rating desc", "published_on desc", "title asc"})
 BATCH_LIST_FILTERS = frozenset(
 	{"title", "category", "certification", "enrolled", "start_date", "end_date", "published"}
 )
@@ -1520,10 +1523,14 @@ def resolve_page_length(limit_page_length=None, default: int = DEFAULT_PAGE_LENG
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
 @rate_limit(limit=500, seconds=60 * 60)
 @guest_access_required(list)
-def get_courses(filters: dict = None, start: int = 0, limit_page_length: int | str = None) -> list:
-	"""Returns the list of courses."""
+def get_courses(
+	filters: dict = None, start: int = 0, limit_page_length: int | str = None, order_by: str = None
+) -> list:
+	"""Returns the list of courses, most enrolled first unless `order_by` names another listed sort."""
 
 	filters = check_list_filters(filters, COURSE_LIST_FILTERS)
+	if order_by not in COURSE_LIST_ORDERS:
+		order_by = "enrollments desc"
 
 	self_scoped = is_self_scoped(filters)
 	filters, or_filters, show_featured = update_course_filters(filters)
@@ -1542,7 +1549,9 @@ def get_courses(filters: dict = None, start: int = 0, limit_page_length: int | s
 	# of the sequence starts at, and it is only needed when the window runs past
 	# the featured rows, which is exactly when this read returned all of them.
 	featured = (
-		get_featured_courses(filters.copy(), or_filters, fields, start + page_length) if show_featured else []
+		get_featured_courses(filters.copy(), or_filters, fields, start + page_length, order_by)
+		if show_featured
+		else []
 	)
 	courses = featured[start : start + page_length]
 	remaining = page_length - len(courses)
@@ -1553,7 +1562,7 @@ def get_courses(filters: dict = None, start: int = 0, limit_page_length: int | s
 			filters=filters,
 			fields=fields,
 			or_filters=or_filters,
-			order_by="enrollments desc",
+			order_by=order_by,
 			start=max(start - len(featured), 0),
 			page_length=remaining,
 		)
@@ -1712,14 +1721,16 @@ def get_enrollment_details(courses: list) -> list:
 	return courses
 
 
-def get_featured_courses(filters: dict, or_filters: dict, fields: list, page_length: int) -> list:
+def get_featured_courses(
+	filters: dict, or_filters: dict, fields: list, page_length: int, order_by: str = "enrollments desc"
+) -> list:
 	filters.update({"featured": 1})
 	featured_courses = frappe.get_all(
 		"LMS Course",
 		filters=filters,
 		fields=fields,
 		or_filters=or_filters,
-		order_by="enrollments desc",
+		order_by=order_by,
 		page_length=page_length,
 	)
 	return featured_courses

@@ -77,6 +77,7 @@ declare module 'vue' {
     ExerciseWorkspaceSkeleton: typeof import('./src/components/ProgrammingExercises/ExerciseWorkspaceSkeleton.vue')['default']
     FeedbackBanner: typeof import('./src/components/Assessment/FeedbackBanner.vue')['default']
     FeedbackModal: typeof import('./src/components/Modals/FeedbackModal.vue')['default']
+    FilterSelect: typeof import('./src/components/Controls/FilterSelect.vue')['default']
     FlowIcon: typeof import('./src/components/Icons/FlowIcon.vue')['default']
     FormShell: typeof import('./src/components/FormShell.vue')['default']
     FrappeCloudIcon: typeof import('./src/components/Icons/FrappeCloudIcon.vue')['default']

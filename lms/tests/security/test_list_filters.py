@@ -213,6 +213,28 @@ class TestListFilters(BaseTestUtils):
 		self.assert_lists_course(self.student.name, {"enrolled": 1, "category": self.category})
 		self.assert_lists_course(self.instructor.name, {"created": 1, "category": self.category})
 
+	def test_the_course_list_filters_by_price_and_rating_and_sorts_by_a_listed_order(self):
+		other = self._make_course(f"Filters Another Course {self.hash}")
+		self.addCleanup(frappe.delete_doc, "LMS Course", other.name, force=True)
+		frappe.db.set_value("LMS Course", self.course.name, {"rating": "4.6", "paid_course": 0})
+		frappe.db.set_value("LMS Course", other.name, {"rating": "3.2", "paid_course": 1})
+		category = {"published": 1, "category": self.category}
+		for user in self.callers():
+			with self.subTest(user=user):
+				self.assert_lists_course(user, {**category, "paid_course": 0})
+				self.assert_lists_course(user, {**category, "rating": [">=", "4"]})
+				for order_by, names in {
+					"title asc": [other.name, self.course.name],
+					"rating desc": [self.course.name, other.name],
+				}.items():
+					courses = self.as_user(user, get_courses, filters=category.copy(), order_by=order_by)
+					self.assertEqual([course.name for course in courses], names)
+				# Any other sort falls back to the default rather than reaching the query.
+				courses = self.as_user(
+					user, get_courses, filters=category.copy(), order_by="rating desc, (select 1)"
+				)
+				self.assertCountEqual([course.name for course in courses], [self.course.name, other.name])
+
 	def test_the_batch_list_filters_still_work(self):
 		today = nowdate()
 		shapes = {
