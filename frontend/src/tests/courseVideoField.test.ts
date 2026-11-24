@@ -3,8 +3,10 @@ import { mount } from '@vue/test-utils'
 
 vi.mock('frappe-ui', () => ({
 	Button: {
+		name: 'Button',
+		props: ['label', 'route'],
 		emits: ['click'],
-		template: '<button @click="$emit(\'click\')"><slot /></button>',
+		template: '<button @click="$emit(\'click\')">{{ label }}<slot /></button>',
 	},
 }))
 vi.mock('@/components/VideoPreview.vue', () => ({
@@ -58,5 +60,16 @@ describe('the course video field', () => {
 		expect(wrapper.get('[data-testid="video-button"]').text()).toBe(
 			'Change video'
 		)
+	})
+
+	it('points to the thumbnail in Settings, where it is edited', () => {
+		const wrapper = mountField({})
+		const edit = wrapper
+			.findAllComponents({ name: 'Button' })
+			.find((button) => button.props('label') === 'Edit thumbnail')
+		expect(edit!.props('route')).toEqual({
+			hash: '#settings',
+			query: { section: 'thumbnail' },
+		})
 	})
 })

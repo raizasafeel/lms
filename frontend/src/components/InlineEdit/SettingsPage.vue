@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, provide, ref, shallowRef } from 'vue'
+import { nextTick, onBeforeUnmount, provide, ref, shallowRef } from 'vue'
 import SettingsSectionNav from '@/components/InlineEdit/SettingsSectionNav.vue'
 import { useFlowDocked } from '@/composables/useFlowDocked'
 import {
@@ -43,6 +43,10 @@ import {
 /** A settings tab: its sections in one column, a nav of them beside it from lg. */
 // With Flow docked beside the app, one more panel is too many.
 const flowDocked = useFlowDocked()
+const props = defineProps<{
+	/** The `name` of a section to open the page on, as a link asked. */
+	openSection?: string | null
+}>()
 const sections = shallowRef<SettingsSection[]>([])
 const active = ref<string | null>(null)
 const inView = new Set<string>()
@@ -88,6 +92,9 @@ provide(SETTINGS_SECTIONS, {
 		sections.value = inPageOrder([...sections.value, section])
 		active.value ??= sections.value[0].id
 		observer?.observe(section.element)
+		if (section.name && section.name === props.openSection) {
+			nextTick(() => goTo(section))
+		}
 	},
 	unregister(id) {
 		const section = sections.value.find((current) => current.id === id)

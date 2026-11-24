@@ -1,9 +1,13 @@
 <template>
 	<SkeletonLoader v-if="!form.resource.doc" variant="form" class="flex-1" />
-	<SettingsPage v-else>
+	<SettingsPage v-else :openSection="openSection">
 		<CoursePublishSettings />
 
-		<SettingsGroup :title="__('Thumbnail')" icon="lucide-image">
+		<SettingsGroup
+			:title="__('Thumbnail')"
+			icon="lucide-image"
+			name="thumbnail"
+		>
 			<CourseThumbnailPicker
 				:image="form.resource.doc.image"
 				:tint="form.resource.doc.card_gradient"
@@ -82,6 +86,7 @@
 
 <script setup lang="ts">
 import { computed, inject } from 'vue'
+import { useRoute } from 'vue-router'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import CourseThumbnailPicker from '@/components/InlineEdit/CourseThumbnailPicker.vue'
 import SettingAction from '@/components/InlineEdit/SettingAction.vue'
@@ -103,6 +108,9 @@ import type { LMSCourse } from '@/types/lms/LMSCourse'
 defineProps<{ course: Resource<CourseDetails | null> }>()
 
 const form = inject<CourseFormContext>('courseForm')!
+const route = useRoute()
+// ?section=thumbnail, from the overview card's Edit thumbnail, opens there.
+const openSection = computed(() => route.query.section as string | undefined)
 const actions = inject(COURSE_ACTIONS, null)
 const user = inject<SessionUser>('$user')!
 

@@ -4,6 +4,7 @@ export interface SettingsSection {
 	id: string
 	title: string
 	icon?: string
+	name?: string
 	element: HTMLElement
 }
 

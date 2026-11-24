@@ -16,9 +16,11 @@ const props = defineProps<{
 	title: string
 	/** Its icon in the page's section nav. */
 	icon?: string
+	/** A stable name a link can point at with `?section=`. */
+	name?: string
 }>()
 
-const id = useId()
+const id = props.name ? `settings-${props.name}` : useId()
 const section = useTemplateRef<HTMLElement>('section')
 const sections = inject(SETTINGS_SECTIONS, null)
 
@@ -27,6 +29,7 @@ onMounted(() =>
 		id,
 		title: props.title,
 		icon: props.icon,
+		name: props.name,
 		element: section.value!,
 	})
 )

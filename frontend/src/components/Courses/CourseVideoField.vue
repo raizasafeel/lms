@@ -26,9 +26,17 @@
 			/>
 		</div>
 		<div
-			class="absolute end-2 top-2 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+			class="absolute end-2 top-2 flex items-center gap-1.5 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
 			:class="videoLink ? 'opacity-100' : 'opacity-0'"
 		>
+			<!-- The thumbnail is edited in Settings; this points the way there. -->
+			<Button
+				size="sm"
+				icon-left="lucide-image"
+				:label="__('Edit thumbnail')"
+				:route="{ hash: '#settings', query: { section: 'thumbnail' } }"
+				data-testid="edit-thumbnail"
+			/>
 			<Button
 				size="sm"
 				:tooltip="__('Preview video')"

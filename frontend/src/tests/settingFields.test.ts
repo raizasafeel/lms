@@ -129,19 +129,19 @@ describe('the search preview', () => {
 })
 
 describe('the settings page section nav', () => {
-	const mountPage = (showLast = true) =>
+	const mountPage = (showLast = true, openSection?: string) =>
 		mount(
 			{
 				components: { SettingsPage, SettingsGroup },
-				props: ['showLast'],
+				props: ['showLast', 'openSection'],
 				template: `
-					<SettingsPage>
+					<SettingsPage :openSection="openSection">
 						<SettingsGroup title="Access" icon="lucide-door-open" />
-						<SettingsGroup title="Thumbnail" icon="lucide-image" />
+						<SettingsGroup title="Thumbnail" icon="lucide-image" name="thumbnail" />
 						<SettingsGroup v-if="showLast" title="Manage" />
 					</SettingsPage>`,
 			},
-			{ props: { showLast }, global, attachTo: document.body }
+			{ props: { showLast, openSection }, global, attachTo: document.body }
 		)
 
 	it('lists every section in page order with its icon, the first marked', async () => {
@@ -211,6 +211,18 @@ describe('the settings page section nav', () => {
 		expect(scrollIntoView).not.toHaveBeenCalled()
 		wrapper.unmount()
 		scroller.remove()
+	})
+
+	it('opens on the section a link names', async () => {
+		const scrollIntoView = vi.fn()
+		Element.prototype.scrollIntoView = scrollIntoView
+		const wrapper = mountPage(true, 'thumbnail')
+		await flushPromises()
+		expect(scrollIntoView).toHaveBeenCalledTimes(1)
+		expect(wrapper.findAll('nav button')[1].attributes('aria-current')).toBe(
+			'location'
+		)
+		wrapper.unmount()
 	})
 
 	it('drops a section that goes away', async () => {
