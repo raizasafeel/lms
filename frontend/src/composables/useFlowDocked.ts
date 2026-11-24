@@ -4,12 +4,15 @@ import type { Ref } from 'vue'
 const docked = ref<boolean>(false)
 let watching = false
 
-/** Flow docks its panel by giving <html> a right margin; the window keeps its width. */
+/**
+ * Flow docks its panel by setting `--flow-dock-width` on <html>, which drives a
+ * right margin; the window keeps its width. The margin animates in, so it reads
+ * 0 when the attribute changes: the variable is the signal, the margin a fallback.
+ */
 function readDocked(): void {
-	const margin = parseFloat(
-		getComputedStyle(document.documentElement).marginRight
-	)
-	docked.value = margin > 0
+	const style = getComputedStyle(document.documentElement)
+	const dockWidth = parseFloat(style.getPropertyValue('--flow-dock-width'))
+	docked.value = dockWidth > 0 || parseFloat(style.marginRight) > 0
 }
 
 function startWatching(): void {
@@ -21,6 +24,7 @@ function startWatching(): void {
 		attributeFilter: ['style', 'class'],
 	})
 	window.addEventListener('resize', readDocked)
+	document.documentElement.addEventListener('transitionend', readDocked)
 }
 
 /** Whether Flow's panel is docked beside the app, shared by every caller. */

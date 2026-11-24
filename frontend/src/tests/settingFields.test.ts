@@ -178,13 +178,35 @@ describe('the settings page section nav', () => {
 	it('hides the section panel while Flow is docked beside the app', async () => {
 		const wrapper = mountPage()
 		await flushPromises()
-		document.documentElement.style.marginRight = '400px'
+		// Flow sets its dock width first; the margin it drives animates in later.
+		document.documentElement.style.setProperty('--flow-dock-width', '420px')
 		await flushPromises()
 		expect(wrapper.find('nav').exists()).toBe(false)
-		document.documentElement.style.marginRight = ''
+		document.documentElement.style.removeProperty('--flow-dock-width')
 		await flushPromises()
 		expect(wrapper.find('nav').exists()).toBe(true)
 		wrapper.unmount()
+	})
+
+	it('takes the first section to the very top of the page', async () => {
+		const scrollIntoView = vi.fn()
+		Element.prototype.scrollIntoView = scrollIntoView
+		const scroller = document.createElement('main')
+		scroller.style.overflowY = 'auto'
+		scroller.scrollTo = vi.fn()
+		document.body.appendChild(scroller)
+		const wrapper = mountPage()
+		const page = wrapper.element as HTMLElement
+		scroller.appendChild(page)
+		await flushPromises()
+		await wrapper.findAll('nav button')[0].trigger('click')
+		expect(scroller.scrollTo).toHaveBeenCalledWith({
+			top: 0,
+			behavior: 'smooth',
+		})
+		expect(scrollIntoView).not.toHaveBeenCalled()
+		wrapper.unmount()
+		scroller.remove()
 	})
 
 	it('drops a section that goes away', async () => {

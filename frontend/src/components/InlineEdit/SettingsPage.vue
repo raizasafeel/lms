@@ -56,7 +56,20 @@ function onIntersect(entries: IntersectionObserverEntry[]): void {
 
 function goTo(section: SettingsSection): void {
 	active.value = section.id
+	// The first section goes to the very top, tabs and all, as on arrival.
+	if (section.id === sections.value[0]?.id) {
+		scrollParent(section.element)?.scrollTo({ top: 0, behavior: 'smooth' })
+		return
+	}
 	section.element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function scrollParent(element: HTMLElement): HTMLElement | null {
+	let node = element.parentElement
+	while (node && !/(auto|scroll)/.test(getComputedStyle(node).overflowY)) {
+		node = node.parentElement
+	}
+	return node
 }
 
 provide(SETTINGS_SECTIONS, {
