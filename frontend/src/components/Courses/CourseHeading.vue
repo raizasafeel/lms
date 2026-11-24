@@ -17,7 +17,7 @@
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-ink-gray-7">
 			<CategoryField
 				v-if="doc"
-				class="-ms-2"
+				class="-mx-2"
 				v-model="doc.category"
 				@update:modelValue="markDirty?.()"
 			/>
@@ -47,7 +47,7 @@
 				<span
 					v-if="hasCategory || hasRating"
 					aria-hidden="true"
-					class="lucide-dot size-5 shrink-0"
+					class="lucide-dot size-5 shrink-0 me-1.5"
 				/>
 				<span class="lucide-users-round size-4" />
 				<span>
@@ -63,6 +63,7 @@
 				<InstructorsField
 					v-model="form.instructors.value"
 					memberRole="course_creator"
+					class="-mx-2"
 					:missing="isMissing?.('instructors')"
 					@update:modelValue="markDirty?.()"
 				/>

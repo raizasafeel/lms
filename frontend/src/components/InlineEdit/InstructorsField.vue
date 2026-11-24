@@ -10,6 +10,7 @@
 		:placeholder="__('Add instructors')"
 		:aria-label="__('Instructors')"
 		variant="ghost"
+		v-bind="$attrs"
 		class="rounded-4"
 		:class="missingRing(missing)"
 		:onCreate="openMemberModal"
@@ -76,6 +77,7 @@ interface UserHit {
  * Instructors as avatars and a name summary, picked in place. `memberRole`
  * is the role a member created from the picker starts with.
  */
+defineOptions({ inheritAttrs: false })
 defineProps<{
 	memberRole: 'course_creator' | 'batch_evaluator'
 	missing?: boolean

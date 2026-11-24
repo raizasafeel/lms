@@ -14,7 +14,7 @@
 		</h1>
 
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-ink-gray-7">
-			<CategoryField v-if="doc" v-model="doc.category" class="-ms-2" />
+			<CategoryField v-if="doc" v-model="doc.category" class="-mx-2" />
 			<span
 				v-else-if="batch.category"
 				class="flex items-center gap-1.5 font-medium"
@@ -30,6 +30,7 @@
 				v-if="doc && form && batch.can_change_instructors"
 				v-model="form.instructors.value"
 				memberRole="batch_evaluator"
+				class="-mx-2"
 				:missing="form.isMissing('instructors')"
 			/>
 			<div v-else-if="batch.instructors?.length" class="flex items-center">
