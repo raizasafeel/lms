@@ -6,20 +6,22 @@
 		:class="
 			flowDocked
 				? '@4xl:grid-cols-[minmax(0,1fr)_0rem] gap-x-0'
-				: '@4xl:grid-cols-[minmax(0,1fr)_16rem] gap-x-12'
+				: '@4xl:grid-cols-[minmax(0,1fr)_17.5rem] gap-x-6'
 		"
 	>
 		<div class="min-w-0 space-y-10">
 			<slot />
 		</div>
+		<!-- Runs the full height so its rule divides the fields from the nav;
+		     the nav inside stays in view. -->
 		<aside
-			class="hidden overflow-hidden transition-[opacity,transform] duration-200 ease-out @4xl:sticky @4xl:top-[calc(var(--header-frame-h)+1.25rem)] @4xl:block"
+			class="-my-8 hidden self-stretch overflow-x-clip border-s border-outline-gray-2 py-8 ps-6 transition-[opacity,transform] duration-200 ease-out @4xl:block"
 			:class="flowDocked ? 'pointer-events-none translate-x-4 opacity-0' : ''"
 			:inert="flowDocked || undefined"
 			data-testid="settings-sections"
 		>
 			<SettingsSectionNav
-				class="w-64"
+				class="sticky top-[calc(var(--header-frame-h)+1.25rem)] w-64"
 				:sections="sections"
 				:active="active"
 				@select="goTo"
