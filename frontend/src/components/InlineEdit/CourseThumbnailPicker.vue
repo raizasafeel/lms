@@ -3,26 +3,24 @@
 		<div class="flex flex-col gap-5 @lg:flex-row">
 			<div class="flex shrink-0 flex-col gap-2 @lg:w-56">
 				<div class="relative">
-					<ImageHoverUpload v-model:image="image" class="rounded-4">
-						<div
-							class="grid aspect-video w-full place-items-center overflow-hidden rounded-4 border border-outline-gray-1"
-							:class="image ? 'bg-surface-gray-2' : courseTint(tint)"
-							data-testid="thumbnail-preview"
-						>
-							<img
-								v-if="image"
-								:src="safeUrl(image)"
-								alt=""
-								class="size-full object-cover"
-							/>
-							<span
-								v-else
-								class="size-10 stroke-[1.5]"
-								:class="courseIcon(icon)"
-								aria-hidden="true"
-							/>
-						</div>
-					</ImageHoverUpload>
+					<div
+						class="grid aspect-video w-full place-items-center overflow-hidden rounded-4 border border-outline-gray-1"
+						:class="image ? 'bg-surface-gray-2' : courseTint(tint)"
+						data-testid="thumbnail-preview"
+					>
+						<img
+							v-if="image"
+							:src="safeUrl(image)"
+							alt=""
+							class="size-full object-cover"
+						/>
+						<span
+							v-else
+							class="size-10 stroke-[1.5]"
+							:class="courseIcon(icon)"
+							aria-hidden="true"
+						/>
+					</div>
 					<Tooltip
 						v-if="image"
 						:text="
@@ -82,7 +80,7 @@
 					>
 						<span
 							v-if="isPicked(color)"
-							class="size-2 rounded-full bg-surface-base shadow-sm"
+							class="size-2 rounded-full bg-surface-base"
 							aria-hidden="true"
 						/>
 					</button>
@@ -104,7 +102,6 @@
 import { useTemplateRef } from 'vue'
 import { Button, Tooltip } from 'frappe-ui'
 import CourseIconPicker from '@/components/InlineEdit/CourseIconPicker.vue'
-import ImageHoverUpload from '@/components/InlineEdit/ImageHoverUpload.vue'
 import { IMAGE_ACCEPT, useImageUpload } from '@/composables/useImageUpload'
 import { courseColor, courseIcon, shuffleThumbnail } from '@/utils/courseIcons'
 import { COURSE_SWATCHES, courseTint } from '@/utils/courseTints'
