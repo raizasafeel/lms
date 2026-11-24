@@ -213,3 +213,13 @@ main#main-content {
 		border-left-width: 1px;
 	}
 }
+
+/* With Flow docked, a dialog centres in the page beside the panel and leaves
+   the panel uncovered. A modal turns the body's pointer events off, which the
+   panel inherits; it stays usable beside the dialog (see flowBesideDialogs). */
+html[data-flow-docked] :is(.dialog-overlay, .dialog-scroll-container) {
+	right: var(--flow-dock-width);
+}
+html[data-flow-docked] flow-launcher {
+	pointer-events: auto;
+}
