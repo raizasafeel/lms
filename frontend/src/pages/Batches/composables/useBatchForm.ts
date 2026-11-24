@@ -11,7 +11,6 @@ import {
 	watch,
 } from 'vue'
 import type { ComputedRef, InjectionKey, Ref } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import {
 	joinFieldLabels,
 	missingBatchFields,
@@ -232,15 +231,6 @@ export function useBatchForm(
 		}).catch((error: FrappeResourceError) => reportAutosaveError(error))
 	}
 
-	// A burst of edits collapses into one save. Gaps skip it quietly: the
-	// "Not saved" badge stays and Save names what is missing.
-	const autoSave = useDebounceFn((): void => {
-		if (!isDirty.value || missingFields.value.length) return
-		updateBatch({ silent: true })
-	}, 1000)
-
-	watch([currentState, isMetaDirty], () => isDirty.value && autoSave())
-
 	const isSaving = computed<boolean>(() =>
 		Boolean(resource.value.setValue.loading)
 	)
@@ -256,7 +246,7 @@ export function useBatchForm(
 		return fields
 	}
 
-	function updateBatch(options: { silent?: boolean } = {}): void {
+	function updateBatch(): void {
 		if (!doc.value) return
 		const metaChanged = isMetaDirty.value
 		submitResource<LMSBatch>(resource.value.setValue, payload(), {
@@ -265,11 +255,11 @@ export function useBatchForm(
 					saveMeta(saved.name)
 					savedMeta.value = JSON.stringify(meta)
 				}
-				if (!options.silent) toast.success(__('Batch saved'))
+				toast.success(__('Batch saved'))
 				batch.reload()
 			},
 			onError(error: FrappeResourceError) {
-				reportAutosaveError(error, options.silent)
+				reportAutosaveError(error)
 			},
 		})
 	}

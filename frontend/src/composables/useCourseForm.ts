@@ -2,7 +2,6 @@ import { createDocumentResource, toast } from 'frappe-ui'
 import type { FrappeResourceError } from 'frappe-ui'
 import { computed, nextTick, provide, reactive, ref, watch } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { getMetaInfo, updateMetaInfo } from '@/utils'
 import { joinLabels, missingCourseFields } from '@/utils/courseForm'
 import type { MissingField } from '@/utils/courseForm'
@@ -100,17 +99,9 @@ export function useCourseForm(
 		}
 	}
 
-	// A burst of edits collapses into one save. Gaps skip it quietly: the
-	// "Not saved" badge stays and Save names what is missing.
-	const autoSave = useDebounceFn((): void => {
-		if (!isDirty.value || missingFields.value.length) return
-		updateCourse({ silent: true })
-	}, 1000)
-
 	function markDirty(): void {
 		if (applyingServerData) return
 		isDirty.value = true
-		autoSave()
 	}
 
 	function submitCourse(): void {
@@ -130,7 +121,7 @@ export function useCourseForm(
 
 	// Whole-doc last-write-wins: a stale `modified` would trip Frappe's
 	// timestamp guard after a publish toggle or lesson autosave.
-	function updateCourse(options: { silent?: boolean } = {}): void {
+	function updateCourse(): void {
 		const fields: Record<string, unknown> = { ...resource.doc }
 		delete fields.modified
 		resource.setValue.submit(
@@ -142,13 +133,13 @@ export function useCourseForm(
 			{
 				onSuccess() {
 					updateMetaInfo('courses', resource.doc?.name, meta)
-					if (!options.silent) toast.success(__('Course updated successfully'))
+					toast.success(__('Course updated successfully'))
 					isDirty.value = false
 					resource.reload()
 					course.reload()
 				},
 				onError(error: FrappeResourceError) {
-					reportAutosaveError(error, options.silent)
+					reportAutosaveError(error)
 				},
 			}
 		)

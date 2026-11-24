@@ -123,11 +123,14 @@ describe('the batch inline form', () => {
 		expect(values).not.toHaveProperty('modified')
 	})
 
-	it('autosaves a complete batch after a pause', async () => {
+	it('waits for Save instead of saving edits on its own', async () => {
 		const form = await mountForm()
 		form.doc.value!.title = 'Summer batch'
 		await flushPromises()
-		vi.advanceTimersByTime(1000)
+		vi.advanceTimersByTime(5000)
+		expect(state.resource.setValue.submit).not.toHaveBeenCalled()
+		expect(form.isDirty.value).toBe(true)
+		form.submitBatch()
 		expect(state.resource.setValue.submit).toHaveBeenCalledTimes(1)
 	})
 })
