@@ -12,6 +12,7 @@ from frappe.utils import cint, comma_and, escape_html, flt, today
 
 from lms.lms.doctype.course_lesson.course_lesson import get_valid_question_count
 from lms.lms.doctype.lms_certificate.lms_certificate import is_certificate_template
+from lms.lms.people import PeopleTable
 
 from ...utils import (
 	generate_slug,
@@ -48,6 +49,7 @@ class LMSCourse(Document):
 		self.validate_published()
 		self.warn_quizzes_without_questions()
 		self.validate_instructors()
+		PeopleTable(self).sync()
 		self.validate_duplicate_instructors()
 		self.validate_video_link()
 		self.validate_status()

@@ -12,6 +12,7 @@
   "tags",
   "column_break_3",
   "instructors",
+  "people",
   "category",
   "status",
   "column_break_htgn",
@@ -47,6 +48,8 @@
   "column_break_sflq",
   "evaluator",
   "timezone",
+  "evaluation_format",
+  "evaluation_duration",
   "tab_4_tab",
   "statistics_section",
   "enrollments",
@@ -319,6 +322,28 @@
    "fieldtype": "Check",
    "label": "Notification Sent",
    "read_only": 1
+  },
+  {
+   "description": "Editors, graders and live class conductors. Editors are mirrored into Instructors, graders into the evaluator fields.",
+   "fieldname": "people",
+   "fieldtype": "Table",
+   "label": "People",
+   "options": "LMS Role Assignment"
+  },
+  {
+   "default": "Live call",
+   "description": "Review of submitted work is stored for now; only live calls can be booked.",
+   "fieldname": "evaluation_format",
+   "fieldtype": "Select",
+   "label": "Evaluation Format",
+   "options": "Live call\nReview of submitted work"
+  },
+  {
+   "default": "30",
+   "fieldname": "evaluation_duration",
+   "fieldtype": "Select",
+   "label": "Evaluation Length (Minutes)",
+   "options": "15\n30\n45\n60"
   }
  ],
  "is_published_field": "published",
@@ -337,7 +362,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-11-24 12:00:00.000000",
+ "modified": "2026-11-25 10:00:00.000000",
  "modified_by": "sayali@frappe.io",
  "module": "LMS",
  "name": "LMS Course",

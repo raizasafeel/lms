@@ -14,6 +14,7 @@ from frappe.query_builder import Bracket
 from frappe.utils import add_days, cint, format_datetime, get_time, getdate, nowdate
 from pypika.terms import LiteralValue
 
+from lms.lms.people import PeopleTable, people_changed
 from lms.lms.permissions import (
 	CONFERENCING_ACCOUNT_FIELDS,
 	administrable_assessment_names,
@@ -53,8 +54,9 @@ class LMSBatch(Document):
 		self.validate_batch_end_date()
 		self.validate_batch_time()
 		self.validate_duplicate_courses()
+		self.validate_people_changes()
+		PeopleTable(self).sync()
 		self.validate_duplicate_instructors()
-		self.validate_instructor_changes()
 		self.validate_payments_app()
 		self.validate_amount_and_currency()
 		self.validate_duplicate_assessments()
@@ -304,18 +306,16 @@ class LMSBatch(Document):
 					frappe.PermissionError,
 				)
 
-	def validate_instructor_changes(self):
-		"""An evaluator may edit the batch, but listing themselves as its instructor
-		would let them schedule its live classes."""
+	def validate_people_changes(self):
+		"""Only an editor, the owner or a Moderator changes who works on the batch;
+		listing yourself as an editor would hand you its live classes and settings."""
 		if self.is_new():
 			return
-		stored = frappe.get_all(
-			"Course Instructor", {"parent": self.name, "parenttype": "LMS Batch"}, pluck="instructor"
-		)
-		if set(stored) == {row.instructor for row in self.instructors}:
+		stored = self.get_doc_before_save()
+		if not stored or not people_changed(stored, self):
 			return
 		if not can_instruct_batch(self.name):
-			frappe.throw(_("Only the batch's instructors can change who teaches it."), frappe.PermissionError)
+			frappe.throw(_("Only the batch's editors can change its people."), frappe.PermissionError)
 
 	def on_payment_authorized(self, payment_status):
 		if payment_status in ["Authorized", "Completed"]:

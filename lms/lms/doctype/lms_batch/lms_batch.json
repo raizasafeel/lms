@@ -25,11 +25,14 @@
   "section_break_cssv",
   "evaluation",
   "evaluation_end_date",
+  "evaluation_format",
+  "evaluation_duration",
   "column_break_wfkz",
   "certification",
   "section_break_6",
   "description",
   "instructors",
+  "people",
   "column_break_hlqw",
   "batch_details",
   "section_break_rgfj",
@@ -415,6 +418,28 @@
   {
    "fieldname": "column_break_uamg",
    "fieldtype": "Column Break"
+  },
+  {
+   "description": "Editors, graders and live class conductors. Editors are mirrored into Instructors, graders into the evaluator fields.",
+   "fieldname": "people",
+   "fieldtype": "Table",
+   "label": "People",
+   "options": "LMS Role Assignment"
+  },
+  {
+   "default": "Live call",
+   "description": "Review of submitted work is stored for now; only live calls can be booked.",
+   "fieldname": "evaluation_format",
+   "fieldtype": "Select",
+   "label": "Evaluation Format",
+   "options": "Live call\nReview of submitted work"
+  },
+  {
+   "default": "30",
+   "fieldname": "evaluation_duration",
+   "fieldtype": "Select",
+   "label": "Evaluation Length (Minutes)",
+   "options": "15\n30\n45\n60"
   }
  ],
  "grid_page_length": 50,
@@ -437,7 +462,7 @@
    "link_fieldname": "payment_for_document"
   }
  ],
- "modified": "2026-10-01 00:00:00.000000",
+ "modified": "2026-11-25 10:00:00.000000",
  "modified_by": "sayali@frappe.io",
  "module": "LMS",
  "name": "LMS Batch",
