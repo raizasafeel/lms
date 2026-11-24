@@ -290,7 +290,7 @@ const MANIFEST: Record<string, Privacy[]> = {
 	'components/Controls/Uploader.vue': ['public'],
 	// The brand logo and the favicon, rendered on /login for Guest.
 	'components/Settings/BrandSettings.vue': ['public', 'public'],
-	'components/Controls/VideoPreviewField.vue': ['public', 'public'],
+	'components/Controls/VideoPreviewField.vue': ['public'],
 	'components/Modals/EditCoverImage.vue': ['public'],
 	'components/UnsplashImageBrowser.vue': ['public'],
 	// A batch's share image; shown on link previews, so it must be public.
