@@ -105,17 +105,22 @@ const ordered = computed(() => [
 	...Object.keys(tags.value).filter((name) => !first.includes(name)),
 ])
 
-function matches(name: string, term: string): boolean {
-	return (
-		name.replace(/-/g, ' ').includes(term) ||
-		(tags.value[name] || []).some((tag) => tag.includes(term))
-	)
+/** Every typed word starts a word of the icon's name or keywords. */
+function matches(name: string, terms: string[]): boolean {
+	const words = [name, ...(tags.value[name] || [])]
+		.join(' ')
+		.toLowerCase()
+		.split(/[\s-]+/)
+	return terms.every((term) => words.some((word) => word.startsWith(term)))
 }
 
 const results = computed(() => {
-	const term = query.value.trim().toLowerCase().replace(/-/g, ' ')
-	if (!term) return ordered.value
-	return ordered.value.filter((name) => matches(name, term))
+	const terms = query.value
+		.toLowerCase()
+		.split(/[\s-]+/)
+		.filter(Boolean)
+	if (!terms.length) return ordered.value
+	return ordered.value.filter((name) => matches(name, terms))
 })
 
 const visible = computed(() => results.value.slice(0, limit.value))

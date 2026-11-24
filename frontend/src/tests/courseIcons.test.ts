@@ -136,12 +136,15 @@ describe('the course icon picker', () => {
 		).toBe('true')
 	})
 
-	it('searches every lucide icon by name and keyword', async () => {
+	it('searches every lucide icon by the start of a name or keyword word', async () => {
 		const wrapper = await mountIconPicker()
 		await wrapper.get('input').setValue('piggy')
 		expect(labels(wrapper)).toContain('piggy bank')
 		await wrapper.get('input').setValue('savings')
 		expect(labels(wrapper)).toContain('piggy bank')
+		await wrapper.get('input').setValue('pen')
+		expect(labels(wrapper)).toContain('clipboard pen')
+		expect(labels(wrapper)).not.toContain('book open')
 		await wrapper.get('input').setValue('zzzz')
 		expect(wrapper.findAll('button')).toHaveLength(0)
 		expect(wrapper.text()).toContain('No icons match')
