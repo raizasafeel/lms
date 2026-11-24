@@ -477,7 +477,7 @@ def _course_reviews(course: str) -> list:
 	reviews = frappe.get_all(
 		"LMS Course Review",
 		{"course": course},
-		["review", "rating", "owner", "creation"],
+		["name", "review", "rating", "owner", "creation"],
 		order_by="creation desc",
 	)
 

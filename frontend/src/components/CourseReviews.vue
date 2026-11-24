@@ -8,12 +8,12 @@
 				{{ __('Reviews') }}
 			</h2>
 			<Button
-				v-if="membership && (ownReview || canCreateReview)"
-				:iconLeft="ownReview ? 'lucide-pencil' : 'lucide-star'"
+				v-if="membership && !ownReview && canCreateReview"
+				iconLeft="lucide-star"
 				data-testid="write-review"
 				@click="showReviewModal = true"
 			>
-				{{ ownReview ? __('Edit your review') : __('Write a Review') }}
+				{{ __('Write a Review') }}
 			</Button>
 		</div>
 
@@ -44,8 +44,19 @@
 			<article
 				v-for="review in visibleReviews"
 				:key="review.name"
-				class="flex flex-col gap-3 rounded-6 border border-outline-gray-2 p-5"
+				class="group relative flex flex-col gap-2.5 rounded-6 border border-outline-gray-2 p-4"
 			>
+				<Button
+					v-if="review.name === ownReview?.name"
+					icon="lucide-pencil"
+					variant="ghost"
+					size="sm"
+					:label="__('Edit your review')"
+					:tooltip="__('Edit your review')"
+					class="absolute end-2 top-2 opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+					data-testid="edit-review"
+					@click="showReviewModal = true"
+				/>
 				<ReviewStars :rating="review.rating" />
 				<div v-if="review.review" class="flex-1">
 					<p
@@ -178,7 +189,8 @@ const matchingReviews = computed(() => {
 	// back null for guest-authored or deleted-user reviews, and the row
 	// markup dereferences it for the avatar / profile link.
 	const all = (reviews.data || []).filter((r) => r.owner_details)
-	return all.filter(
+	const own = all.filter((r) => r.name === ownReview.value?.name)
+	return [...own, ...all.filter((r) => !own.includes(r))].filter(
 		(r) => !starFilter.value || starBucket(r.rating) === starFilter.value
 	)
 })

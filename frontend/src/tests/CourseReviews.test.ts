@@ -241,11 +241,13 @@ describe('CourseReviews summary and editing', () => {
 		expect(wrapper.findAll('article')).toHaveLength(4)
 	})
 
-	it("offers to edit the member's own review instead of writing another", async () => {
-		ownReviews = [{ name: 'REV-1', rating: 0.8 }]
+	it("puts the member's own review first, with its edit button", async () => {
+		ownReviews = [{ name: 'r-2-months', rating: 0.4 }]
 		const wrapper = mountReviews({ membership })
 		await flushPromises()
-		expect(wrapper.text()).toContain('Edit your review')
+		const first = wrapper.findAll('article')[0]
+		expect(first.find('[data-testid="edit-review"]').exists()).toBe(true)
+		expect(wrapper.findAll('[data-testid="edit-review"]')).toHaveLength(1)
 		expect(wrapper.text()).not.toContain('Write a Review')
 	})
 })
