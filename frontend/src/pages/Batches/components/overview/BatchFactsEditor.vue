@@ -1,5 +1,5 @@
 <template>
-	<div class="space-y-2.5 text-p-base text-ink-gray-8">
+	<div class="-mx-2 space-y-[3px] text-p-base text-ink-gray-8">
 		<DateRangePicker
 			v-model="dates"
 			variant="ghost"
@@ -56,7 +56,11 @@
 				</template>
 			</Select>
 		</div>
-		<div class="grid grid-cols-2 items-center gap-2">
+		<div v-if="courseCount" class="flex h-7 items-center gap-2.5 px-2">
+			<span class="lucide-book-open size-4 shrink-0 text-ink-gray-5" />
+			{{ courseLabel }}
+		</div>
+		<div class="flex items-center gap-1">
 			<FormControl
 				:modelValue="doc.seat_count || ''"
 				type="number"
@@ -64,6 +68,7 @@
 				variant="ghost"
 				placeholder="–"
 				:aria-label="__('Seat count')"
+				class="w-20"
 				@update:modelValue="
 					(value: string) => (doc.seat_count = Number(value) || 0)
 				"
@@ -72,20 +77,16 @@
 					<span class="lucide-armchair size-4 text-ink-gray-5" />
 				</template>
 			</FormControl>
-			<span class="ps-2 text-ink-gray-6">{{ seatsLabel }}</span>
+			<span class="text-ink-gray-6">{{ seatsLabel }}</span>
 		</div>
-		<BatchSwitchFact
-			v-model="doc.certification"
-			icon="lucide-badge-check"
-			:on="__('Certificate')"
-			:off="__('No certificate')"
-		/>
-		<BatchSwitchFact
-			v-model="doc.evaluation"
-			icon="lucide-user-check"
-			:on="__('1-on-1 evaluation')"
-			:off="__('No evaluation')"
-		/>
+		<div v-if="doc.certification" class="flex h-7 items-center gap-2.5 px-2">
+			<span class="lucide-badge-check size-4 shrink-0 text-ink-gray-5" />
+			{{ __('Certificate') }}
+		</div>
+		<div v-if="doc.evaluation" class="flex h-7 items-center gap-2.5 px-2">
+			<span class="lucide-user-check size-4 shrink-0 text-ink-gray-5" />
+			{{ __('1-on-1 evaluation') }}
+		</div>
 	</div>
 </template>
 
@@ -100,14 +101,17 @@ import {
 } from 'frappe-ui'
 import { missingRing } from '@/components/InlineEdit/fieldClasses'
 import TimeRangeField from '@/components/InlineEdit/TimeRangeField.vue'
-import BatchSwitchFact from '@/pages/Batches/components/overview/BatchSwitchFact.vue'
 import type { BatchForm } from '@/pages/Batches/composables/useBatchForm'
 import type { LMSBatch } from '@/types/lms/LMSBatch'
 
-/** The enrol card's facts as inline fields. */
+/**
+ * The enrol card's facts in BatchFacts' order and pitch, editable in place.
+ * Certificate and evaluation are switched in Settings, so they read as facts.
+ */
 const props = defineProps<{
 	doc: LMSBatch
 	form: BatchForm
+	courseCount?: number
 }>()
 
 const ring = (key: string) => missingRing(props.form.isMissing(key))
@@ -128,6 +132,12 @@ const mediumOptions = computed(() => [
 	},
 	{ label: __('In person'), value: 'Offline' },
 ])
+
+const courseLabel = computed<string>(() =>
+	props.courseCount === 1
+		? __('1 course')
+		: __('{0} courses').format(props.courseCount)
+)
 
 const seatsLabel = computed<string>(() =>
 	props.doc.seat_count ? __('seats') : __('No seat limit')

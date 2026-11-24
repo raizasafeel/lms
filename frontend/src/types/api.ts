@@ -85,6 +85,8 @@ export interface BatchDetails extends Omit<LMSBatch, 'instructors'> {
 	instructors: string[]
 	student_count?: number
 	is_student?: boolean
+	/** False once the batch has started and takes no more enrolments. */
+	accept_enrollments?: boolean
 	batch_details_raw?: string
 	/** A listed instructor of this batch, or a Moderator: the server refuses
 	 * instructor-list changes from anyone else, a tagged evaluator included. */

@@ -4,12 +4,20 @@
 			<div class="min-w-0 space-y-10 @4xl:w-[70%]">
 				<BatchHeading :batch="batch.data" :doc="doc" :form="form" />
 				<div class="w-full @4xl:hidden">
-					<BatchEnrollCardEditor v-if="doc" :doc="doc" :form="form!" />
+					<BatchEnrollCardEditor
+						v-if="doc"
+						:doc="doc"
+						:form="form!"
+						:courseCount="courseCount"
+						:enrollmentClosed="batch.data.accept_enrollments === false"
+						:enrollmentClosesOn="batch.data.enrollment_closes_on"
+					/>
 					<BatchOverlay v-else :batch="batch" />
 				</div>
 
 				<BatchCourseList
 					v-model:draft="draftCourses"
+					v-model:count="courseCount"
 					:batchName="batch.data.name"
 					:editable="Boolean(doc)"
 					:hideProgress="Boolean(doc)"
@@ -65,7 +73,14 @@
 			<aside
 				class="hidden w-full shrink-0 self-start sticky-below-header @4xl:block @4xl:w-[30%]"
 			>
-				<BatchEnrollCardEditor v-if="doc" :doc="doc" :form="form!" />
+				<BatchEnrollCardEditor
+					v-if="doc"
+					:doc="doc"
+					:form="form!"
+					:courseCount="courseCount"
+					:enrollmentClosed="batch.data.accept_enrollments === false"
+					:enrollmentClosesOn="batch.data.enrollment_closes_on"
+				/>
 				<BatchOverlay v-else :batch="batch" />
 			</aside>
 		</div>
@@ -73,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useId } from 'vue'
+import { computed, ref, useId } from 'vue'
 import RichTextField from '@/components/InlineEdit/RichTextField.vue'
 import BatchOverlay from '@/pages/Batches/components/BatchOverlay.vue'
 import BatchAssessmentList from '@/pages/Batches/components/overview/BatchAssessmentList.vue'
@@ -92,6 +107,7 @@ const props = defineProps<{ batch: Resource<BatchDetails> }>()
 const form = injectBatchForm()
 const isStudentView = useStudentView()
 const aboutHeadingId = useId()
+const courseCount = ref(0)
 
 const doc = computed(() =>
 	isStudentView.value ? null : form?.doc.value ?? null

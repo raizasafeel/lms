@@ -85,26 +85,30 @@ import BatchFactsEditor from '@/pages/Batches/components/overview/BatchFactsEdit
 const form = { isMissing: () => false }
 const options = { global: { mocks: { __: globalThis.__ } } }
 
-const mountCard = (doc: Record<string, unknown>) =>
+const mountCard = (doc: Record<string, unknown>, props = {}) =>
 	mount(BatchEnrollCardEditor, {
-		props: { doc, form } as never,
+		props: { doc, form, ...props } as never,
 		...options,
 	})
 
+// Learners read BatchOverlay: price, video, button, then This batch includes.
 describe('the batch enroll card editor', () => {
 	it('has no cover image field', () => {
-		const html = mountCard({}).html()
-		expect(html).not.toContain('ImageField')
-		expect(mountCard({}).text()).not.toContain('This batch includes')
+		expect(mountCard({}).html()).not.toContain('ImageField')
 	})
 
-	it('sets the preview video under the details, above the enroll button', async () => {
+	it('keeps the learner card order: price, button, then the facts', () => {
+		const text = mountCard({ paid_batch: 1 }).text()
+		expect(text.indexOf('Register Now')).toBeGreaterThan(-1)
+		expect(text.indexOf('Register Now')).toBeLessThan(
+			text.indexOf('This batch includes')
+		)
+	})
+
+	it('adds a video from the price row until there is one', async () => {
 		const doc: Record<string, unknown> = { meta_image: '/files/m.png' }
 		const card = mountCard(doc)
-		const text = card.text()
-		expect(text.indexOf('Add preview video')).toBeLessThan(
-			text.indexOf('Contact the Administrator')
-		)
+		expect(card.findComponent({ name: 'VideoPreview' }).exists()).toBe(false)
 		const dialog = card.findComponent({ name: 'VideoLinkDialog' })
 		const button = card
 			.findAll('button')
@@ -115,7 +119,7 @@ describe('the batch enroll card editor', () => {
 		expect(doc.video_link).toBe('https://youtu.be/x')
 	})
 
-	it('previews a set video with the meta image as its poster', () => {
+	it('previews a set video above the button, with its change control on it', () => {
 		const card = mountCard({
 			video_link: 'https://youtu.be/x',
 			meta_image: '/files/m.png',
@@ -126,26 +130,63 @@ describe('the batch enroll card editor', () => {
 			fallbackImage: '/files/m.png',
 		})
 		expect(card.text()).toContain('Change video')
+		expect(card.text()).not.toContain('Add preview video')
+		expect(card.text().indexOf('Change video')).toBeLessThan(
+			card.text().indexOf('Contact the Administrator')
+		)
 	})
 
-	it('names the formatted price on a paid batch', () => {
-		const card = mountCard({ paid_batch: 1, amount: 30000, currency: 'INR' })
-		expect(card.text()).toContain('Enroll for INR 30000')
-		expect(card.text()).not.toContain('Learners see this button.')
+	it('labels the button as learners see it', () => {
+		const paid = mountCard({ paid_batch: 1, amount: 30000, currency: 'INR' })
+		expect(paid.text()).toContain('Register Now')
+		expect(mountCard({ allow_self_enrollment: 1 }).text()).toContain(
+			'Enroll Now'
+		)
+		const contact = mountCard({}).text()
+		expect(contact).toContain('Contact the Administrator')
+		expect(contact).toContain('Self enrollment is off in Settings')
 	})
 
-	it('reads Enroll on a free self-enroll batch, else the contact message', () => {
-		expect(mountCard({ allow_self_enrollment: 1 }).text()).toContain('Enroll')
-		expect(mountCard({}).text()).toContain('Contact the Administrator')
+	it('names the late-enrolment deadline under the button, as learners see it', () => {
+		const card = mountCard(
+			{ paid_batch: 1 },
+			{ enrollmentClosesOn: '2026-12-15' }
+		)
+		expect(card.text()).toContain('Enrolment closes on 15 Dec')
+	})
+
+	it('shows the closed message once the saved batch takes no enrolments', () => {
+		const text = mountCard({ paid_batch: 1 }, { enrollmentClosed: true }).text()
+		expect(text).toContain('Enrollment for this batch is closed')
+		expect(text).not.toContain('Register Now')
+		expect(text).not.toContain('Self enrollment is off')
 	})
 })
 
 describe('the batch facts editor', () => {
-	const mountFacts = (doc: Record<string, unknown>) =>
+	const mountFacts = (doc: Record<string, unknown>, courseCount?: number) =>
 		mount(BatchFactsEditor, {
-			props: { doc, form } as never,
+			props: { doc, form, courseCount } as never,
 			...options,
 		})
+
+	it('lists certificate and evaluation as learners read them, only when on', () => {
+		const on = mountFacts({ certification: 1, evaluation: 1 })
+		expect(on.text()).toContain('Certificate')
+		expect(on.text()).toContain('1-on-1 evaluation')
+		expect(on.findComponent({ name: 'Switch' }).exists()).toBe(false)
+		const off = mountFacts({}).text()
+		expect(off).not.toContain('certificate')
+		expect(off).not.toContain('evaluation')
+	})
+
+	it('counts the courses between medium and seats, as learners see it', () => {
+		const text = mountFacts({ seat_count: 20 }, 3).text()
+		expect(text).toContain('3 courses')
+		expect(text.indexOf('3 courses')).toBeLessThan(text.indexOf('seats'))
+		expect(mountFacts({}, 1).text()).toContain('1 course')
+		expect(mountFacts({}, 0).text()).not.toContain('course')
+	})
 
 	it('draws every field as a ghost field', () => {
 		const facts = mountFacts({ evaluation: 1 })

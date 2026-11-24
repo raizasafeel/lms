@@ -228,6 +228,11 @@ describe('BatchCourseList add course', () => {
 		expect(pickerItems).toEqual({ exclude: ['C1'], category: 'ERPNext' })
 	})
 
+	it('reports how many courses it shows, for the enrol card', async () => {
+		const wrapper = await mountEditable()
+		expect(wrapper.emitted('update:count')?.at(-1)).toEqual([1])
+	})
+
 	it('offers no create footer', async () => {
 		expect((await openPicker()).props('createLabel')).toBeUndefined()
 	})

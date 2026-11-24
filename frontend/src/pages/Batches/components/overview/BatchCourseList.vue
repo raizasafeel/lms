@@ -132,6 +132,8 @@ const props = defineProps<{
 
 /** A new batch's courses, kept here until the batch is first saved. */
 const draft = defineModel<string[]>('draft')
+/** How many courses the list shows, for the enrol card's facts. */
+const count = defineModel<number>('count')
 
 const pickerOpen = ref<boolean>(false)
 
@@ -177,6 +179,12 @@ const cards = computed<BatchCourseCard[]>(() => {
 				} as BatchCourseCard)
 		)
 })
+
+watch(
+	() => cards.value.length,
+	(length) => (count.value = length),
+	{ immediate: true }
+)
 
 const courseCount = computed(() => {
 	const count = cards.value.length
