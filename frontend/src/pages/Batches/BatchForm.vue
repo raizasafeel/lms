@@ -66,6 +66,11 @@
 				:label="__('Meta keywords')"
 				:summary="__('Comma separated keywords for search engines.')"
 			/>
+			<SettingImage
+				v-model="doc.meta_image"
+				:label="__('Meta image')"
+				:summary="__('Shown when the batch link is shared.')"
+			/>
 			<SettingRow
 				:label="__('Meta preview')"
 				:summary="
@@ -79,11 +84,6 @@
 					:image="doc.meta_image"
 				/>
 			</SettingRow>
-			<SettingImage
-				v-model="doc.meta_image"
-				:label="__('Meta image')"
-				:summary="__('Shown when the batch link is shared.')"
-			/>
 		</SettingsGroup>
 
 		<BatchManageGroup :batch="batch" />
