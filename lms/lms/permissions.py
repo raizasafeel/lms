@@ -17,6 +17,7 @@ from pypika import Case
 from pypika import functions as fn
 from pypika.terms import LiteralValue
 
+from lms.lms.people import GRADER, LIVE_CLASS_CONDUCTOR, has_role
 from lms.lms.utils import (
 	can_modify_batch,
 	can_modify_course,
@@ -92,6 +93,9 @@ def course_has_permission(doc, ptype="read", user=None) -> bool:
 	if ptype in COURSE_READ_PTYPES:
 		return can_access_course(doc.name, user=user)
 
+	if ptype == "delete":
+		return owns("LMS Course", doc.name, user=user)
+
 	if can_author_course(doc.name, user=user):
 		return True
 
@@ -122,7 +126,12 @@ def _course_read_condition(user=None):
 		.where((instructor.instructor == member) & (instructor.parenttype == "LMS Course"))
 	)
 	enrolled = frappe.qb.from_(enrollment).select(enrollment.course).where(enrollment.member == member)
-	return Bracket((course.published == 1) | course.name.isin(taught) | course.name.isin(enrolled))
+	return Bracket(
+		(course.published == 1)
+		| (course.owner == member)
+		| course.name.isin(taught)
+		| course.name.isin(enrolled)
+	)
 
 
 def _render(condition) -> str:
@@ -172,23 +181,53 @@ def chapter_query_conditions(user=None) -> str:
 
 
 def can_author_batch(batch: str | None, *, user: str | None = None) -> bool:
-	"""A site administrator, a Moderator, or a user the stored batch tags as an
-	instructor or as the evaluator of one of its courses."""
-	return can_instruct_batch(batch, user=user) or evaluates_batch(batch, user=user)
+	"""Batch staff: a site administrator, a Moderator, the owner, or anyone in its
+	People (editor, grader or live class conductor). Reaches staff views, not edits."""
+	return (
+		can_instruct_batch(batch, user=user)
+		or evaluates_batch(batch, user=user)
+		or conducts_live_classes(batch, user=user)
+	)
 
 
 def can_instruct_batch(batch: str | None, *, user: str | None = None) -> bool:
-	"""A site administrator, a Moderator, or a user the stored batch lists as an
-	instructor. Unlike can_author_batch, a Batch Course evaluator tag is not enough."""
+	"""Who edits the batch: a site administrator, a Moderator, its owner, or an
+	Editor (mirrored into Course Instructor). A Grader or conductor is not enough."""
 	user = user or frappe.session.user
 	if is_site_administrator(user) or has_moderator_role(user):
 		return True
-	return _batch_tags(batch, "Course Instructor", "instructor", user)
+	if _batch_tags(batch, "Course Instructor", "instructor", user):
+		return True
+	return bool(isinstance(batch, str) and batch and frappe.db.get_value("LMS Batch", batch, "owner") == user)
 
 
 def evaluates_batch(batch: str | None, *, user: str | None = None) -> bool:
-	"""A user the stored batch tags as the evaluator of one of its courses."""
-	return _batch_tags(batch, "Batch Course", "evaluator", user or frappe.session.user)
+	"""A Grader of the stored batch."""
+	return _exists_batch(batch) and has_role("LMS Batch", batch, GRADER, user or frappe.session.user)
+
+
+def conducts_live_classes(batch: str | None, *, user: str | None = None) -> bool:
+	"""A Live class conductor of the stored batch."""
+	user = user or frappe.session.user
+	return _exists_batch(batch) and has_role("LMS Batch", batch, LIVE_CLASS_CONDUCTOR, user)
+
+
+def can_run_live_classes(batch: str | None, *, user: str | None = None) -> bool:
+	"""Who schedules and changes the batch's live classes: its editors and conductors."""
+	return can_instruct_batch(batch, user=user) or conducts_live_classes(batch, user=user)
+
+
+def owns(doctype: str, name: str | None, *, user: str | None = None) -> bool:
+	"""The document owner, a Moderator or a site administrator: who deletes a course
+	or batch and hands it to someone else."""
+	user = user or frappe.session.user
+	if is_site_administrator(user) or has_moderator_role(user):
+		return True
+	return bool(name) and frappe.db.get_value(doctype, name, "owner") == user
+
+
+def _exists_batch(batch) -> bool:
+	return isinstance(batch, str) and bool(batch) and bool(frappe.db.exists("LMS Batch", batch))
 
 
 def evaluator_role_reads_batch(batch: str | None, *, user: str | None = None) -> bool:
@@ -201,16 +240,25 @@ def evaluator_role_reads_batch(batch: str | None, *, user: str | None = None) ->
 
 
 def _batch_tags(batch: str | None, child_doctype: str, field: str, user: str) -> bool:
-	# A deleted batch leaves its Course Instructor / Batch Course rows behind.
-	if not isinstance(batch, str) or not batch or not frappe.db.exists("LMS Batch", batch):
+	# A deleted batch leaves its Course Instructor rows behind.
+	if not _exists_batch(batch):
 		return False
 	return bool(frappe.db.exists(child_doctype, {"parent": batch, "parenttype": "LMS Batch", field: user}))
 
 
 def authored_batch_condition(field, user: str):
-	"""qb condition: `field` names a batch `user` is a tagged instructor or evaluator of.
-	Two IN subqueries rather than a UNION, which MariaDB rejects inside IN."""
-	return field.isin(_taught("LMS Batch", user)) | field.isin(_evaluator_batches(user))
+	"""qb condition: `field` names a batch `user` owns or is in the People of.
+	IN subqueries rather than a UNION, which MariaDB rejects inside IN."""
+	batch = frappe.qb.DocType("LMS Batch")
+	owned = (
+		frappe.qb.from_(batch).select(batch.name).where(batch.owner == LiteralValue(frappe.db.escape(user)))
+	)
+	return (
+		field.isin(_taught("LMS Batch", user))
+		| field.isin(_evaluator_batches(user))
+		| field.isin(_role_parents("LMS Batch", LIVE_CLASS_CONDUCTOR, user))
+		| field.isin(owned)
+	)
 
 
 # The LMS Batch / LMS Live Class field that names each kind of conferencing account.
@@ -237,7 +285,9 @@ def can_use_conferencing_account(
 		return False
 
 	field = CONFERENCING_ACCOUNT_FIELDS[doctype]
-	return frappe.db.get_value("LMS Batch", batch, field) == account and can_instruct_batch(batch, user=user)
+	return frappe.db.get_value("LMS Batch", batch, field) == account and can_run_live_classes(
+		batch, user=user
+	)
 
 
 def course_record_has_permission(doc, ptype="read", user=None) -> bool:
@@ -973,9 +1023,9 @@ def _reaches_through_a_course(doctype: str, name: str, user: str, *, include_mem
 	batch_course = frappe.qb.DocType("Batch Course")
 	if placements and _evaluated_courses(user).where(batch_course.course.isin(set(placements))).run():
 		return True
-	# The evaluator of a paid-certificate course grades its students' submissions, so
-	# opens the assessments its student-visible lessons place, as the screens need.
-	if placements and _evaluated_paid_certificate_courses(user, set(placements)):
+	# A course's Grader grades its students' submissions, so opens the assessments
+	# its student-visible lessons place, as the screens need.
+	if placements and _graded_courses(user, set(placements)):
 		return True
 
 	enrolled = _enrolled_in(set(placements), user)
@@ -1001,7 +1051,7 @@ def _enrolled_in(courses: set, user: str) -> set:
 
 
 def _evaluated_courses(user: str):
-	"""Courses `user` is the Batch Course evaluator of in an existing batch, as a subquery."""
+	"""Courses of an existing batch `user` is a Grader of, as a subquery."""
 	batch_course = frappe.qb.DocType("Batch Course")
 	batch = frappe.qb.DocType("LMS Batch")
 	return (
@@ -1009,10 +1059,7 @@ def _evaluated_courses(user: str):
 		.join(batch)
 		.on(batch.name == batch_course.parent)
 		.select(batch_course.course)
-		.where(
-			(batch_course.evaluator == LiteralValue(frappe.db.escape(user)))
-			& (batch_course.parenttype == "LMS Batch")
-		)
+		.where(batch_course.parent.isin(_evaluator_batches(user)) & (batch_course.parenttype == "LMS Batch"))
 	)
 
 
@@ -1037,8 +1084,8 @@ def _reaches_through_a_batch(doctype: str, name: str, user: str, *, include_memb
 	if _taught("LMS Batch", user).where(instructor.parent.isin(batches)).run(pluck=True):
 		return True
 	if frappe.get_all(
-		"Batch Course",
-		filters={"evaluator": user, "parenttype": "LMS Batch", "parent": ("in", batches)},
+		"LMS Role Assignment",
+		filters={"member": user, "role": GRADER, "parenttype": "LMS Batch", "parent": ("in", batches)},
 		limit=1,
 	):
 		return True
@@ -1261,8 +1308,8 @@ def _taught_course_submissions(doctype: str, user: str):
 
 
 def _evaluated_batch_course_submissions(doctype: str, user: str):
-	"""The submissions whose member is enrolled in a batch where `user` is the
-	Batch Course evaluator, with that row's course for the placement joins."""
+	"""The submissions whose member is enrolled in a batch `user` is a Grader of,
+	with each of its Batch Course rows' course for the placement joins."""
 	reviewed = frappe.qb.DocType(doctype).as_("reviewed")
 	enrollment = frappe.qb.DocType("LMS Batch Enrollment")
 	batch_course = frappe.qb.DocType("Batch Course")
@@ -1275,7 +1322,7 @@ def _evaluated_batch_course_submissions(doctype: str, user: str):
 		.on(
 			(batch_course.parent == enrollment.batch)
 			& (batch_course.parenttype == "LMS Batch")
-			& (batch_course.evaluator == LiteralValue(frappe.db.escape(user)))
+			& batch_course.parent.isin(_evaluator_batches(user))
 		)
 		.join(batch)
 		.on(batch.name == batch_course.parent)
@@ -1285,8 +1332,8 @@ def _evaluated_batch_course_submissions(doctype: str, user: str):
 
 
 def _evaluated_course_submissions(doctype: str, user: str):
-	"""The submissions whose member is enrolled in a paid-certificate course `user`
-	is the evaluator of, with the enrolment's course for the placement joins."""
+	"""The submissions whose member is enrolled in a course `user` is a Grader of,
+	with the enrolment's course for the placement joins."""
 	reviewed = frappe.qb.DocType(doctype).as_("reviewed")
 	enrollment = frappe.qb.DocType("LMS Enrollment")
 	course = frappe.qb.DocType("LMS Course")
@@ -1295,11 +1342,7 @@ def _evaluated_course_submissions(doctype: str, user: str):
 		.join(enrollment)
 		.on(enrollment.member == reviewed.member)
 		.join(course)
-		.on(
-			(course.name == enrollment.course)
-			& (course.evaluator == LiteralValue(frappe.db.escape(user)))
-			& (course.paid_certificate == 1)
-		)
+		.on((course.name == enrollment.course) & course.name.isin(_role_parents("LMS Course", GRADER, user)))
 		.select(reviewed.name)
 	)
 	return query, reviewed, enrollment.course
@@ -1453,12 +1496,14 @@ def _member_in_a_taught_course(member: str, user: str) -> bool:
 
 
 def _member_in_a_staffed_batch(member: str, user: str, batches: list | None = None) -> bool:
-	"""Whether `member` is enrolled in a batch `user` instructs or evaluates a course
-	of, among `batches` when given. One query: the staffed batches are subqueries."""
+	"""Whether `member` is enrolled in a batch `user` instructs or grades, among
+	`batches` when given. One query: the staffed batches are subqueries."""
 	if batches is not None and not batches:
 		return False
 	enrollment = frappe.qb.DocType("LMS Batch Enrollment")
-	staffed = enrollment.batch.isin(_taught("LMS Batch", user)) | enrollment.batch.isin(_evaluated(user))
+	staffed = enrollment.batch.isin(_taught("LMS Batch", user)) | enrollment.batch.isin(
+		_evaluator_batches(user)
+	)
 	query = (
 		frappe.qb.from_(enrollment)
 		.select(enrollment.name)
@@ -1467,19 +1512,6 @@ def _member_in_a_staffed_batch(member: str, user: str, batches: list | None = No
 	if batches is not None:
 		query = query.where(enrollment.batch.isin(batches))
 	return bool(query.limit(1).run())
-
-
-def _evaluated(user: str):
-	"""Names of the batches `user` evaluates a course of."""
-	batch_course = frappe.qb.DocType("Batch Course")
-	return (
-		frappe.qb.from_(batch_course)
-		.select(batch_course.parent)
-		.where(
-			(batch_course.evaluator == LiteralValue(frappe.db.escape(user)))
-			& (batch_course.parenttype == "LMS Batch")
-		)
-	)
 
 
 def can_review_submission(doctype: str, name: str, member: str, *, user: str | None = None) -> bool:
@@ -1513,7 +1545,7 @@ def _batch_staff_reach(doctype: str, name: str, member: str, user: str) -> bool:
 
 
 def _batch_course_evaluator_reach(doctype: str, name: str, member: str, user: str) -> bool:
-	"""`user` evaluates, on some batch `member` is enrolled in, a course whose
+	"""`user` grades a batch `member` is enrolled in that runs a course whose
 	student-visible lesson places this assessment."""
 	courses = set(_course_placements(doctype, name))
 	if not courses:
@@ -1533,23 +1565,28 @@ def _batch_course_evaluator_reach(doctype: str, name: str, member: str, user: st
 
 
 def _course_evaluator_reach(doctype: str, name: str, member: str, user: str) -> bool:
-	"""`user` evaluates a paid-certificate course `member` is enrolled in whose
-	student-visible lesson places this assessment."""
+	"""`user` grades a course `member` is enrolled in whose student-visible lesson
+	places this assessment."""
 	courses = set(_course_placements(doctype, name))
 	if not courses:
 		return False
-	return bool(_enrolled_in(_evaluated_paid_certificate_courses(user, courses), member))
+	return bool(_enrolled_in(_graded_courses(user, courses), member))
 
 
-def _evaluated_paid_certificate_courses(user: str, courses: set) -> set:
-	"""Which of `courses` are paid-certificate courses `user` is the evaluator of."""
+def _graded_courses(user: str, courses: set) -> set:
+	"""Which of `courses` `user` is a Grader of."""
 	if not courses:
 		return set()
 	return set(
 		frappe.get_all(
-			"LMS Course",
-			filters={"name": ("in", list(courses)), "evaluator": user, "paid_certificate": 1},
-			pluck="name",
+			"LMS Role Assignment",
+			filters={
+				"parent": ("in", list(courses)),
+				"parenttype": "LMS Course",
+				"role": GRADER,
+				"member": user,
+			},
+			pluck="parent",
 		)
 	)
 
@@ -1722,14 +1759,21 @@ def _batch_condition(doctype: str, assessment, user: str, *, include_members: bo
 
 
 def _evaluator_batches(user: str):
-	"""Batches whose Batch Course tags `user` as evaluator, as a subquery."""
-	batch_course = frappe.qb.DocType("Batch Course")
+	"""Batches `user` is a Grader of, as a subquery."""
+	return _role_parents("LMS Batch", GRADER, user)
+
+
+def _role_parents(doctype: str, role: str, user: str):
+	"""Courses or batches whose People give `user` the `role`, as a subquery."""
+	assignment = frappe.qb.DocType("LMS Role Assignment")
 	return (
-		frappe.qb.from_(batch_course)
-		.select(batch_course.parent)
+		frappe.qb.from_(assignment)
+		.select(assignment.parent)
 		.where(
-			(batch_course.evaluator == LiteralValue(frappe.db.escape(user)))
-			& (batch_course.parenttype == "LMS Batch")
+			(assignment.member == LiteralValue(frappe.db.escape(user)))
+			& (assignment.parenttype == doctype)
+			& (assignment.parentfield == "people")
+			& (assignment.role == role)
 		)
 	)
 

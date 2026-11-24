@@ -146,11 +146,19 @@ class TestBatchAuthoringScope(BaseTestUtils):
 		with self.assertRaises(frappe.PermissionError):
 			batch.save()
 
-	def test_tagged_users_and_moderators_can_author_a_batch(self):
-		for user in (self.instructor.name, self.evaluator.name, self.moderator.name):
-			for ptype in AUTHORING:
-				with self.subTest(user=user, ptype=ptype):
-					self.assertTrue(self._can(user, "LMS Batch", self.batch, ptype))
+	def test_editors_and_moderators_can_author_a_batch(self):
+		"""A Grader reads the batch but edits nothing; deleting is the owner's or a Moderator's."""
+		expected = {
+			(self.instructor.name, "write"): True,
+			(self.instructor.name, "delete"): False,
+			(self.evaluator.name, "write"): False,
+			(self.evaluator.name, "delete"): False,
+			(self.moderator.name, "write"): True,
+			(self.moderator.name, "delete"): True,
+		}
+		for (user, ptype), allowed in expected.items():
+			with self.subTest(user=user, ptype=ptype):
+				self.assertEqual(self._can(user, "LMS Batch", self.batch, ptype), allowed)
 
 	def test_an_untagged_evaluator_reads_the_batch_only_while_published(self):
 		frappe.db.set_value("LMS Batch", self.batch, "published", 1)
@@ -184,7 +192,7 @@ class TestBatchAuthoringScope(BaseTestUtils):
 	def test_a_tagged_evaluator_cannot_schedule_a_zoom_class(self):
 		frappe.db.set_value("LMS Batch", self.batch, "zoom_account", self.zoom_account)
 		frappe.set_user(self.evaluator.name)
-		with self.assertRaisesRegex(frappe.PermissionError, "Only the batch's instructors"):
+		with self.assertRaisesRegex(frappe.PermissionError, "Only the batch's editors"):
 			self._book_zoom_class(self.batch)
 		self.zoom_requests.request.assert_not_called()
 		self.zoom_requests.post.assert_not_called()
@@ -192,7 +200,7 @@ class TestBatchAuthoringScope(BaseTestUtils):
 	def test_a_tagged_evaluator_cannot_schedule_a_google_meet_class(self):
 		frappe.set_user(self.evaluator.name)
 		with patch.object(LMSLiveClass, "create_calendar_event") as calendar_call:
-			with self.assertRaisesRegex(frappe.PermissionError, "Only the batch's instructors"):
+			with self.assertRaisesRegex(frappe.PermissionError, "Only the batch's editors"):
 				lms_batch.create_google_meet_live_class(
 					batch_name=self.batch,
 					google_meet_account="does-not-matter",
@@ -264,7 +272,8 @@ class TestBatchAuthoringScope(BaseTestUtils):
 		frappe.set_user(self.evaluator.name)
 		batch = frappe.get_doc("LMS Batch", self.batch)
 		batch.append("instructors", {"instructor": self.evaluator.name})
-		with self.assertRaisesRegex(frappe.PermissionError, "Only the batch's instructors"):
+		# A Grader may not write the batch at all, let alone its People.
+		with self.assertRaises(frappe.PermissionError):
 			batch.save()
 
 		frappe.set_user("Administrator")

@@ -142,8 +142,10 @@ class TestCourseAuthoringScope(BaseTestUtils):
 
 		created = self._as(self.outsider.name, create_for_someone_else)
 		self.assertTrue(frappe.db.exists("LMS Course", created))
-		# ...and the creator immediately cannot author it, which is the rule working.
-		self.assertFalse(self._may(self.outsider.name, created, "write"))
+		# ...and the creator owns it, so keeps authoring it without an Editor row.
+		self.assertTrue(self._may(self.outsider.name, created, "write"))
+		self.assertTrue(self._may(self.outsider.name, created, "delete"))
+		self.assertFalse(self._may(self.author.name, created, "delete"))
 
 	# --- the narrowing: these fail on develop.
 
@@ -183,6 +185,9 @@ class TestCourseAuthoringScope(BaseTestUtils):
 		)
 		for ptype in ("write", "delete", "share"):
 			for label, user, course, expected in cases:
+				# Deleting is the owner's (here Administrator's) or a Moderator's, not an editor's.
+				if ptype == "delete" and label != "moderator":
+					expected = False
 				with self.subTest(ptype=ptype, case=label):
 					self.assertEqual(self._may(user, course, ptype), expected)
 

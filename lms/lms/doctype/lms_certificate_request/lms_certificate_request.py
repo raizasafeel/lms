@@ -23,13 +23,13 @@ from frappe.utils import (
 	nowtime,
 )
 
+from lms.lms.doctype.course_evaluator.course_evaluator import get_free_grader
 from lms.lms.locking import locked_count
 from lms.lms.utils import (
 	PRIVILEGED_ROLES,
 	convert_from_system_timezone,
 	format_timezone,
 	get_evaluation_display_timezone,
-	get_evaluator,
 	get_membership,
 )
 
@@ -76,7 +76,7 @@ class LMSCertificateRequest(Document):
 		stored = self.get_doc_before_save()
 		# A saved request keeps the evaluator it was given, by staff or by the
 		# course at the time; the course's current default is for new requests.
-		assigned = stored.evaluator if stored else get_evaluator(self.course, self.batch_name)
+		assigned = stored.evaluator if stored else self.get_free_grader()
 		if self.evaluator and self.evaluator != assigned:
 			frappe.throw(_("The evaluator is assigned by the course or batch."), frappe.PermissionError)
 		self.evaluator = assigned
@@ -84,9 +84,12 @@ class LMSCertificateRequest(Document):
 		self.event = stored.event if stored else None
 		self.status = stored.status if stored else "Upcoming"
 
+	def get_free_grader(self):
+		return get_free_grader(self.course, self.batch_name, self.date, self.start_time)
+
 	def set_evaluator(self):
 		if not self.evaluator:
-			self.evaluator = get_evaluator(self.course, self.batch_name)
+			self.evaluator = self.get_free_grader()
 		# get_fullname(None) would name the caller, not nobody.
 		self.evaluator_name = get_fullname(self.evaluator) if self.evaluator else None
 

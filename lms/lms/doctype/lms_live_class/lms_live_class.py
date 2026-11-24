@@ -16,7 +16,7 @@ from lms.lms.permissions import (
 	CONFERENCING_ACCOUNT_FIELDS,
 	authored_batch_condition,
 	can_author_batch,
-	can_instruct_batch,
+	can_run_live_classes,
 	can_use_conferencing_account,
 	is_site_administrator,
 )
@@ -586,13 +586,13 @@ def has_permission(doc, ptype="read", user=None):
 		return True
 
 	if ptype not in ("read", "select", "print"):
-		# Only the batch's instructors schedule and change its classes; a tagged
-		# evaluator keeps read access below.
-		if not can_instruct_batch(doc.batch_name, user=user):
+		# Only the batch's editors and conductors schedule and change its classes; a
+		# grader keeps read access below.
+		if not can_run_live_classes(doc.batch_name, user=user):
 			return False
 		# Authorise the stored batch too, or a submitted batch_name moves the class.
 		stored = None if doc.is_new() else frappe.db.get_value("LMS Live Class", doc.name, "batch_name")
-		return not stored or can_instruct_batch(stored, user=user)
+		return not stored or can_run_live_classes(stored, user=user)
 
 	# "Batch Evaluator" keeps its existing blanket read; any other tagged
 	# instructor/evaluator (e.g. Course Creator) is scoped to their own batch.

@@ -2382,19 +2382,18 @@ def get_batch_details(batch: str, student_view: str | None = None):
 
 
 def build_batch_details(batch: str) -> dict:
-	from lms.lms.permissions import can_instruct_batch, evaluates_batch
+	from lms.lms.permissions import can_author_batch, can_instruct_batch, can_run_live_classes
 	from lms.lms.student_view import hides_enrollment, is_viewing_as_student
 
 	if not can_view_batch(batch):
 		return {}
 
 	batch_students = frappe.get_all("LMS Batch Enrollment", {"batch": batch}, pluck="member")
-	# can_modify_batch only recognises the Course Instructor tag; can_manage, like
-	# can_author_batch, also recognises a Batch Course evaluator tag, which a Course
-	# Creator may hold instead. Only instructors schedule live classes.
+	# can_manage is anyone in the batch's People; only editors change them, and
+	# editors and live class conductors schedule live classes.
 	as_staff = not is_viewing_as_student("LMS Batch", batch)
 	instructs = as_staff and can_instruct_batch(batch)
-	can_manage = instructs or (as_staff and evaluates_batch(batch))
+	can_manage = instructs or (as_staff and can_author_batch(batch))
 	is_student_enrolled = frappe.session.user in batch_students and not hides_enrollment("LMS Batch", batch)
 
 	batch_details = frappe.db.get_value(
@@ -2434,11 +2433,11 @@ def build_batch_details(batch: str) -> dict:
 
 	batch_details.instructors = get_public_instructors("LMS Batch", batch)
 	batch_details.can_manage = can_manage
-	# The rule LMSBatch.validate_instructor_changes applies.
+	# The rule LMSBatch.validate_people_changes applies.
 	batch_details.can_change_instructors = instructs
 	# The rule check_can_schedule_live_class applies.
 	can_create_classes = frappe.has_permission("LMS Live Class", "create")
-	batch_details.can_schedule_classes = instructs and can_create_classes
+	batch_details.can_schedule_classes = as_staff and can_run_live_classes(batch) and can_create_classes
 	batch_details.accept_enrollments = batch_details.start_date > getdate()
 
 	if (
@@ -4265,13 +4264,13 @@ def delete_discussions(reference_doctype: str, reference_docname: str):
 
 
 def can_modify_course(course: str) -> bool:
+	"""A Moderator, the owner, or an Editor (mirrored into Course Instructor)."""
 	is_instructor = frappe.db.exists(
 		"Course Instructor",
 		{"instructor": frappe.session.user, "parent": course, "parenttype": "LMS Course"},
 	)
-	if not (has_moderator_role() or is_instructor):
-		return False
-	return True
+	is_owner = bool(course) and frappe.db.get_value("LMS Course", course, "owner") == frappe.session.user
+	return bool(has_moderator_role() or is_instructor or is_owner)
 
 
 def views_as_author(course: str) -> bool:
@@ -4289,6 +4288,7 @@ def hides_own_enrollment(course: str, member: str | None = None) -> bool:
 
 
 def can_modify_batch(batch: str) -> bool:
+	"""A Moderator, the owner, or an Editor (mirrored into Course Instructor)."""
 	is_instructor = frappe.db.exists(
 		"Course Instructor",
 		{
@@ -4297,9 +4297,8 @@ def can_modify_batch(batch: str) -> bool:
 			"parenttype": "LMS Batch",
 		},
 	)
-	if not (has_moderator_role() or is_instructor):
-		return False
-	return True
+	is_owner = bool(batch) and frappe.db.get_value("LMS Batch", batch, "owner") == frappe.session.user
+	return bool(has_moderator_role() or is_instructor or is_owner)
 
 
 def has_lms_role():

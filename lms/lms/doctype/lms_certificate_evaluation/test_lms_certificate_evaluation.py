@@ -55,7 +55,7 @@ class TestLMSCertificateEvaluation(BaseTestUtils):
 		frappe.get_doc({"doctype": "Course Evaluator", "evaluator": cls.evaluator_b}).insert(
 			ignore_permissions=True, ignore_if_duplicate=True
 		)
-		frappe.db.set_value("LMS Course", cls.course.name, "evaluator", cls.evaluator_b)
+		cls._set_evaluator(cls.course.name, cls.evaluator_b)
 
 	def setUp(self):
 		super().setUp()
@@ -130,7 +130,7 @@ class TestLMSCertificateEvaluation(BaseTestUtils):
 
 		The caller chooses that field on a new row, so an evaluator could still mint a
 		Pass for any member on any course by naming themselves. The rule asks
-		get_evaluator() for the course/batch instead, matching save_evaluation_details.
+		is_grader() for the course/batch instead, matching save_evaluation_details.
 		"""
 		frappe.set_user(self.evaluator_a)
 		with self.assertRaises(frappe.PermissionError):
@@ -162,7 +162,7 @@ class TestLMSCertificateEvaluation(BaseTestUtils):
 		other_course = self._create_course(
 			title=f"Cert Eval Other {frappe.generate_hash(length=6)}", instructor=self.evaluator_a
 		)
-		frappe.db.set_value("LMS Course", other_course.name, "evaluator", self.evaluator_a)
+		self._set_evaluator(other_course.name, self.evaluator_a)
 
 		frappe.set_user(self.evaluator_b)
 		with self.assertRaises(frappe.PermissionError):

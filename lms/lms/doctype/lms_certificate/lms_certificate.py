@@ -9,8 +9,8 @@ from frappe.model.naming import make_autoname
 from frappe.utils import nowdate
 from pypika import Case
 
+from lms.lms.people import is_grader
 from lms.lms.permissions import can_author_batch, can_author_course, is_site_administrator
-from lms.lms.utils import get_evaluator
 
 
 class LMSCertificate(Document):
@@ -361,16 +361,15 @@ def is_assigned_evaluator(doc, ptype, user):
 
 
 def evaluates_certificate(course, batch_name, member, user):
-	"""A course certificate belongs to that course's evaluator in the batch. A batch
-	certificate (no course, issued from Generate Certificates) belongs to any evaluator
-	tagged on the batch, and only for a student enrolled in it."""
+	"""A course certificate belongs to the Graders of that course, or of the batch
+	that runs it. A batch certificate (no course, issued from Generate Certificates)
+	belongs to the batch's Graders, and only for a student enrolled in it."""
 	if course:
-		return get_evaluator(course, batch_name) == user
+		return is_grader(user, course, batch_name)
 	if not batch_name:
 		return False
-	tagged = {"parent": batch_name, "parenttype": "LMS Batch"}
 	return bool(
-		frappe.db.exists("Batch Course", {**tagged, "evaluator": user})
+		is_grader(user, None, batch_name)
 		and frappe.db.exists("LMS Batch Enrollment", {"batch": batch_name, "member": member})
 	)
 

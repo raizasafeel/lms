@@ -21,10 +21,12 @@ from lms.lms.permissions import (
 	authored_batch_condition,
 	can_author_batch,
 	can_instruct_batch,
+	can_run_live_classes,
 	can_use_conferencing_account,
 	courses_authored_by,
 	evaluator_role_reads_batch,
 	is_site_administrator,
+	owns,
 )
 from lms.lms.utils import (
 	delete_discussions,
@@ -546,8 +548,11 @@ def create_google_meet_live_class(
 
 
 def check_can_schedule_live_class(batch_name):
-	if not can_instruct_batch(batch_name):
-		frappe.throw(_("Only the batch's instructors can schedule live classes."), frappe.PermissionError)
+	if not can_run_live_classes(batch_name):
+		frappe.throw(
+			_("Only the batch's editors and live class conductors can schedule live classes."),
+			frappe.PermissionError,
+		)
 	if not frappe.has_permission("LMS Live Class", "create"):
 		frappe.throw(
 			_("You do not have permission to create a live class for this batch."), frappe.PermissionError
@@ -725,8 +730,13 @@ def has_permission(doc, ptype="read", user=None):
 		return True
 
 	if ptype not in ("read", "select", "print"):
-		# A new batch has no tags yet; creation stays governed by the DocPerm grant.
-		return doc.is_new() or can_author_batch(doc.name, user=user)
+		# A new batch has no People yet; creation stays governed by the DocPerm grant.
+		# Graders and conductors read the batch but only editors change it.
+		if doc.is_new():
+			return True
+		if ptype == "delete":
+			return owns("LMS Batch", doc.name, user=user)
+		return can_instruct_batch(doc.name, user=user)
 
 	if can_author_batch(doc.name, user=user):
 		return True

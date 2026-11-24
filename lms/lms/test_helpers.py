@@ -275,6 +275,15 @@ class BaseTestUtils(IntegrationTestCase):
 		return evaluator
 
 	@classmethod
+	def _set_evaluator(cls, course: str, evaluator: str):
+		"""Makes `evaluator` the course's Grader and legacy evaluator without saving
+		the course, so a fixture skips the paid-certificate validation."""
+		from lms.lms.people import GRADER, add_missing_rows
+
+		add_missing_rows("LMS Course", course, [(evaluator, GRADER)])
+		frappe.db.set_value("LMS Course", course, "evaluator", evaluator)
+
+	@classmethod
 	def _create_batch(
 		cls,
 		course,

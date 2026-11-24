@@ -8,7 +8,8 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder import Bracket
 from pypika.terms import LiteralValue
 
-from lms.lms.utils import get_evaluator, has_moderator_role
+from lms.lms.people import is_grader
+from lms.lms.utils import has_moderator_role
 
 
 class LMSCertificateEvaluation(Document):
@@ -84,10 +85,11 @@ def is_assigned_evaluator(evaluation, user):
 
 
 def can_evaluate(user: str, member: str, course: str, batch_name: str | None = None) -> bool:
-	"""The course/batch's evaluator, or the evaluator on the member's live certificate request."""
-	if get_evaluator(course, batch_name) == user:
+	"""A Grader of the course/batch, or the evaluator on the member's live certificate
+	request. Either way only a Batch Evaluator grades."""
+	if is_grader(user, course, batch_name):
 		return True
-	if not (member and course):
+	if not (member and course) or "Batch Evaluator" not in frappe.get_roles(user):
 		return False
 	return bool(
 		frappe.db.exists(

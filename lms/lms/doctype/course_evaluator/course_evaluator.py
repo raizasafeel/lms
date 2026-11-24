@@ -8,6 +8,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import add_days, get_time, getdate, nowdate, nowtime
 
+from lms.lms.people import get_graders
 from lms.lms.utils import (
 	convert_from_system_timezone,
 	format_timezone,
@@ -89,13 +90,52 @@ class CourseEvaluator(Document):
 
 @frappe.whitelist()
 def get_schedule(course: str, batch: str = None):
-	evaluator = get_evaluator(course, batch)
+	"""Every slot at least one Grader is free for; the booking picks which of them."""
 	start_date = nowdate()
 	end_date = get_schedule_range_end_date(start_date, batch)
-	all_slots = get_all_slots(evaluator, start_date, end_date)
-	booked_slots = get_booked_slots(evaluator, start_date, end_date)
-	available = remove_booked_slots(all_slots, booked_slots)
+	slots = {}
+	for evaluator in get_schedulable_graders(course, batch):
+		for slot in get_open_slots(evaluator, start_date, end_date):
+			slots.setdefault((slot.date, str(slot.start_time), str(slot.end_time)), slot)
+	available = sorted(slots.values(), key=lambda slot: (slot.date, get_time(slot.start_time)))
 	return group_slots_by_display_date(available, get_evaluation_display_timezone(course, batch))
+
+
+def get_schedulable_graders(course: str, batch: str | None = None) -> list[str]:
+	"""Graders with a Course Evaluator schedule, the default evaluator first."""
+	default = get_evaluator(course, batch)
+	graders = dict.fromkeys(([default] if default else []) + get_graders(course, batch))
+	return [grader for grader in graders if frappe.db.exists("Course Evaluator", grader)]
+
+
+def get_open_slots(evaluator: str, start_date, end_date) -> list:
+	all_slots = get_all_slots(evaluator, start_date, end_date)
+	return remove_booked_slots(all_slots, get_booked_slots(evaluator, start_date, end_date))
+
+
+def get_free_grader(course: str, batch: str | None, date, start_time) -> str | None:
+	"""The first Grader free at this slot, else the default evaluator so the slot
+	checks name who is busy."""
+	for evaluator in get_schedulable_graders(course, batch):
+		for slot in get_open_slots(evaluator, date, date):
+			if get_time(slot.start_time) == get_time(start_time):
+				return evaluator
+	return get_evaluator(course, batch)
+
+
+@frappe.whitelist()
+def get_open_slot_counts(evaluators: str | list) -> dict:
+	"""Open slots in the next seven days per evaluator, for the evaluation settings."""
+	frappe.only_for(["Moderator", "Course Creator", "Batch Evaluator"])
+	if isinstance(evaluators, str):
+		evaluators = frappe.parse_json(evaluators)
+	start_date = nowdate()
+	end_date = add_days(start_date, 6)
+	return {
+		evaluator: len(get_open_slots(evaluator, start_date, end_date))
+		for evaluator in evaluators or []
+		if isinstance(evaluator, str) and frappe.db.exists("Course Evaluator", evaluator)
+	}
 
 
 def get_all_slots(evaluator, start_date, end_date):

@@ -7,9 +7,8 @@ from lms.lms.test_helpers import BaseTestUtils
 
 
 class TestCourseEvaluatorSubmissionScope(BaseTestUtils):
-	"""The evaluator of a paid-certificate course reads the submissions its
-	enrolled students make on assessments the course's lessons place, with no
-	batch in between."""
+	"""A course's Grader reads the submissions its enrolled students make on
+	assessments the course's lessons place, with no batch in between."""
 
 	@classmethod
 	def setUpClass(cls):
@@ -29,7 +28,9 @@ class TestCourseEvaluatorSubmissionScope(BaseTestUtils):
 			cls._create_evaluator(user.name)
 
 		cls.course = cls._course(f"CES Course {suffix}", cls.evaluator.name, paid_certificate=1)
-		cls.unpaid_course = cls._course(f"CES Unpaid {suffix}", cls.lapsed.name, paid_certificate=0)
+		cls.unpaid_course = cls._course(
+			f"CES Unpaid {suffix}", cls.lapsed.name, paid_certificate=0, grader=False
+		)
 		cls.other_course = cls._course(f"CES Other {suffix}", cls.bystander.name, paid_certificate=1)
 
 		cls.assignment = cls._create_assignment(title=f"CES Assignment {suffix}")
@@ -51,8 +52,11 @@ class TestCourseEvaluatorSubmissionScope(BaseTestUtils):
 		cls.hidden_sub = cls._submit(cls.hidden_assignment.name, cls.student.name)
 
 	@classmethod
-	def _course(cls, title, evaluator, paid_certificate):
+	def _course(cls, title, evaluator, paid_certificate, grader=True):
 		course = cls._create_course(title=title, instructor=cls.instructor.name)
+		if grader:
+			course.append("people", {"member": evaluator, "role": "Grader"})
+			course.save()
 		# Set directly: a paid certificate's price and timezone validation is not what is measured.
 		frappe.db.set_value(
 			"LMS Course", course.name, {"paid_certificate": paid_certificate, "evaluator": evaluator}
@@ -101,7 +105,7 @@ class TestCourseEvaluatorSubmissionScope(BaseTestUtils):
 		self.assertFalse(self._reads(self.hidden_sub, self.evaluator.name))
 		self.assertNotIn(self.hidden_sub.name, self._listed(self.evaluator.name))
 
-	def test_an_evaluator_left_on_a_course_without_paid_certificate_reaches_nothing(self):
+	def test_an_evaluator_field_without_a_grader_row_reaches_nothing(self):
 		self.assertFalse(self._reads(self.enrolled_sub, self.lapsed.name))
 		self.assertNotIn(self.enrolled_sub.name, self._listed(self.lapsed.name))
 

@@ -190,9 +190,9 @@ class TestBatchEvaluatorBatchScope(BatchFixtures):
 		self.assertFalse(self._can("read", self.hidden, self.evaluator.name))
 		self.assertNotIn(self.hidden.name, self._listed("LMS Batch", self.evaluator.name))
 
-	def test_an_evaluator_sees_and_edits_an_unpublished_batch_they_evaluate(self):
+	def test_an_evaluator_sees_but_does_not_edit_an_unpublished_batch_they_grade(self):
 		self.assertTrue(self._can("read", self.evaluated, self.evaluator.name))
-		self.assertTrue(self._can("write", self.evaluated, self.evaluator.name))
+		self.assertFalse(self._can("write", self.evaluated, self.evaluator.name))
 		self.assertIn(self.evaluated.name, self._listed("LMS Batch", self.evaluator.name))
 
 	def test_an_instructor_sees_and_edits_an_unpublished_batch_they_instruct(self):

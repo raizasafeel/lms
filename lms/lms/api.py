@@ -78,6 +78,7 @@ from lms.lms.doctype.lms_certificate.lms_certificate import (
 )
 from lms.lms.doctype.lms_certificate_evaluation.lms_certificate_evaluation import can_evaluate
 from lms.lms.html_sanitizer import sanitize_rich_text
+from lms.lms.people import get_staff_roles, is_grader
 from lms.lms.permissions import (
 	ASSESSMENT_DOCTYPES,
 	can_administer_assessment,
@@ -1937,7 +1938,9 @@ def save_certificate_details(
 			_("You are not the assigned evaluator for this course and batch."),
 			frappe.PermissionError,
 		)
-	evaluator = get_evaluator(course, batch_name) or frappe.session.user
+	# A Grader issues under their own name; a Moderator under the course's evaluator.
+	user = frappe.session.user
+	evaluator = user if is_grader(user, course, batch_name) else get_evaluator(course, batch_name) or user
 
 	frappe.db.get_value("User", member, "name", for_update=True)
 	certificate = frappe.db.get_value(
@@ -4758,6 +4761,7 @@ def search_users_by_role(
 			"description": r.full_name or r.name,
 			"label": r.full_name or r.name,
 			"user_image": r.user_image,
+			"roles": get_staff_roles(r.name),
 		}
 		for r in results
 	]

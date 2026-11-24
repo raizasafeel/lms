@@ -12,6 +12,9 @@ from lms.lms.permissions import can_access_assessment
 from lms.lms.schedule_utils import assert_within_schedule
 from lms.lms.utils import PRIVILEGED_ROLES, get_attachable_files, get_lms_route, validate_attachable_file
 
+# Only evaluators grade; a Course Creator reads and manages submissions but grades none.
+GRADING_ROLES = {"Moderator", "System Manager", "Batch Evaluator"}
+
 # The files an Audio assignment's player can play, as frontend/src/utils/audio.ts lists them.
 AUDIO_EXTENSIONS = (".mp3", ".wav", ".ogg", ".m4a", ".aac")
 
@@ -79,21 +82,27 @@ class LMSAssignmentSubmission(Document):
 		)
 
 	def enforce_grading_permission(self):
-		"""Only evaluators/instructors may set the grading fields.
+		"""Only evaluators may set the grading fields.
 
 		Prevents a student from grading their own submission (e.g. flipping status from
 		"Not Graded" to "Pass" via frappe.client.set_value). On create the grading fields
 		are reset to their defaults; on update they are reverted to the stored values.
 		"""
-		if PRIVILEGED_ROLES & set(frappe.get_roles()):
+		roles = set(frappe.get_roles())
+		if GRADING_ROLES & roles:
 			return
 
 		# Revert grading fields to their stored values on update, or to safe defaults on
 		# create / when no baseline is available (fail closed, never fail open).
 		previous = None if self.is_new() else self.get_doc_before_save()
 		defaults = {"status": "Not Graded", "comments": None, "evaluator": None}
-		for field, default in defaults.items():
-			setattr(self, field, previous.get(field) if previous else default)
+		baseline = {
+			field: previous.get(field) if previous else default for field, default in defaults.items()
+		}
+		changed = any((self.get(field) or None) != (value or None) for field, value in baseline.items())
+		if changed and PRIVILEGED_ROLES & roles:
+			frappe.throw(_("Only evaluators can grade submissions."), frappe.PermissionError)
+		self.update(baseline)
 
 	def enforce_assignment_access(self):
 		"""A learner answers only an assignment a course or batch of theirs places.

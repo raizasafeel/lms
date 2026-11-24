@@ -348,9 +348,12 @@ class TestLMSCertificate(BaseTestUtils):
 		)
 
 	def _reassign_evaluator(self, batch, evaluator):
-		frappe.db.set_value(
-			"Batch Course", {"parent": batch, "course": self.course.name}, "evaluator", evaluator
-		)
+		"""The batch's Graders are who evaluates its courses."""
+		doc = frappe.get_doc("LMS Batch", batch)
+		doc.set("people", [row for row in doc.people if row.role != "Grader"])
+		if evaluator:
+			doc.append("people", {"member": evaluator, "role": "Grader"})
+		doc.save()
 
 	def test_a_reassigned_evaluator_regrades_their_predecessors_evaluation(self):
 		"""The save endpoint authorises the batch's current evaluator, so the
