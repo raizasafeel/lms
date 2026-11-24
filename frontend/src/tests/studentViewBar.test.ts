@@ -59,12 +59,16 @@ import StudentViewBar from '@/components/StudentViewBar.vue'
 const ENROLL = 'lms.lms.student_view.enroll_self'
 const RESET = 'lms.lms.student_view.reset_own_progress'
 
-const mountBar = (modelValue = 'not-enrolled', doctype = 'LMS Course') =>
+const mountBar = (
+	modelValue = 'not-enrolled',
+	doctype = 'LMS Course',
+	name = 'COURSE-1'
+) =>
 	mount(StudentViewBar, {
 		props: {
 			modelValue,
 			doctype,
-			name: 'COURSE-1',
+			name,
 			'onUpdate:modelValue': (value: string) =>
 				wrapper.setProps({ modelValue: value }),
 		},
@@ -102,6 +106,20 @@ describe('StudentViewBar', () => {
 		expect(enroll.submit).toHaveBeenCalledTimes(1)
 		expect(enroll.params).toEqual({ doctype: 'LMS Course', name: 'COURSE-1' })
 		expect(wrapper.emitted('change')).toHaveLength(1)
+		expect(wrapper.props('modelValue')).toBe('enrolled')
+	})
+
+	it('waits for the course before enrolling on arrival', async () => {
+		wrapper = mountBar('enrolled', 'LMS Course', '')
+		await flushPromises()
+		const enroll = resources[`${ENROLL}:resource`] as any
+		expect(enroll.submit).not.toHaveBeenCalled()
+		expect(wrapper.props('modelValue')).toBe('enrolled')
+
+		await wrapper.setProps({ name: 'COURSE-1' })
+		await flushPromises()
+		expect(enroll.submit).toHaveBeenCalledTimes(1)
+		expect(enroll.params).toEqual({ doctype: 'LMS Course', name: 'COURSE-1' })
 		expect(wrapper.props('modelValue')).toBe('enrolled')
 	})
 

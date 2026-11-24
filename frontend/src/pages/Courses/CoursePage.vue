@@ -3,6 +3,7 @@
 		v-if="studentView"
 		v-model="studentView"
 		:course="course"
+		:breadcrumbs="breadcrumbs"
 		@exit="studentView = null"
 	/>
 	<TabbedDetailPage
@@ -212,6 +213,11 @@ import { Badge, Button, createResource, Tooltip, usePageMeta } from 'frappe-ui'
 import { sessionStore } from '@/stores/session'
 import { useScreenSize } from '@/utils/composables'
 import TabbedDetailPage from '@/components/Layouts/pages/TabbedDetailPage.vue'
+import {
+	studentViewMode,
+	studentViewQuery,
+	type StudentViewMode,
+} from '@/composables/useStudentView'
 import type { DetailTab } from '@/components/Layouts/pages/TabbedDetailPage.vue'
 import CourseOverview from '@/pages/Courses/CourseOverview.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
@@ -384,7 +390,18 @@ const form = useCourseForm(props.courseName, course, () => isAdmin.value)
 const actions = useCourseActions(course)
 provide(COURSE_ACTIONS, actions)
 
-const studentView = ref<'not-enrolled' | 'enrolled' | null>(null)
+// The URL owns student view, so it survives hops to lessons and back.
+const studentView = computed<StudentViewMode | null>({
+	get: () => studentViewMode(route.query.studentView),
+	set: (mode) =>
+		router.replace({
+			hash: route.hash,
+			query: {
+				...route.query,
+				studentView: studentViewQuery(mode)?.studentView,
+			},
+		}),
+})
 
 const isFormTab = (key?: string): boolean =>
 	isAdmin.value && (key === 'overview' || key === 'settings')

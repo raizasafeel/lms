@@ -12,6 +12,7 @@
 			</template>
 		</PageHeader>
 		<StudentViewBar
+			belowHeader
 			v-if="isStudentView"
 			v-model="studentMode"
 			doctype="LMS Course"
@@ -837,7 +838,11 @@ const breadcrumbs = computed(() => {
 	const crumbs: Crumb[] = [{ label: __('Courses'), route: { name: 'Courses' } }]
 	crumbs.push({
 		label: lesson?.data?.course_title,
-		route: { name: 'CourseDetail', params: { courseName: props.courseName } },
+		route: {
+			name: 'CourseDetail',
+			params: { courseName: props.courseName },
+			query: previewQuery.value,
+		},
 	})
 	crumbs.push({
 		label: lesson?.data?.title,

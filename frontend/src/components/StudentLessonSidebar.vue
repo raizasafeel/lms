@@ -19,12 +19,18 @@
 						<span class="lucide-panel-right-close size-4 text-ink-gray-6" />
 					</template>
 				</Button>
-				<div
+				<router-link
 					v-if="!hideHeader"
-					class="min-w-0 text-lg-semibold text-ink-gray-9 leading-snug"
+					:to="{
+						name: 'CourseDetail',
+						params: { courseName },
+						query: previewQuery,
+					}"
+					class="min-w-0 text-lg-semibold text-ink-gray-9 leading-snug hover:underline"
+					data-testid="course-home"
 				>
 					{{ courseTitle }}
-				</div>
+				</router-link>
 			</div>
 			<template v-if="withProgress">
 				<div

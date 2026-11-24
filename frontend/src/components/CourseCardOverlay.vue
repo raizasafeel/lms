@@ -33,7 +33,7 @@
 									? course?.data?.current_lesson.split('-')[1]
 									: 1,
 							},
-							query: preview ? { studentView: 1 } : undefined,
+							query: studentViewQuery(preview ?? null),
 						}"
 					>
 						<template #prefix>
@@ -138,6 +138,7 @@ import ProgressBar from '@/components/ProgressBar.vue'
 import VideoPreview from '@/components/VideoPreview.vue'
 import CourseIncludes from '@/components/Courses/CourseIncludes.vue'
 import { redirectToLogin } from '@/utils/login'
+import { studentViewQuery } from '@/composables/useStudentView'
 import type { CourseDetails, Resource, SessionUser } from '@/types'
 import { isInstructorOf } from '@/utils/instructors'
 

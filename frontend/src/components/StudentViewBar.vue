@@ -1,6 +1,7 @@
 <template>
 	<div
-		class="sticky top-0 z-20 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-outline-gray-2 bg-surface-base px-5 py-2"
+		class="sticky flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-outline-gray-2 bg-surface-base px-5 py-2"
+		:class="belowHeader ? 'top-[var(--header-frame-h)] z-[9]' : 'top-0 z-20'"
 		role="region"
 		:aria-label="__('Student view')"
 	>
@@ -66,6 +67,8 @@ type StudentMode = 'not-enrolled' | 'enrolled'
 const props = defineProps<{
 	doctype: 'LMS Course' | 'LMS Batch'
 	name: string
+	/** Sticks under the page header instead of at the very top. */
+	belowHeader?: boolean
 }>()
 const emit = defineEmits<{ exit: []; change: [] }>()
 const mode = defineModel<StudentMode>({ required: true })
@@ -111,10 +114,12 @@ function failed(error: unknown): void {
 	toast.error(resourceErrorMessage(error))
 }
 
+// Waits for the name: a page arriving in enrolled mode may not have loaded
+// its course yet, and enrolling into nothing fails back to not enrolled.
 watch(
-	mode,
-	(value) => {
-		if (value !== 'enrolled') return
+	[mode, () => props.name],
+	([value, name]) => {
+		if (value !== 'enrolled' || !name) return
 		submitResource(
 			enroll,
 			{},

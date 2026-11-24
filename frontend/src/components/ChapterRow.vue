@@ -229,6 +229,7 @@ import type { RouteLocationRaw } from 'vue-router'
 import type { InputExposed } from 'frappe-ui'
 import type { OutlineChapter, OutlineLesson, SessionUser } from '@/types'
 import { draftLessonNumber, outlineDragOptions } from '@/utils/courseOutline'
+import { studentViewMode, studentViewQuery } from '@/composables/useStudentView'
 
 interface DraggableEvent {
 	item: { __draggable_context: { element: OutlineChapter | OutlineLesson } }
@@ -367,6 +368,7 @@ function lessonRoute(lesson: OutlineLesson): RouteLocationRaw {
 	return {
 		name: 'Lesson',
 		params: { courseName: props.courseName, chapterNumber, lessonNumber },
+		query: studentViewQuery(studentViewMode(route.query.studentView)),
 	}
 }
 

@@ -1,6 +1,8 @@
 <template>
 	<div class="flex min-h-full flex-col">
+		<PageHeader :breadcrumbs="breadcrumbs" />
 		<StudentViewBar
+			belowHeader
 			v-model="mode"
 			doctype="LMS Course"
 			:name="course.data?.name ?? ''"
@@ -18,14 +20,18 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
 import StudentViewBar from '@/components/StudentViewBar.vue'
 import CourseOverview from '@/pages/Courses/CourseOverview.vue'
-import type { CourseDetails, Resource } from '@/types'
+import type { Breadcrumb, CourseDetails, Resource } from '@/types'
 
 type PreviewMode = 'not-enrolled' | 'enrolled'
 
 /** The course page as a learner sees it, before and after enrolling. */
-const props = defineProps<{ course: Resource<CourseDetails | null> }>()
+const props = defineProps<{
+	course: Resource<CourseDetails | null>
+	breadcrumbs: Breadcrumb[]
+}>()
 const emit = defineEmits<{ exit: [] }>()
 
 const mode = defineModel<PreviewMode>({ default: 'not-enrolled' })

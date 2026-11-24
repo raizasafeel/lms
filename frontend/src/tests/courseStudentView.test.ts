@@ -25,17 +25,32 @@ vi.mock('@/pages/Courses/CourseOverview.vue', () => ({
 	},
 }))
 
+vi.mock('@/components/Layouts/pages/PageHeader.vue', () => ({
+	default: {
+		props: ['breadcrumbs'],
+		template: `<header class="page-header">{{ breadcrumbs.map((crumb) => crumb.label).join(' / ') }}</header>`,
+	},
+}))
+
 import CourseStudentView from '@/components/Courses/CourseStudentView.vue'
 
 const mountView = () => {
 	const course = { data: { name: 'COURSE-1' }, reload: vi.fn() }
 	const wrapper = mount(CourseStudentView, {
-		props: { course: course as never },
+		props: {
+			course: course as never,
+			breadcrumbs: [{ label: 'Courses' }, { label: 'ERPNext' }],
+		},
 	})
 	return { wrapper, course }
 }
 
 describe('CourseStudentView', () => {
+	it('keeps the page header above the bar', () => {
+		const { wrapper } = mountView()
+		expect(wrapper.find('.page-header').text()).toBe('Courses / ERPNext')
+	})
+
 	it('drives the shared bar for this course', () => {
 		const { wrapper } = mountView()
 		expect(wrapper.find('.bar').attributes('data-doctype')).toBe('LMS Course')
