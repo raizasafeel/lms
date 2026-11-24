@@ -14,6 +14,7 @@
 			<SwitchRow
 				v-else
 				v-model="lesson.include_in_preview"
+				control-position="start"
 				:label="__('Include in preview')"
 				@update:modelValue="markDirty"
 			>

@@ -166,6 +166,11 @@ describe('named controls and focus outlines', () => {
 		const switches = elements(file).filter((el) => el.tag === 'SwitchRow')
 		expect(switches).toHaveLength(2)
 		for (const sw of switches) expect(attr(sw, 'label')).toBeTruthy()
+		// The editor's toolbar switch sits right before its label.
+		expect(switches.map((sw) => attr(sw, 'control-position'))).toEqual([
+			'start',
+			undefined,
+		])
 		const title = elements(file).find((el) => el.tag === 'textarea')!
 		// The ring is bound, not static: it shows only after keyboard input.
 		const boundClass = (title.props ?? []).find(
