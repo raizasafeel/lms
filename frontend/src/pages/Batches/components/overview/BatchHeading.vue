@@ -6,7 +6,7 @@
 			v-model="doc.title"
 			:placeholder="__('Batch title')"
 			:missing="form?.isMissing('title')"
-			class="text-4xl-semibold text-ink-gray-9"
+			class="-mt-[7px] text-4xl-semibold text-ink-gray-9"
 			@enter="descriptionField?.focus()"
 		/>
 		<h1 v-else class="text-4xl-semibold text-ink-gray-9">

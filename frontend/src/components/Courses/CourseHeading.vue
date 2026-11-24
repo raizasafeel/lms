@@ -1,13 +1,12 @@
 <template>
 	<section class="space-y-4">
-		<h1 v-if="doc" class="sr-only">{{ doc.title || __('Untitled course') }}</h1>
 		<InlineText
 			bleed
 			v-if="doc"
 			v-model="doc.title"
 			:placeholder="__('Course title')"
 			:missing="isMissing?.('title')"
-			class="text-4xl-semibold text-ink-gray-9"
+			class="-mt-[7px] text-4xl-semibold text-ink-gray-9"
 			@update:modelValue="markDirty?.()"
 			@enter="intro?.focus()"
 		/>
@@ -115,6 +114,8 @@
 		<p v-else-if="course.short_introduction" class="text-ink-gray-7 leading-6">
 			{{ course.short_introduction }}
 		</p>
+		<!-- Last: an earlier sibling would take the section's spacing above the title. -->
+		<h1 v-if="doc" class="sr-only">{{ doc.title || __('Untitled course') }}</h1>
 	</section>
 </template>
 
