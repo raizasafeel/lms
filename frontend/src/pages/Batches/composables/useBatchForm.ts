@@ -18,6 +18,8 @@ import {
 } from '@/utils/batchForm'
 import { reportAutosaveError, submitResource } from '@/utils/resource'
 import type { LMSBatch } from '@/types/lms/LMSBatch'
+import type { PersonRow } from '@/types/lms/LMSRoleAssignment'
+import { membersWith, withMembers } from '@/components/InlineEdit/People/people'
 import type { BatchAssessment } from '@/pages/Batches/components/overview/assessmentTypes'
 import type { BatchDetails, Resource } from '@/types'
 
@@ -45,6 +47,9 @@ export interface BatchMeta {
 
 export interface BatchForm {
 	doc: ComputedRef<LMSBatch | null>
+	/** The role table: who edits, grades and runs live classes. */
+	people: Ref<PersonRow[]>
+	/** The Editor rows of `people`, as the instructors learners see. */
 	instructors: Ref<string[]>
 	meta: BatchMeta
 	isDirty: ComputedRef<boolean>
@@ -138,7 +143,13 @@ export function useBatchForm(
 ): BatchForm {
 	const resource = shallowRef(createBatchResource(batchName()))
 	const doc = computed<LMSBatch | null>(() => resource.value.doc ?? null)
-	const instructors = ref<string[]>([])
+	const people = ref<PersonRow[]>([])
+	const instructors = computed<string[]>({
+		get: () => membersWith(people.value, 'Editor'),
+		set: (editors) => {
+			people.value = withMembers('LMS Batch', people.value, 'Editor', editors)
+		},
+	})
 	const meta = reactive<BatchMeta>({ description: '', keywords: '' })
 	const savedState = ref<string | null>(null)
 	const savedMeta = ref<string>('')
@@ -152,7 +163,7 @@ export function useBatchForm(
 	}
 
 	const currentState = computed<string>(() =>
-		JSON.stringify({ doc: doc.value, instructors: instructors.value })
+		JSON.stringify({ doc: doc.value, people: people.value })
 	)
 	const isMetaDirty = computed(() => JSON.stringify(meta) !== savedMeta.value)
 	const isDirty = computed<boolean>(
@@ -202,9 +213,10 @@ export function useBatchForm(
 
 	function applyServerData(loaded: LMSBatch): void {
 		normalize(loaded)
-		instructors.value = (loaded.instructors || [])
-			.map((row) => row.instructor)
-			.filter(Boolean) as string[]
+		people.value = (loaded.people || []).map(({ member, role }) => ({
+			member,
+			role,
+		}))
 		savedState.value = currentState.value
 	}
 
@@ -242,6 +254,7 @@ export function useBatchForm(
 	function payload(): Record<string, unknown> {
 		const fields: Record<string, unknown> = { ...toRaw(doc.value) }
 		for (const key of UNSAVED_KEYS) delete fields[key]
+		fields.people = people.value
 		fields.instructors = instructors.value.map((instructor) => ({ instructor }))
 		return fields
 	}
@@ -266,6 +279,7 @@ export function useBatchForm(
 
 	const form: BatchForm = {
 		doc,
+		people,
 		instructors,
 		meta,
 		isDirty,

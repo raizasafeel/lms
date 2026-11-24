@@ -1,5 +1,6 @@
 import { ChapterReference } from './ChapterReference'
 import { CourseInstructor } from './CourseInstructor'
+import { LMSRoleAssignment } from './LMSRoleAssignment'
 import { RelatedCourses } from './RelatedCourses'
 
 export interface LMSCourse {
@@ -89,4 +90,10 @@ export interface LMSCourse {
 	timezone?: string
 	/**	Notification Sent : Check	*/
 	notification_sent?: 0 | 1
+	/**	People : Table - LMS Role Assignment	*/
+	people?: LMSRoleAssignment[]
+	/**	Evaluation Format : Select	*/
+	evaluation_format?: 'Live call' | 'Review of submitted work'
+	/**	Evaluation Length (Minutes) : Select	*/
+	evaluation_duration?: '15' | '30' | '45' | '60'
 }

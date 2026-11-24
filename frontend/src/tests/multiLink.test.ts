@@ -602,4 +602,15 @@ describe('MultiLink select all', () => {
 		expect(selectAllButton()).toBeUndefined()
 		expect(popoverText()).toContain('Clear')
 	})
+
+	it('leaves Clear out when the caller turns it off', async () => {
+		h.searchHits = [{ value: 'b1', label: 'One' }]
+		const wrapper = mountLink(['b1'], false, { clearable: false })
+		await flushPromises()
+
+		await wrapper.get('button[data-state]').trigger('click')
+		await flushPromises()
+
+		expect(popoverText()).not.toContain('Clear')
+	})
 })

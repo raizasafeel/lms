@@ -19,6 +19,7 @@ vi.mock('frappe-ui', async () => {
 						short_introduction: 'Intro',
 						description: '<p>About</p>',
 						instructors: [{ instructor: 'ash@example.com' }],
+						people: [{ member: 'ash@example.com', role: 'Editor' }],
 						related_courses: [],
 					}
 				}),
@@ -63,5 +64,26 @@ describe('the course form', () => {
 		expect(form.isDirty.value).toBe(true)
 		form.submitCourse()
 		expect(state.resource.setValue.submit).toHaveBeenCalledTimes(1)
+	})
+
+	it('saves People and derives the instructors from its Editors', async () => {
+		const form = await mountForm()
+		form.instructors.value = ['ash@example.com', 'bo@example.com']
+		form.people.value = [
+			...form.people.value,
+			{ member: 'eve@example.com', role: 'Grader' },
+		]
+		form.markDirty()
+		form.submitCourse()
+		const [values] = state.resource.setValue.submit.mock.calls.at(-1)
+		expect(values.people).toEqual([
+			{ member: 'ash@example.com', role: 'Editor' },
+			{ member: 'bo@example.com', role: 'Editor' },
+			{ member: 'eve@example.com', role: 'Grader' },
+		])
+		expect(values.instructors).toEqual([
+			{ instructor: 'ash@example.com' },
+			{ instructor: 'bo@example.com' },
+		])
 	})
 })

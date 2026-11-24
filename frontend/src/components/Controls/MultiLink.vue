@@ -40,11 +40,11 @@
 		<template #footer="{ clear, selectAll }">
 			<slot name="footer" :close="closePopover">
 				<div
-					v-if="value?.length || props.onCreate || canSelectAll"
+					v-if="canClear || props.onCreate || canSelectAll"
 					class="flex items-center justify-between gap-2 border-t border-outline-gray-1 px-2 py-1.5 mt-1"
 				>
 					<Button
-						v-if="value?.length"
+						v-if="canClear"
 						variant="ghost"
 						size="sm"
 						:aria-label="__('Clear')"
@@ -141,6 +141,8 @@ const props = withDefaults(
 		 *  `page_length` defaults to 10 server-side, not every record of the
 		 *  doctype, which the label no longer says. */
 		allowSelectAll?: boolean
+		/** Offer Clear in the footer. Off where dropping every value at once would be destructive. */
+		clearable?: boolean
 	}>(),
 	{
 		filters: () => ({}),
@@ -151,6 +153,7 @@ const props = withDefaults(
 		createLabel: 'Create New',
 		emptyText: 'No results',
 		allowSelectAll: false,
+		clearable: true,
 	}
 )
 
@@ -282,6 +285,10 @@ const mergedOptions = computed<SelectOption[]>(() => {
 	}
 	return out
 })
+
+const canClear = computed<boolean>(
+	() => props.clearable && Boolean(value.value?.length)
+)
 
 const canSelectAll = computed<boolean>(
 	() =>

@@ -1,5 +1,6 @@
 import { BatchCourse } from './BatchCourse'
 import { CourseInstructor } from './CourseInstructor'
+import { LMSRoleAssignment } from './LMSRoleAssignment'
 import { LMSAssessment } from './LMSAssessment'
 import { LMSBatchTimetable } from './LMSBatchTimetable'
 import { LMSTimetableLegend } from './LMSTimetableLegend'
@@ -91,4 +92,10 @@ export interface LMSBatch {
 	notification_sent?: 0 | 1
 	/**	Evaluation : Check	*/
 	evaluation?: 0 | 1
+	/**	People : Table - LMS Role Assignment	*/
+	people?: LMSRoleAssignment[]
+	/**	Evaluation Format : Select	*/
+	evaluation_format?: 'Live call' | 'Review of submitted work'
+	/**	Evaluation Length (Minutes) : Select	*/
+	evaluation_duration?: '15' | '30' | '45' | '60'
 }

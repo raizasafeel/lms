@@ -6,6 +6,11 @@ import { getMetaInfo, updateMetaInfo } from '@/utils'
 import { joinLabels, missingCourseFields } from '@/utils/courseForm'
 import type { MissingField } from '@/utils/courseForm'
 import { reportAutosaveError } from '@/utils/resource'
+import {
+	membersWith,
+	withMembers,
+	type PersonRow,
+} from '@/components/InlineEdit/People/people'
 import type { LMSCourse } from '@/types/lms/LMSCourse'
 import type {
 	CourseDetails,
@@ -50,7 +55,14 @@ export function useCourseForm(
 
 	const isDirty = ref<boolean>(false)
 	const showRequired = ref<boolean>(false)
-	const instructors = ref<string[]>([])
+	const people = ref<PersonRow[]>([])
+	// Editors are the instructors learners see; the role table is the one owner.
+	const instructors = computed<string[]>({
+		get: () => membersWith(people.value, 'Editor'),
+		set: (editors) => {
+			people.value = withMembers('LMS Course', people.value, 'Editor', editors)
+		},
+	})
 	const relatedCourses = ref<string[]>([])
 	const meta = reactive<CourseFormMeta>({ description: '', keywords: '' })
 	// Set while server data is applied, so it does not arm autosave.
@@ -88,9 +100,10 @@ export function useCourseForm(
 	)
 
 	function applyServerData(doc: LMSCourse): void {
-		instructors.value = (doc.instructors || [])
-			.map((row) => row.instructor)
-			.filter(Boolean) as string[]
+		people.value = (doc.people || []).map(({ member, role }) => ({
+			member,
+			role,
+		}))
 		relatedCourses.value = (doc.related_courses || [])
 			.map((row) => row.course)
 			.filter(Boolean) as string[]
@@ -127,6 +140,7 @@ export function useCourseForm(
 		resource.setValue.submit(
 			{
 				...fields,
+				people: people.value,
 				instructors: instructors.value.map((i) => ({ instructor: i })),
 				related_courses: relatedCourses.value.map((c) => ({ course: c })),
 			},
@@ -147,6 +161,7 @@ export function useCourseForm(
 
 	const form: CourseForm = {
 		resource,
+		people,
 		instructors,
 		relatedCourses,
 		meta,

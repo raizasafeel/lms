@@ -114,6 +114,10 @@ export function useBatchDraft(onCreated: (name: string) => void): BatchDraft {
 
 	const form: BatchDraft = {
 		doc: computed(() => doc),
+		// A new batch's People are its instructors as Editors; the server adopts them.
+		people: computed(() =>
+			instructors.value.map((member) => ({ member, role: 'Editor' as const }))
+		),
 		instructors,
 		meta,
 		isDirty: computed(() => true),

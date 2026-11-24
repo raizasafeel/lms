@@ -29,7 +29,7 @@
 			<InstructorsField
 				v-if="doc && form && batch.can_change_instructors"
 				v-model="form.instructors.value"
-				memberRole="batch_evaluator"
+				memberRole="course_creator"
 				class="-mx-2"
 				:missing="form.isMissing('instructors')"
 			/>

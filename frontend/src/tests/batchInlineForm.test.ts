@@ -42,6 +42,7 @@ const completeDoc = () => ({
 	timezone: 'Asia/Kolkata',
 	batch_details: '<p>Details</p>',
 	instructors: [{ instructor: 'ash@example.com' }],
+	people: [{ member: 'ash@example.com', role: 'Editor' }],
 	courses: [{ course: 'C1' }],
 	modified: '2026-01-01 10:00:00',
 	paid_batch: 0,
@@ -119,6 +120,9 @@ describe('the batch inline form', () => {
 		const [values] = state.resource.setValue.submit.mock.calls[0]
 		expect(values.title).toBe('Summer batch')
 		expect(values.instructors).toEqual([{ instructor: 'ash@example.com' }])
+		expect(values.people).toEqual([
+			{ member: 'ash@example.com', role: 'Editor' },
+		])
 		expect(values).not.toHaveProperty('courses')
 		expect(values).not.toHaveProperty('modified')
 	})

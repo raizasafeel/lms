@@ -4,7 +4,7 @@
 		v-model="instructors"
 		doctype="User"
 		url="lms.lms.api.search_users_by_role"
-		:searchParams="{ roles: JSON.stringify(ROLES) }"
+		:searchParams="{ roles: JSON.stringify(EDITOR_ROLES) }"
 		:transform="toOptions"
 		:extraOptions="knownSelected"
 		:placeholder="__('Add instructors')"
@@ -59,6 +59,7 @@ import MultiLink from '@/components/Controls/MultiLink.vue'
 import NewMemberModal from '@/components/Modals/NewMemberModal.vue'
 import { missingRing } from '@/components/InlineEdit/fieldClasses'
 import { summarisePeople } from '@/utils/peopleSummary'
+import { STAFF_SITE_ROLES } from '@/components/InlineEdit/People/people'
 
 interface PersonOption {
 	label: string
@@ -79,12 +80,13 @@ interface UserHit {
  */
 defineOptions({ inheritAttrs: false })
 defineProps<{
-	memberRole: 'course_creator' | 'batch_evaluator'
+	memberRole: 'course_creator'
 	missing?: boolean
 }>()
 const instructors = defineModel<string[]>({ required: true })
 
-const ROLES = ['Course Creator', 'Batch Evaluator']
+// Instructors are the Editors of People, which needs Course Creator.
+const EDITOR_ROLES = ['Course Creator', 'Moderator']
 const MAX_VISIBLE_AVATARS = 3
 
 const picker = useTemplateRef<{ reload: () => void }>('picker')
@@ -104,7 +106,7 @@ const lookup = createResource({
 	url: 'lms.lms.api.search_users_by_role',
 	method: 'POST',
 	makeParams: () => ({
-		roles: JSON.stringify(ROLES),
+		roles: JSON.stringify(STAFF_SITE_ROLES),
 		names: JSON.stringify(instructors.value),
 	}),
 	onSuccess(rows: UserHit[]) {

@@ -2,6 +2,7 @@ import type { CloudContext } from '@frappe/cloud-sdk'
 import type { Ref } from 'vue'
 import type { LMSCourse } from './lms/LMSCourse'
 import type { LMSBatch } from './lms/LMSBatch'
+import type { PersonRow } from './lms/LMSRoleAssignment'
 import type { CourseEvaluator } from './lms/CourseEvaluator'
 
 export interface Resource<T = unknown> {
@@ -163,6 +164,9 @@ export interface CourseFormMeta {
 
 export interface CourseFormContext {
 	resource: Resource<LMSCourse | null>
+	/** The role table: who edits, grades and runs live classes. */
+	people: Ref<PersonRow[]>
+	/** The Editor rows of `people`, as the instructors learners see. */
 	instructors: Ref<string[]>
 	relatedCourses: Ref<string[]>
 	meta: CourseFormMeta

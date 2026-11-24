@@ -138,6 +138,10 @@ export function useCourseDraft(
 
 	const form: CourseDraft = {
 		resource,
+		// A new course's People are its instructors as Editors; the server adopts them.
+		people: computed(() =>
+			instructors.value.map((member) => ({ member, role: 'Editor' as const }))
+		),
 		instructors,
 		relatedCourses,
 		meta,
