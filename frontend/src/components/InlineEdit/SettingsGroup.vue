@@ -1,6 +1,6 @@
 <template>
-	<section :id="id" ref="section" class="scroll-mt-6 space-y-3">
-		<div class="space-y-1">
+	<section :id="id" ref="section" class="scroll-mt-6 space-y-1">
+		<div class="space-y-1 border-b border-outline-gray-2 pb-3">
 			<h2 class="text-lg-semibold text-ink-gray-9">{{ title }}</h2>
 			<p v-if="description" class="text-p-sm text-ink-gray-6">
 				{{ description }}
