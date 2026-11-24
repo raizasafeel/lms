@@ -9,11 +9,7 @@
 				v-if="isPreview"
 				class="mb-6"
 				:title="__('Student view')"
-				:description="
-					__(
-						'This is the checkout a learner sees. No payment is taken: proceeding enrolls you as a preview learner.'
-					)
-				"
+				:description="previewNotice"
 			/>
 			<div class="flex flex-col @4xl:flex-row justify-between">
 				<div class="flex flex-col lg:order-last mb-10 lg:mt-10 lg:w-1/4">
@@ -314,6 +310,14 @@ const paymentForLabel = computed(() => {
 	if (props.type == 'certificate') return __('Payment for certificate:')
 	return __('Payment for course:')
 })
+
+const previewNotice = computed(() =>
+	props.type == 'certificate'
+		? __('This is the checkout a learner sees. No payment is taken.')
+		: __(
+				'This is the checkout a learner sees. No payment is taken: proceeding enrolls you as a preview learner.'
+		  )
+)
 
 const access = createResource({
 	url: 'lms.lms.api.validate_billing_access',

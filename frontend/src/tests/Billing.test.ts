@@ -417,7 +417,9 @@ describe('Billing in student view', () => {
 	it('shows the checkout as a preview and enrolls in student view instead of paying', async () => {
 		routeQuery.value = { studentView: 'not-enrolled' }
 		const wrapper = await mountBilling({}, { type: 'course', name: 'COURSE-1' })
-		expect(wrapper.find('[data-testid="preview-note"]').exists()).toBe(true)
+		expect(wrapper.get('[data-testid="preview-note"]').text()).toContain(
+			'proceeding enrolls you as a preview learner'
+		)
 
 		const pay = wrapper
 			.findAll('button')
@@ -440,7 +442,9 @@ describe('Billing in student view', () => {
 			{},
 			{ type: 'certificate', name: 'COURSE-1' }
 		)
-		expect(wrapper.find('[data-testid="preview-note"]').exists()).toBe(true)
+		expect(wrapper.get('[data-testid="preview-note"]').text()).toBe(
+			'This is the checkout a learner sees. No payment is taken.'
+		)
 
 		await proceed(wrapper)
 		expect(pushMock).toHaveBeenCalledWith({
