@@ -12,7 +12,7 @@
 		<TabbedDetailPage
 			ref="page"
 			:key="studentViewVersion"
-			class="min-h-0 flex-1"
+			class="grow"
 			:tabs="tabs"
 			:breadcrumbs="breadcrumbs"
 			:published="isAdmin && Boolean(batch.data?.published)"

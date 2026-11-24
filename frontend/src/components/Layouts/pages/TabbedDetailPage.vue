@@ -139,9 +139,9 @@ const activeInstance = computed<unknown>(() =>
 	activeTab.value ? instances[activeTab.value.key] ?? null : null
 )
 
-const flowsWithPage = computed<boolean>(
-	() => isMobile.value && Boolean(activeTab.value?.flow)
-)
+// A flow tab grows the page so the layout's scroller scrolls it; a bounded
+// h-full box would end the sticky header's run one viewport down.
+const flowsWithPage = computed<boolean>(() => Boolean(activeTab.value?.flow))
 
 const pageTitle = computed<string>(
 	() => props.breadcrumbs[props.breadcrumbs.length - 1]?.label ?? ''
@@ -205,8 +205,7 @@ defineExpose({ instanceFor: (key: string): unknown => instances[key] ?? null })
 
 <style scoped>
 /* Same box as the `.header-frame` above: one height token, one inset.
-   CourseDetail floats its Chapters bar level with this row, so both borders
-   have to land on the same line. frappe-ui sizes only the pills. */
+   frappe-ui sizes only the pills. */
 :deep([role='tablist']) {
 	flex-shrink: 0;
 	height: var(--header-frame-h);
