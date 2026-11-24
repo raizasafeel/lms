@@ -15,7 +15,7 @@
 		/>
 		<div
 			v-else
-			class="grid grid-cols-1 gap-5 lg:min-h-[30rem] lg:flex-1"
+			class="grid shrink-0 grid-cols-1 gap-5 lg:min-h-[30rem]"
 			:class="gridClass"
 		>
 			<div class="flex min-w-0 flex-col gap-5 lg:min-h-0">

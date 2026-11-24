@@ -24,6 +24,13 @@ describe('the dashboard columns', () => {
 		expect(kpiClass.value).toContain('@5xl:grid-cols-2')
 	})
 
+	it('lets only the side by side grid fill the page height', async () => {
+		const { gridClass } = useDashboardColumns()
+		expect(gridClass.value).toContain('lg:@5xl:flex-1')
+		await dockFlow()
+		expect(gridClass.value).not.toContain('flex-1')
+	})
+
 	it('stacks the side panels below the list at any width while Flow is docked', async () => {
 		const { gridClass, kpiClass } = useDashboardColumns()
 		await dockFlow()
