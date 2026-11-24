@@ -23,6 +23,14 @@
 			:title="__('Search and sharing')"
 			:description="__('How the course shows up in search results.')"
 		>
+			<SearchPreview
+				class="mb-3"
+				:url="courseUrl"
+				:title="form.resource.doc.title"
+				:description="
+					form.meta.description || form.resource.doc.short_introduction
+				"
+			/>
 			<SettingField
 				v-model="form.meta.description"
 				type="textarea"
@@ -77,11 +85,12 @@
 </template>
 
 <script setup lang="ts">
-import { inject } from 'vue'
+import { computed, inject } from 'vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import CourseThumbnailPicker from '@/components/InlineEdit/CourseThumbnailPicker.vue'
 import SettingAction from '@/components/InlineEdit/SettingAction.vue'
 import SettingField from '@/components/InlineEdit/SettingField.vue'
+import SearchPreview from '@/components/InlineEdit/SearchPreview.vue'
 import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import CoursePublishSettings from '@/pages/Courses/CoursePublishSettings.vue'
 import { COURSE_ACTIONS } from '@/composables/useCourseActions'
@@ -99,6 +108,11 @@ defineProps<{ course: Resource<CourseDetails | null> }>()
 const form = inject<CourseFormContext>('courseForm')!
 const actions = inject(COURSE_ACTIONS, null)
 const user = inject<SessionUser>('$user')!
+
+// The address learners share, without the scheme, as search results print it.
+const courseUrl = computed<string>(
+	() => `${window.location.host}/lms/courses/${form.resource.doc?.name ?? ''}`
+)
 
 function setField(field: keyof LMSCourse, value: unknown): void {
 	;(form.resource.doc as Record<string, unknown>)[field] = value
