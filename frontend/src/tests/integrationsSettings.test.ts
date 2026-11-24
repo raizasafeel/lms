@@ -1,12 +1,12 @@
 /**
  * Settings > Integrations: the grid of cards, what each card offers in each
- * state, the breadcrumb a configured page opens under, and which integration
- * pages the sidebar lists. Only the server call, toasts and navigation are
- * replaced; the cards, switches and buttons are the shipped ones.
+ * state, which integration pages the sidebar lists, and the pages Configure
+ * opens. Only the server, the settings documents, toasts and navigation are
+ * replaced; the cards, switches, inputs and buttons are the shipped ones.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { defineComponent, h } from 'vue'
+import { reactive } from 'vue'
 
 vi.hoisted(() => {
 	window.matchMedia ??= (() => ({
@@ -18,21 +18,35 @@ vi.hoisted(() => {
 
 const server = vi.hoisted(() => ({
 	status: null as unknown,
+	refuse: false,
 	calls: [] as { url: string; params?: unknown }[],
 }))
 const navigation = vi.hoisted(() => ({ slugs: [] as string[] }))
 const external = vi.hoisted(() => ({ urls: [] as string[] }))
+const flowPanel = vi.hoisted(() => ({ open: false }))
+const failures = vi.hoisted(() => ({ reported: [] as unknown[] }))
+const sources = vi.hoisted(
+	() =>
+		[] as {
+			doc: Record<string, unknown>
+			isDirty: boolean
+			save: () => Promise<unknown>
+			reload: () => Promise<unknown>
+		}[]
+)
+const guards = vi.hoisted(
+	() => [] as { isDirty: () => boolean; discard?: () => void }[]
+)
 
 vi.mock('frappe-ui', async () => {
 	const actual = (await vi.importActual('frappe-ui')) as Record<string, unknown>
 	return new Proxy(actual, {
 		get(target, key: string) {
 			if (key === 'call')
-				return (
-					url: string,
-					params?: { changes?: Record<string, boolean> }
-				) => {
+				return (url: string, params?: unknown) => {
 					server.calls.push({ url, params })
+					if (server.refuse && url.endsWith('set_integrations_enabled'))
+						return Promise.reject({ messages: ['Refused'] })
 					return Promise.resolve(server.status)
 				}
 			if (key === 'toast') return { error: () => {}, success: () => {} }
@@ -46,7 +60,28 @@ vi.mock('@/utils', () => ({
 vi.mock('@/utils/openExternal', () => ({
 	openExternal: (url: string) => external.urls.push(url),
 }))
-vi.mock('@/composables/useDirtyGuard', () => ({ useDirtyGuard: () => {} }))
+vi.mock('@/composables/useDirtyGuard', () => ({
+	useDirtyGuard: (isDirty: () => boolean, discard?: () => void) =>
+		guards.push({ isDirty, discard }),
+}))
+vi.mock('@/composables/useSettingsSource', async (importOriginal) => ({
+	...((await importOriginal()) as object),
+	reportSaveFailure: (error: unknown) => failures.reported.push(error),
+	useSettingsSource: () => {
+		const source = reactive({
+			doc: {} as Record<string, unknown>,
+			isDirty: false,
+			save: vi.fn(() => Promise.resolve()),
+			reload: vi.fn(() => Promise.resolve()),
+		})
+		sources.push(source)
+		return source
+	},
+}))
+vi.mock('@/composables/useFlowDocked', async () => {
+	const { computed } = await import('vue')
+	return { useFlowDocked: () => computed(() => flowPanel.open) }
+})
 vi.mock('@framework/ui/telemetry/index', () => ({}))
 vi.mock('@framework/ui/components/Onboarding/index', () => ({}))
 vi.mock('@/stores/user', () => ({
@@ -68,9 +103,10 @@ vi.stubGlobal('__', __t)
 const mountOptions = { global: { mocks: { __: __t } } }
 
 import Integrations from '@/components/Settings/Integrations/Integrations.vue'
+import GoogleConfig from '@/components/Settings/Integrations/GoogleConfig.vue'
+import UnsplashConfig from '@/components/Settings/Integrations/UnsplashConfig.vue'
+import FlowConfig from '@/components/Settings/Integrations/FlowConfig.vue'
 import ZoomAttendanceSwitch from '@/components/Settings/Zoom/ZoomAttendanceSwitch.vue'
-import SettingsCrumbScope from '@/components/Layouts/settings/desktop/SettingsCrumbScope.vue'
-import SettingsHeader from '@/components/Layouts/settings/desktop/SettingsHeader.vue'
 import {
 	integrationStatus,
 	isSidebarItemVisible,
@@ -82,39 +118,57 @@ const STATUS_URL = 'lms.lms.integrations.get_integration_status'
 const SAVE_URL = 'lms.lms.integrations.set_integrations_enabled'
 
 const baseStatus = (): IntegrationStatus => ({
-	google: { enabled: true, has_credentials: true, permitted: true },
+	google: { enabled: true, has_credentials: false, permitted: true },
 	google_calendar: { enabled: true, calendars: 5, need_access: 1 },
 	google_meet: { enabled: true, accounts: 1 },
 	zoom: { enabled: false, attendance: true, accounts: 2 },
 	code_runner: { enabled: true, own_server: true },
 	unsplash: { enabled: false, has_key: false },
 	raven: { enabled: false, raven: true, raven_integration: false },
-	frappe_meet: { installed: false },
+	flow: {
+		installed: true,
+		enabled: true,
+		hide_for_learners: true,
+		ready: true,
+	},
+})
+
+const withZoom = (enabled: boolean): IntegrationStatus => ({
+	...baseStatus(),
+	zoom: { ...baseStatus().zoom, enabled },
 })
 
 const card = (wrapper: ReturnType<typeof mount>, key: string) =>
 	wrapper.get(`[data-testid="integration-${key}"]`)
 
-const mountGrid = async () => {
-	const wrapper = mount(Integrations, mountOptions)
+const configure = (wrapper: ReturnType<typeof mount>, key: string) =>
+	card(wrapper, key).get('[data-testid="integration-configure"]')
+
+const mountGrid = async (record: string | null = null) => {
+	const wrapper = mount(Integrations, { ...mountOptions, props: { record } })
 	await flushPromises()
 	return wrapper
 }
 
 beforeEach(() => {
 	server.status = baseStatus()
+	server.refuse = false
 	server.calls = []
 	navigation.slugs = []
 	external.urls = []
+	failures.reported = []
+	sources.length = 0
+	guards.length = 0
+	flowPanel.open = false
 	integrationStatus.value = null
 })
 
 describe('the Integrations grid', () => {
-	it('loads the status and draws a card for every integration', async () => {
+	it('draws a card for every integration the LMS supports', async () => {
 		const wrapper = await mountGrid()
 		expect(server.calls[0].url).toBe(STATUS_URL)
 		const keys = wrapper
-			.findAll('[data-testid^="integration-"][data-enabled]')
+			.findAll('[data-enabled]')
 			.map((node) => node.attributes('data-testid'))
 		expect(keys).toEqual([
 			'integration-google',
@@ -124,133 +178,135 @@ describe('the Integrations grid', () => {
 			'integration-code_runner',
 			'integration-unsplash',
 			'integration-raven',
-			'integration-frappe_meet',
+			'integration-flow',
 		])
 	})
 
-	it('reports each card in its own words', async () => {
+	it('reports each card in its own words, warnings in a readable ink', async () => {
 		const wrapper = await mountGrid()
 		const line = (key: string) =>
 			card(wrapper, key).get('[data-testid="integration-status"]')
-		expect(line('google').text()).toBe('Connected')
+		expect(line('google').text()).toBe('Needs a client ID and secret')
+		expect(line('google').classes()).toContain('text-ink-amber-8')
 		expect(line('google_calendar').text()).toBe('5 calendars · 1 need access')
-		expect(line('google_calendar').classes()).toContain('text-ink-amber-3')
 		expect(line('google_meet').text()).toBe('1 account')
 		expect(line('code_runner').text()).toBe('Your own server')
 		expect(line('zoom').text()).toBe('Off')
 		expect(line('raven').text()).toBe('Needs the Raven integration app')
-		expect(line('frappe_meet').text()).toBe('Needs the Frappe Meet app')
+		expect(line('flow').text()).toBe('Connected · hidden for learners')
 	})
 
-	it('mutes an off card and keeps it from being configured', async () => {
+	it('has no Save: a switch saves the moment it flips', async () => {
 		const wrapper = await mountGrid()
-		const zoom = card(wrapper, 'zoom')
-		expect(zoom.attributes('data-enabled')).toBe('false')
-		expect(zoom.classes()).toContain('bg-surface-gray-1')
-		expect(
-			zoom.get('[data-testid="integration-configure"]').attributes()
-		).toHaveProperty('disabled')
-	})
-
-	it('offers Install instead of a switch when an app is missing', async () => {
-		const wrapper = await mountGrid()
-		const meet = card(wrapper, 'frappe_meet')
-		expect(meet.find('[role="switch"]').exists()).toBe(false)
-		expect(
-			meet.get('[data-testid="integration-configure"]').attributes()
-		).toHaveProperty('disabled')
-		await meet.get('[data-testid="integration-install"]').trigger('click')
-		expect(external.urls).toEqual([
-			'https://cloud.frappe.io/marketplace/apps/meet',
-		])
-		expect(card(wrapper, 'zoom').find('[role="switch"]').exists()).toBe(true)
-	})
-
-	it('saves a toggle only on Save', async () => {
-		const wrapper = await mountGrid()
-		const save = wrapper.get('[data-testid="integrations-save"]')
-		expect(save.attributes()).toHaveProperty('disabled')
-
+		expect(wrapper.find('[data-testid="integrations-save"]').exists()).toBe(
+			false
+		)
+		server.status = withZoom(true)
 		await card(wrapper, 'zoom').get('[role="switch"]').trigger('click')
-		expect(card(wrapper, 'zoom').attributes('data-enabled')).toBe('true')
-		expect(server.calls.map((call) => call.url)).toEqual([STATUS_URL])
-		expect(save.attributes()).not.toHaveProperty('disabled')
-
-		server.status = {
-			...baseStatus(),
-			zoom: { ...baseStatus().zoom, enabled: true },
-		}
-		await save.trigger('click')
 		await flushPromises()
 		expect(server.calls[1]).toEqual({
 			url: SAVE_URL,
 			params: { changes: { zoom: true } },
 		})
-		expect(save.attributes()).toHaveProperty('disabled')
+		expect(card(wrapper, 'zoom').attributes('data-enabled')).toBe('true')
 		expect(
 			card(wrapper, 'zoom').get('[data-testid="integration-status"]').text()
 		).toBe('2 accounts · attendance on')
 	})
 
-	it('drops a toggle flipped back before saving', async () => {
+	it('puts a refused switch back and says why', async () => {
 		const wrapper = await mountGrid()
-		const zoomSwitch = card(wrapper, 'zoom').get('[role="switch"]')
-		await zoomSwitch.trigger('click')
-		await zoomSwitch.trigger('click')
-		expect(
-			wrapper.get('[data-testid="integrations-save"]').attributes()
-		).toHaveProperty('disabled')
+		server.refuse = true
+		await card(wrapper, 'zoom').get('[role="switch"]').trigger('click')
+		await flushPromises()
+		expect(failures.reported).toEqual([{ messages: ['Refused'] }])
+		expect(card(wrapper, 'zoom').attributes('data-enabled')).toBe('false')
 	})
 
-	it('opens an on integration’s page from Configure', async () => {
+	it('mutes an off card and keeps its page closed', async () => {
 		const wrapper = await mountGrid()
-		await card(wrapper, 'google_calendar')
-			.get('[data-testid="integration-configure"]')
-			.trigger('click')
-		expect(navigation.slugs).toEqual(['google-calendar'])
+		expect(card(wrapper, 'zoom').classes()).toContain('bg-surface-gray-1')
+		expect(configure(wrapper, 'zoom').attributes()).toHaveProperty('disabled')
 	})
 
-	it('locks the Google Meet switch while Google is off', async () => {
+	it('opens a simple integration in place, on or off, and comes back', async () => {
+		const wrapper = await mountGrid()
+		await configure(wrapper, 'google').trigger('click')
+		await configure(wrapper, 'unsplash').trigger('click')
+		expect(wrapper.emitted('update:record')).toEqual([['google'], ['unsplash']])
+		expect(navigation.slugs).toEqual([])
+
+		const page = await mountGrid('unsplash')
+		expect(page.find('[data-enabled]').exists()).toBe(false)
+		expect(page.find('[data-testid="integration-intro"]').exists()).toBe(true)
+		await page.get('header button').trigger('click')
+		expect(page.emitted('update:record')).toEqual([[null]])
+	})
+
+	it('sends a list integration to its own sidebar page', async () => {
+		server.status = withZoom(true)
+		const wrapper = await mountGrid()
+		await configure(wrapper, 'zoom').trigger('click')
+		expect(navigation.slugs).toEqual(['zoom'])
+	})
+
+	it('gives Google Calendar and Google Meet no Configure', async () => {
+		const wrapper = await mountGrid()
+		for (const key of ['google_calendar', 'google_meet'])
+			expect(
+				card(wrapper, key)
+					.find('[data-testid="integration-configure"]')
+					.exists()
+			).toBe(false)
+	})
+
+	it('offers to install Raven’s apps in place of its switch and Configure', async () => {
+		const wrapper = await mountGrid()
+		const raven = card(wrapper, 'raven')
+		expect(raven.find('[role="switch"]').exists()).toBe(false)
+		expect(raven.find('[data-testid="integration-configure"]').exists()).toBe(
+			false
+		)
+		const install = raven.get('[data-testid="integration-install"]')
+		expect(install.text()).toContain('Install required apps')
+		await install.trigger('click')
+		expect(external.urls).toEqual([
+			'https://github.com/raizasafeel/raven_integration',
+		])
+	})
+
+	it('shows Raven’s switch and Configure once its apps are installed', async () => {
 		server.status = {
 			...baseStatus(),
-			google: { enabled: false, has_credentials: false, permitted: true },
-			google_meet: { enabled: false, accounts: 0 },
+			raven: { enabled: true, raven: true, raven_integration: true },
 		}
 		const wrapper = await mountGrid()
+		const raven = card(wrapper, 'raven')
+		expect(raven.find('[role="switch"]').exists()).toBe(true)
+		await raven.get('[data-testid="integration-configure"]').trigger('click')
+		expect(navigation.slugs).toEqual(['raven'])
+	})
+
+	it('locks Calendar and Meet until Google has its credentials', async () => {
+		server.status = {
+			...baseStatus(),
+			google_calendar: { enabled: false, calendars: 0, need_access: 0 },
+			google_meet: { enabled: false, accounts: 0 },
+		}
+		const locked = await mountGrid()
+		for (const key of ['google_calendar', 'google_meet'])
+			expect(
+				card(locked, key).get('[role="switch"]').attributes()
+			).toHaveProperty('disabled')
+
+		server.status = {
+			...(server.status as IntegrationStatus),
+			google: { enabled: true, has_credentials: true, permitted: true },
+		}
+		const ready = await mountGrid()
 		expect(
-			card(wrapper, 'google_meet').get('[role="switch"]').attributes()
-		).toHaveProperty('disabled')
-	})
-})
-
-describe('the integration breadcrumb', () => {
-	const Page = defineComponent({
-		props: { crumb: { type: Object, default: null } },
-		setup: (props) => () =>
-			h(SettingsCrumbScope, { crumb: props.crumb }, () =>
-				h(SettingsHeader, { title: 'Zoom' })
-			),
-	})
-
-	it('draws "← Integrations / Zoom" and goes back on click', async () => {
-		const open = vi.fn()
-		const wrapper = mount(Page, {
-			...mountOptions,
-			props: { crumb: { label: 'Integrations', open } },
-		})
-		const crumb = wrapper.get('[data-testid="settings-crumb"]')
-		expect(crumb.text()).toContain('Integrations')
-		expect(crumb.get('h2').text()).toBe('Zoom')
-		await crumb
-			.get('button[aria-label="Back to Integrations"]')
-			.trigger('click')
-		expect(open).toHaveBeenCalledOnce()
-	})
-
-	it('keeps the plain title on a page outside Integrations', () => {
-		const wrapper = mount(Page, mountOptions)
-		expect(wrapper.find('[data-testid="settings-crumb"]').exists()).toBe(false)
-		expect(wrapper.get('h2').text()).toBe('Zoom')
+			card(ready, 'google_meet').get('[role="switch"]').attributes()
+		).not.toHaveProperty('disabled')
 	})
 })
 
@@ -261,26 +317,117 @@ describe('the settings sidebar', () => {
 			.items.filter(isSidebarItemVisible)
 			.map((item) => item.slug)
 
-	it('lists only the integrations that are on, plus the grid', () => {
+	it('lists the grid and only the integrations that are on', () => {
 		integrationStatus.value = baseStatus()
 		expect(sidebarSlugs()).toEqual([
 			'integrations',
-			'services',
 			'google-calendar',
 			'google-meet',
 		])
 	})
 
 	it('adds an integration once it is turned on', () => {
-		integrationStatus.value = {
-			...baseStatus(),
-			zoom: { ...baseStatus().zoom, enabled: true },
-		}
+		integrationStatus.value = withZoom(true)
 		expect(sidebarSlugs()).toContain('zoom')
 	})
 
 	it('lists no integration page before the status has loaded', () => {
 		expect(sidebarSlugs()).toEqual(['integrations'])
+	})
+
+	it('keeps simple integrations out of the sidebar, and Services gone', () => {
+		const slugs = settingsTree.flatMap((g) => g.items.map((i) => i.slug))
+		for (const slug of [
+			'services',
+			'google',
+			'code-runner',
+			'unsplash',
+			'flow',
+		])
+			expect(slugs).not.toContain(slug)
+	})
+})
+
+describe('an integration page', () => {
+	it('opens with the integration’s icon and purpose', () => {
+		const wrapper = mount(UnsplashConfig, mountOptions)
+		expect(wrapper.get('[data-testid="integration-intro"]').text()).toBe(
+			'Lets people pick cover images from Unsplash.'
+		)
+		expect(wrapper.get('header').text()).toContain('Unsplash')
+	})
+
+	it('saves its own fields on its own Save', async () => {
+		const wrapper = mount(UnsplashConfig, mountOptions)
+		const [lms] = sources
+		const save = wrapper.get('[data-testid="unsplash-save"]')
+		expect(save.attributes()).toHaveProperty('disabled')
+
+		const key = wrapper.get('input[type="password"]')
+		expect(key.attributes('placeholder')).toBe('Paste your Unsplash access key')
+		await key.setValue('abc')
+		expect(lms.doc.unsplash_access_key).toBe('abc')
+
+		lms.isDirty = true
+		await wrapper.vm.$nextTick()
+		await save.trigger('click')
+		await flushPromises()
+		expect(lms.save).toHaveBeenCalledOnce()
+		expect(server.calls.map((call) => call.url)).toEqual([STATUS_URL])
+	})
+
+	it('guards a typed Google client secret and clears it on discard', async () => {
+		const wrapper = mount(GoogleConfig, mountOptions)
+		const guard = guards.at(-1)!
+		expect(guard.isDirty()).toBe(false)
+
+		const secret = wrapper.get('input[type="password"]')
+		await secret.setValue('s3cret')
+		expect(guard.isDirty()).toBe(true)
+
+		guard.discard?.()
+		await wrapper.vm.$nextTick()
+		expect(guard.isDirty()).toBe(false)
+		expect((secret.element as HTMLInputElement).value).toBe('')
+	})
+
+	it('writes a Google client secret after the rest of Google Settings', async () => {
+		const wrapper = mount(GoogleConfig, mountOptions)
+		const [google] = sources
+		google.isDirty = true
+		await wrapper.get('input[type="password"]').setValue('s3cret')
+		await wrapper.get('[data-testid="google-save"]').trigger('click')
+		await flushPromises()
+		expect(google.save).toHaveBeenCalledOnce()
+		expect(server.calls[0]).toEqual({
+			url: 'frappe.client.set_value',
+			params: {
+				doctype: 'Google Settings',
+				name: 'Google Settings',
+				fieldname: 'client_secret',
+				value: 's3cret',
+			},
+		})
+	})
+
+	it('lets Flow be hidden from learners', async () => {
+		integrationStatus.value = baseStatus()
+		const wrapper = mount(FlowConfig, mountOptions)
+		const [lms] = sources
+		expect(wrapper.get('[data-testid="flow-connection"]').text()).toContain(
+			'Connected'
+		)
+		await wrapper.get('[role="switch"]').trigger('click')
+		expect(lms.doc.hide_flow_for_learners).toBe(1)
+	})
+
+	it('offers to open Flow only while its panel is closed', () => {
+		integrationStatus.value = baseStatus()
+		const closed = mount(FlowConfig, mountOptions)
+		expect(closed.text()).toContain('Open Flow')
+		flowPanel.open = true
+		const open = mount(FlowConfig, mountOptions)
+		expect(open.text()).not.toContain('Open Flow')
 	})
 })
 

@@ -11,7 +11,7 @@ export type IntegrationKey =
 	| 'code_runner'
 	| 'unsplash'
 	| 'raven'
-	| 'frappe_meet'
+	| 'flow'
 
 /** What lms.lms.integrations.get_integration_status answers. */
 export interface IntegrationStatus {
@@ -22,12 +22,16 @@ export interface IntegrationStatus {
 	code_runner: { enabled: boolean; own_server: boolean }
 	unsplash: { enabled: boolean; has_key: boolean }
 	raven: { enabled: boolean; raven: boolean; raven_integration: boolean }
-	frappe_meet: { installed: boolean }
+	flow: {
+		installed: boolean
+		enabled: boolean
+		hide_for_learners: boolean
+		ready: boolean
+	}
 }
 
-export type ToggleKey = Exclude<IntegrationKey, 'frappe_meet'>
 export type IntegrationChanges = Partial<
-	Record<ToggleKey | 'zoom_attendance', boolean>
+	Record<IntegrationKey | 'zoom_attendance', boolean>
 >
 
 export interface CardLine {
@@ -41,8 +45,12 @@ export interface Integration {
 	label: string
 	icon: string
 	description: string
-	/** The settings page Configure opens. */
-	slug?: string
+	/**
+	 * Where Configure goes: `inPlace` for a page of fields opened inside the
+	 * grid, or the slug of an integration's own sidebar page of records.
+	 * Neither, and the card has no Configure.
+	 */
+	configure?: 'inPlace' | { slug: string }
 }
 
 const STATUS_URL = 'lms.lms.integrations.get_integration_status'
@@ -67,7 +75,7 @@ export const integrations: Integration[] = [
 		label: 'Google',
 		icon: 'lucide-key-round',
 		description: 'Lets the school use Google Calendar and Google Meet.',
-		slug: 'services',
+		configure: 'inPlace',
 	},
 	{
 		key: 'google_calendar',
@@ -75,35 +83,33 @@ export const integrations: Integration[] = [
 		icon: 'lucide-calendar',
 		description:
 			"Books evaluations into evaluators' free slots and sends invites.",
-		slug: 'google-calendar',
 	},
 	{
 		key: 'google_meet',
 		label: 'Google Meet',
 		icon: 'lucide-presentation',
 		description: 'Creates a Meet link for each live class and evaluation.',
-		slug: 'google-meet',
 	},
 	{
 		key: 'zoom',
 		label: 'Zoom',
 		icon: 'lucide-video',
 		description: 'Creates a Zoom link for each live class.',
-		slug: 'zoom',
+		configure: { slug: 'zoom' },
 	},
 	{
 		key: 'code_runner',
 		label: 'Code runner',
 		icon: 'lucide-square-terminal',
 		description: "Runs learners' code in programming exercises.",
-		slug: 'services',
+		configure: 'inPlace',
 	},
 	{
 		key: 'unsplash',
 		label: 'Unsplash',
 		icon: 'lucide-image',
 		description: 'Lets people pick cover images from Unsplash.',
-		slug: 'services',
+		configure: 'inPlace',
 	},
 	{
 		key: 'raven',
@@ -111,14 +117,15 @@ export const integrations: Integration[] = [
 		icon: 'lucide-messages-square',
 		description:
 			'Puts learners in a chat channel for each batch and posts announcements there.',
-		slug: 'raven',
+		configure: { slug: 'raven' },
 	},
 	{
-		key: 'frappe_meet',
-		label: 'Frappe Meet',
-		icon: 'lucide-phone-call',
+		key: 'flow',
+		label: 'Flow',
+		icon: 'lucide-sparkles',
 		description:
-			'Runs live classes and evaluations on your own video calls, with no Zoom or Google account.',
+			'AI assistant beside the app for building courses and answering questions.',
+		configure: 'inPlace',
 	},
 ]
 
@@ -128,18 +135,12 @@ export const isIntegrationEnabled = (key: IntegrationKey): boolean => {
 }
 
 /**
- * A sidebar item tied to integrations shows once any of them is on. Hidden
+ * A sidebar item tied to an integration shows once it is on. Hidden
  * until the status loads, so a disabled page never flashes in.
  */
 export const isSidebarItemVisible = (item: {
-	integration?: IntegrationKey | IntegrationKey[]
-}): boolean => {
-	if (!item.integration) return true
-	const keys = Array.isArray(item.integration)
-		? item.integration
-		: [item.integration]
-	return keys.some(isIntegrationEnabled)
-}
+	integration?: IntegrationKey
+}): boolean => !item.integration || isIntegrationEnabled(item.integration)
 
 /** The app an integration still needs, or null when nothing is missing. */
 export const missingApp = (
@@ -155,11 +156,6 @@ export const missingApp = (
 		return {
 			label: 'Needs the Raven app',
 			url: 'https://cloud.frappe.io/marketplace/apps/raven',
-		}
-	if (key === 'frappe_meet' && !status.frappe_meet.installed)
-		return {
-			label: 'Needs the Frappe Meet app',
-			url: 'https://cloud.frappe.io/marketplace/apps/meet',
 		}
 	return null
 }
@@ -206,25 +202,37 @@ const zoomLine = (state: IntegrationStatus['zoom']): CardLine => {
 	return { ...accounts, label: `${accounts.label} · ${attendance}` }
 }
 
-const onLines: Record<ToggleKey, (status: IntegrationStatus) => CardLine> = {
-	google: (status) =>
-		status.google.has_credentials
-			? { label: __('Connected') }
-			: { label: __('Needs a client ID and secret'), warning: true },
-	google_calendar: (status) => calendarLine(status.google_calendar),
-	google_meet: (status) => accountsLine(status.google_meet.accounts),
-	zoom: (status) => zoomLine(status.zoom),
-	code_runner: (status) => ({
-		label: status.code_runner.own_server
-			? __('Your own server')
-			: __("Frappe's server"),
-	}),
-	unsplash: (status) =>
-		status.unsplash.has_key
-			? { label: __('Connected') }
-			: { label: __('Needs an access key'), warning: true },
-	raven: () => ({ label: __('Connected') }),
+const flowLine = (state: IntegrationStatus['flow']): CardLine => {
+	if (!state.ready)
+		return { label: __('No AI service connected'), warning: true }
+	return {
+		label: state.hide_for_learners
+			? __('Connected · hidden for learners')
+			: __('Connected'),
+	}
 }
+
+const onLines: Record<IntegrationKey, (status: IntegrationStatus) => CardLine> =
+	{
+		google: (status) =>
+			status.google.has_credentials
+				? { label: __('Connected') }
+				: { label: __('Needs a client ID and secret'), warning: true },
+		google_calendar: (status) => calendarLine(status.google_calendar),
+		google_meet: (status) => accountsLine(status.google_meet.accounts),
+		zoom: (status) => zoomLine(status.zoom),
+		code_runner: (status) => ({
+			label: status.code_runner.own_server
+				? __('Your own server')
+				: __("Frappe's server"),
+		}),
+		unsplash: (status) =>
+			status.unsplash.has_key
+				? { label: __('Connected') }
+				: { label: __('Needs an access key'), warning: true },
+		raven: () => ({ label: __('Connected') }),
+		flow: (status) => flowLine(status.flow),
+	}
 
 /** The status line under a card, for the state it would be in once saved. */
 export const statusLine = (
@@ -234,7 +242,6 @@ export const statusLine = (
 ): CardLine => {
 	const missing = missingApp(key, status)
 	if (missing) return { label: __(missing.label) }
-	if (key === 'frappe_meet') return { label: __('Installed') }
 	if (needsGoogleRole(key, status))
 		return { label: __('Needs the System Manager role'), warning: true }
 	if (!enabled) return { label: __('Off') }
@@ -250,15 +257,40 @@ export const needsGoogleRole = (
 
 /** Why a card's switch can't be flipped right now, or '' when it can. */
 export const lockedReason = (
-	key: ToggleKey,
+	key: IntegrationKey,
 	status: IntegrationStatus,
-	pending: { enabled: (key: ToggleKey) => boolean }
+	pending: { enabled: (key: IntegrationKey) => boolean }
 ): string => {
 	if (needsGoogleRole(key, status)) return __('Needs the System Manager role')
+	if (key === 'flow' && !status.flow.installed)
+		return __('This version of Frappe has no Flow')
 	if (key === 'raven' && status.raven.enabled)
 		return __("Raven membership sync can't be turned off once it is on.")
 	const needsGoogle = key === 'google_calendar' || key === 'google_meet'
-	if (needsGoogle && !pending.enabled('google') && !pending.enabled(key))
-		return __('Turn on Google first')
+	if (needsGoogle && !isGoogleReady(status, pending) && !pending.enabled(key))
+		return __('Configure Google first')
 	return ''
 }
+
+/** Google is on and has the client ID and secret Calendar and Meet sign in with. */
+const isGoogleReady = (
+	status: IntegrationStatus,
+	pending: { enabled: (key: IntegrationKey) => boolean }
+): boolean => pending.enabled('google') && status.google.has_credentials
+
+/** Pages that hold what an integration needs before it can work. */
+const SETUP_PAGES: IntegrationKey[] = ['google', 'code_runner', 'unsplash']
+
+/**
+ * Configure opens whenever the integration is on, and also while it is off
+ * for one whose page holds its credentials, so they can go in first.
+ */
+export const isConfigurable = (
+	integration: Integration,
+	status: IntegrationStatus
+): boolean =>
+	Boolean(integration.configure) &&
+	!missingApp(integration.key, status) &&
+	!needsGoogleRole(integration.key, status) &&
+	(isIntegrationEnabled(integration.key) ||
+		SETUP_PAGES.includes(integration.key))

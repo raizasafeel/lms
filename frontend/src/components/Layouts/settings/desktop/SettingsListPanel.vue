@@ -193,9 +193,9 @@ const dependencyBanner = computed((): string => {
 	if (!googleApiEnabled.value) {
 		return props.page.requiresGoogleCalendar
 			? __(
-					'Enable Google API in Services and set up a Google Calendar to use this.'
+					'Turn on Google in Integrations and set up a Google Calendar to use this.'
 			  )
-			: __('Enable Google API in Services to use this.')
+			: __('Turn on Google in Integrations to use this.')
 	}
 	if (props.page.requiresGoogleCalendar) {
 		if (calendarCheck?.loading) return ''

@@ -21,7 +21,6 @@ import {
 	googleMeetSettingsPage,
 } from '@/components/Settings/GoogleMeet/googleMeet'
 import { canManageGoogleIntegrations } from '@/components/Settings/GoogleApi/googleApi'
-import Services from '@/components/Settings/Services/Services.vue'
 import { googleCalendarSettingsPage } from '@/components/Settings/GoogleCalendar/googleCalendar'
 import RavenSettings from '@/components/Settings/Raven/RavenSettings.vue'
 import Integrations from '@/components/Settings/Integrations/Integrations.vue'
@@ -449,14 +448,8 @@ export const settingsTree: SettingsGroup[] = [
 				label: __('Integrations'),
 				slug: 'integrations',
 				icon: 'lucide-blocks',
+				records: true,
 				page: { kind: 'custom', component: markRaw(Integrations) },
-			},
-			{
-				label: __('Services'),
-				slug: 'services',
-				icon: 'lucide-key-round',
-				integration: ['google', 'code_runner', 'unsplash'],
-				page: { kind: 'custom', component: markRaw(Services) },
 			},
 			{
 				label: __('Google Calendar'),

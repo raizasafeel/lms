@@ -25,15 +25,8 @@
 					{{ __(integration.label) }}
 				</h3>
 			</div>
-			<Button
-				v-if="installUrl"
-				size="sm"
-				:label="__('Install')"
-				data-testid="integration-install"
-				@click="emit('install')"
-			/>
 			<Tooltip
-				v-else-if="toggleable"
+				v-if="!installUrl"
 				:text="lockedReason"
 				:disabled="!lockedReason"
 			>
@@ -52,12 +45,24 @@
 		<div class="mt-auto flex items-center justify-between gap-3">
 			<span
 				class="truncate text-p-sm"
-				:class="status.warning ? 'text-ink-amber-3' : 'text-ink-gray-6'"
+				:class="status.warning ? 'text-ink-amber-8' : 'text-ink-gray-6'"
 				data-testid="integration-status"
 			>
 				{{ status.label }}
 			</span>
 			<Button
+				v-if="installUrl"
+				size="sm"
+				:label="__('Install required apps')"
+				data-testid="integration-install"
+				@click="emit('install')"
+			>
+				<template #suffix>
+					<span class="lucide-arrow-up-right size-3.5" />
+				</template>
+			</Button>
+			<Button
+				v-else-if="integration.configure"
 				size="sm"
 				:label="__('Configure')"
 				:disabled="!canConfigure"
@@ -76,7 +81,6 @@ defineProps<{
 	integration: Integration
 	enabled: boolean
 	status: CardLine
-	toggleable: boolean
 	/** Why the switch is locked, or '' when it can be flipped. */
 	lockedReason: string
 	installUrl: string | null

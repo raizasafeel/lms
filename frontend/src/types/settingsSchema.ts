@@ -332,8 +332,8 @@ export interface SettingsRoutableGroup {
 export interface SettingsItem extends SettingsRoutableItem {
 	icon: string
 	condition?: () => boolean
-	/** Listed in the sidebar only while one of these integrations is on. */
-	integration?: IntegrationKey | IntegrationKey[]
+	/** Listed in the sidebar only while this integration is on. */
+	integration?: IntegrationKey
 	page: SettingsPage
 }
 

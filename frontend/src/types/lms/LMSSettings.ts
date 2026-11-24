@@ -24,6 +24,10 @@ export interface LMSSettings {
 	track_zoom_attendance?: 0 | 1
 	/**	Enable Google Meet : Check	*/
 	enable_google_meet?: 0 | 1
+	/**	Enable Flow : Check	*/
+	enable_flow?: 0 | 1
+	/**	Hide Flow for Learners : Check	*/
+	hide_flow_for_learners?: 0 | 1
 	/**	Mentor Request Creation Template : Link - Email Template	*/
 	mentor_request_creation?: string
 	/**	Mentor Request Status Update Template : Link - Email Template	*/
