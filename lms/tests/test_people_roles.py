@@ -32,7 +32,7 @@ class PeopleFixtures(BaseTestUtils):
 		cls._create_evaluator(cls.grader.name)
 		cls.suffix = suffix
 
-	def make_course(self, **fields):
+	def make_course(self, ignore_permissions=False, **fields):
 		course = frappe.new_doc("LMS Course")
 		course.update(
 			{
@@ -43,10 +43,10 @@ class PeopleFixtures(BaseTestUtils):
 				**fields,
 			}
 		)
-		course.insert()
+		course.insert(ignore_permissions=ignore_permissions)
 		return course
 
-	def make_batch(self, course, **fields):
+	def make_batch(self, course, ignore_permissions=False, **fields):
 		batch = frappe.new_doc("LMS Batch")
 		batch.update(
 			{
@@ -63,7 +63,7 @@ class PeopleFixtures(BaseTestUtils):
 				**fields,
 			}
 		)
-		batch.insert()
+		batch.insert(ignore_permissions=ignore_permissions)
 		return batch
 
 
@@ -368,3 +368,62 @@ class TestEditorsRunLiveClasses(PeopleFixtures):
 		)
 		details = self.as_user(self.grader.name, lambda: build_batch_details(self.batch.name))
 		self.assertFalse(details["can_schedule_classes"])
+
+
+class TestOwnership(PeopleFixtures):
+	"""A course belongs to a Course Creator, a batch to a Batch Evaluator; owning grants
+	editing and deleting, never grading or certifying."""
+
+	def as_user(self, user, fn):
+		frappe.set_user(user)
+		try:
+			return fn()
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_only_a_course_creator_or_moderator_creates_a_course(self):
+		# Past the DocPerm, so the owner rule itself refuses.
+		with self.assertRaisesRegex(frappe.PermissionError, "own a course"):
+			self.as_user(self.grader.name, lambda: self.make_course(ignore_permissions=True))
+		self.as_user(self.moderator.name, self.make_course)
+
+	def test_only_a_batch_evaluator_or_moderator_creates_a_batch(self):
+		course = self.make_course().name
+		with self.assertRaisesRegex(frappe.PermissionError, "own a batch"):
+			self.as_user(self.editor.name, lambda: self.make_batch(course, ignore_permissions=True))
+		batch = self.as_user(self.grader.name, lambda: self.make_batch(course))
+		self.assertEqual(batch.owner, self.grader.name)
+
+	def test_a_batch_goes_only_to_an_evaluator(self):
+		batch = self.make_batch(self.make_course().name)
+		with self.assertRaises(frappe.ValidationError):
+			change_owner("LMS Batch", batch.name, self.editor.name)
+		change_owner("LMS Batch", batch.name, self.grader.name)
+		self.assertEqual(frappe.db.get_value("LMS Batch", batch.name, "owner"), self.grader.name)
+
+	def test_an_existing_ineligible_owner_still_saves(self):
+		course = self.make_course()
+		frappe.db.set_value("LMS Course", course.name, "owner", self.grader.name)
+		course.reload()
+		course.short_introduction = "Still saves"
+		course.save()
+
+	def test_owning_a_course_neither_grades_nor_certifies(self):
+		from lms.lms.doctype.lms_certificate.lms_certificate import authors_certificate
+
+		both = self._create_user(
+			f"ppl-both-{self.suffix}@example.com", "Bo", "Both", ["Course Creator", "Batch Evaluator"]
+		)
+		course = self.as_user(both.name, self.make_course)
+		self.assertEqual(course.owner, both.name)
+		self.assertNotIn((both.name, GRADER), people(course))
+		self.assertTrue(can_author_course(course.name, user=both.name))
+		self.assertFalse(is_grader(both.name, course.name))
+		self.assertFalse(can_evaluate(both.name, self.student.name, course.name))
+		self.assertFalse(authors_certificate(course.name, None, both.name))
+		self.assertTrue(authors_certificate(course.name, None, self.editor.name))
+
+		# Holding both roles, they may still be made a Grader on purpose.
+		course.append("people", {"member": both.name, "role": GRADER})
+		course.save()
+		self.assertTrue(is_grader(both.name, course.name))

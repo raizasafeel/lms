@@ -15,6 +15,12 @@ const ELIGIBLE_SITE_ROLES: Record<PeopleRole, string[]> = {
 	'Live class conductor': ['Course Creator', 'Batch Evaluator'],
 }
 
+/** The site role an owner needs; a Moderator may own either. Mirrors lms.lms.people. */
+export const OWNER_SITE_ROLE: Record<PeopleDoctype, string> = {
+	'LMS Course': 'Course Creator',
+	'LMS Batch': 'Batch Evaluator',
+}
+
 /** Site roles the "Add someone" search reaches. */
 export const STAFF_SITE_ROLES = [
 	'Course Creator',

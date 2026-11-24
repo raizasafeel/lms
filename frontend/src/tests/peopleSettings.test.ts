@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
 import type { PersonRow } from '@/types/lms/LMSRoleAssignment'
 
-const { details, slotCounts } = vi.hoisted(() => {
+const { details, slotCounts, resourceParams } = vi.hoisted(() => {
 	// @/utils pulls in plyr, which touches matchMedia at import time.
 	window.matchMedia ??= (() => ({
 		matches: false,
@@ -18,6 +18,7 @@ const { details, slotCounts } = vi.hoisted(() => {
 			'both@example.com': ['Course Creator', 'Batch Evaluator'],
 		} as Record<string, string[]>,
 		slotCounts: { 'eve@example.com': 3 } as Record<string, number>,
+		resourceParams: [] as unknown[],
 	}
 })
 
@@ -32,8 +33,10 @@ vi.mock('frappe-ui', async () => {
 				roles: details[name] || [],
 			}))
 		),
-		createResource: () =>
-			reactive({ data: slotCounts, reload: vi.fn(), loading: false }),
+		createResource: (options: { makeParams?: () => unknown }) => {
+			resourceParams.push(options.makeParams?.())
+			return reactive({ data: slotCounts, reload: vi.fn(), loading: false })
+		},
 		Avatar: { props: ['label'], template: '<span class="avatar" />' },
 		Badge: {
 			props: ['label'],
@@ -76,6 +79,7 @@ vi.mock('@/components/Controls/MultiLink.vue', () => ({
 	},
 }))
 
+import ChangeOwnerDialog from '@/components/InlineEdit/People/ChangeOwnerDialog.vue'
 import EvaluationGroup from '@/components/InlineEdit/People/EvaluationGroup.vue'
 import PeopleGroup from '@/components/InlineEdit/People/PeopleGroup.vue'
 import {
@@ -339,5 +343,28 @@ describe('EvaluationGroup', () => {
 		expect(wrapper.find('.switch').text()).toContain(
 			'Learners get no evaluation.'
 		)
+	})
+})
+
+describe('ChangeOwnerDialog', () => {
+	const ownerSearch = (doctype: string) => {
+		resourceParams.length = 0
+		const wrapper = mount(ChangeOwnerDialog, {
+			props: { doctype, name: 'x', owner: 'owner@example.com', open: true },
+			global,
+		})
+		return { wrapper, params: resourceParams[0] as { roles: string } }
+	}
+
+	it('offers a course only to Course Creators and Moderators', () => {
+		const { wrapper, params } = ownerSearch('LMS Course')
+		expect(JSON.parse(params.roles)).toEqual(['Course Creator', 'Moderator'])
+		expect(wrapper.text()).toContain('Only Course Creators can own a course.')
+	})
+
+	it('offers a batch only to Batch Evaluators and Moderators', () => {
+		const { wrapper, params } = ownerSearch('LMS Batch')
+		expect(JSON.parse(params.roles)).toEqual(['Batch Evaluator', 'Moderator'])
+		expect(wrapper.text()).toContain('Only Batch Evaluators can own a batch.')
 	})
 })

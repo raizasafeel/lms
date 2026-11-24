@@ -10,7 +10,7 @@ from frappe.utils import nowdate
 from pypika import Case
 
 from lms.lms.people import is_grader
-from lms.lms.permissions import can_author_batch, can_author_course, is_site_administrator
+from lms.lms.permissions import is_site_administrator, staffs_without_owning
 
 
 class LMSCertificate(Document):
@@ -325,13 +325,14 @@ def is_course_or_batch_author(doc, ptype, user):
 
 
 def authors_certificate(course, batch_name, user):
-	"""A certificate belongs to the authors of its course and, when issued from a
-	batch, to that batch's authors too, but only for the batch's own courses."""
-	if can_author_course(course, user=user):
+	"""A certificate belongs to the staff of its course and, when issued from a
+	batch, to that batch's staff too, but only for the batch's own courses.
+	Owning the course or batch alone does not certify anyone."""
+	if staffs_without_owning("LMS Course", course, user=user):
 		return True
 	if course and not batch_offers_course(batch_name, course):
 		return False
-	return can_author_batch(batch_name, user=user)
+	return staffs_without_owning("LMS Batch", batch_name, user=user)
 
 
 def batch_offers_course(batch_name, course):

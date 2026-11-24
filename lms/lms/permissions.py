@@ -217,6 +217,25 @@ def can_run_live_classes(batch: str | None, *, user: str | None = None) -> bool:
 	return can_instruct_batch(batch, user=user) or conducts_live_classes(batch, user=user)
 
 
+def staffs_without_owning(doctype: str, name: str | None, *, user: str | None = None) -> bool:
+	"""A Moderator or someone in the People of the course or batch, but not its owner
+	as such: owning hands over editing and deleting, never grading or certifying."""
+	user = user or frappe.session.user
+	if is_site_administrator(user) or has_moderator_role(user):
+		return True
+	if not isinstance(name, str) or not name:
+		return False
+	if doctype == "LMS Course":
+		return bool(
+			frappe.db.exists("Course Instructor", {"parent": name, "parenttype": doctype, "instructor": user})
+		)
+	return (
+		_batch_tags(name, "Course Instructor", "instructor", user)
+		or evaluates_batch(name, user=user)
+		or conducts_live_classes(name, user=user)
+	)
+
+
 def owns(doctype: str, name: str | None, *, user: str | None = None) -> bool:
 	"""The document owner, a Moderator or a site administrator: who deletes a course
 	or batch and hands it to someone else."""

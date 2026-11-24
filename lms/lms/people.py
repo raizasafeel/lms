@@ -24,6 +24,20 @@ ELIGIBLE_SITE_ROLES = {
 
 STAFF_SITE_ROLES = ("Moderator", "Course Creator", "Batch Evaluator")
 
+# Who may own each: a course belongs to a Course Creator, a batch to a Batch Evaluator.
+OWNER_SITE_ROLE = {"LMS Course": "Course Creator", "LMS Batch": "Batch Evaluator"}
+
+
+def can_own(doctype: str, user: str) -> bool:
+	site_roles = set(frappe.get_roles(user))
+	return "Moderator" in site_roles or OWNER_SITE_ROLE[doctype] in site_roles
+
+
+def owner_message(doctype: str) -> str:
+	if doctype == "LMS Batch":
+		return _("Only a Batch Evaluator or a Moderator can own a batch.")
+	return _("Only a Course Creator or a Moderator can own a course.")
+
 
 def is_eligible(user: str, role: str) -> bool:
 	site_roles = set(frappe.get_roles(user))
@@ -82,12 +96,18 @@ class PeopleTable:
 		self.stored = None if doc.is_new() else doc.get_doc_before_save()
 
 	def sync(self):
+		self.validate_new_owner()
 		if self.stored_rows() == self.rows():
 			self.adopt_legacy_fields()
 		else:
 			self.validate_added_rows()
 		self.validate_rows()
 		self.derive_legacy_fields()
+
+	def validate_new_owner(self):
+		"""Checked on new documents only: existing owners predate the rule and keep saving."""
+		if self.doc.is_new() and not can_own(self.doc.doctype, self.doc.owner or frappe.session.user):
+			frappe.throw(owner_message(self.doc.doctype), frappe.PermissionError)
 
 	def rows(self, doc=None) -> list[tuple[str, str]]:
 		doc = doc or self.doc
@@ -206,15 +226,16 @@ def people_changed(stored, doc) -> bool:
 
 @frappe.whitelist(methods=["POST"])
 def change_owner(doctype: str, name: str, owner: str):
-	"""Hands a course or batch to another Course Creator. Only its owner or a Moderator may."""
+	"""Hands a course to another Course Creator, or a batch to another Batch Evaluator.
+	Only its owner or a Moderator may."""
 	from lms.lms.permissions import owns
 
 	if doctype not in ROLES_BY_DOCTYPE or not frappe.db.exists(doctype, name):
 		frappe.throw(_("Not found."), frappe.DoesNotExistError)
 	if not owns(doctype, name):
 		frappe.throw(_("Only the owner or a Moderator can change the owner."), frappe.PermissionError)
-	if not frappe.db.exists("User", {"name": owner, "enabled": 1}) or not is_eligible(owner, EDITOR):
-		frappe.throw(_("The new owner needs the Course Creator role."))
+	if not frappe.db.exists("User", {"name": owner, "enabled": 1}) or not can_own(doctype, owner):
+		frappe.throw(owner_message(doctype))
 	frappe.db.set_value(doctype, name, "owner", owner)
 	return owner
 

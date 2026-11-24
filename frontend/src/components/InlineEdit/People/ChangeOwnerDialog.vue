@@ -15,11 +15,7 @@
 		<template #default>
 			<div class="space-y-3">
 				<p class="text-p-base text-ink-gray-7">
-					{{
-						__(
-							'The new owner can do everything, including deleting it. Only Course Creators can own it.'
-						)
-					}}
+					{{ ownerRule }}
 				</p>
 				<FormControl
 					v-model="query"
@@ -70,8 +66,11 @@ import {
 	toast,
 } from 'frappe-ui'
 import { useDebounceFn } from '@vueuse/core'
-import { ref, watch } from 'vue'
-import type { PeopleDoctype } from '@/components/InlineEdit/People/people'
+import { computed, ref, watch } from 'vue'
+import {
+	OWNER_SITE_ROLE,
+	type PeopleDoctype,
+} from '@/components/InlineEdit/People/people'
 import type { Resource } from '@/types'
 import { cleanError } from '@/utils'
 
@@ -81,7 +80,7 @@ interface UserHit {
 	user_image?: string
 }
 
-/** Hands the course or batch to another Course Creator, straight away: owner is not a form field. */
+/** Hands the course to another Course Creator or the batch to another Batch Evaluator, straight away: owner is not a form field. */
 const props = defineProps<{
 	doctype: PeopleDoctype
 	name: string
@@ -89,6 +88,16 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ changed: [string] }>()
 const open = defineModel<boolean>('open', { required: true })
+
+const ownerRule = computed(() =>
+	props.doctype === 'LMS Batch'
+		? __(
+				'The new owner can do everything, including deleting the batch. Only Batch Evaluators can own a batch.'
+		  )
+		: __(
+				'The new owner can do everything, including deleting the course. Only Course Creators can own a course.'
+		  )
+)
 
 const query = ref('')
 const picked = ref<string | null>(null)
@@ -99,7 +108,7 @@ const results = createResource({
 	method: 'POST',
 	makeParams: () => ({
 		txt: query.value,
-		roles: JSON.stringify(['Course Creator', 'Moderator']),
+		roles: JSON.stringify([OWNER_SITE_ROLE[props.doctype], 'Moderator']),
 	}),
 	auto: true,
 }) as Resource<UserHit[] | null>
