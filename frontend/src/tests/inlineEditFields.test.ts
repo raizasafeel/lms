@@ -64,6 +64,14 @@ vi.mock('@/components/InlineEdit/VideoLinkDialog.vue', () => ({
 	},
 }))
 vi.mock('@framework/ui/telemetry/index', () => ({}))
+const { resized } = vi.hoisted(() => ({
+	resized: [] as ((entries: { contentRect: { width: number } }[]) => void)[],
+}))
+vi.mock('@vueuse/core', async (original) => ({
+	...(await original<typeof import('@vueuse/core')>()),
+	useResizeObserver: (_target: unknown, callback: typeof resized[0]) =>
+		resized.push(callback),
+}))
 vi.mock('@framework/ui/components/Onboarding/index', () => ({}))
 
 import InlineText from '@/components/InlineEdit/InlineText.vue'
@@ -97,6 +105,19 @@ describe('the inline text field', () => {
 		const wrapper = mount(InlineText, { props: { placeholder: 'Title' } })
 		await wrapper.get('textarea').trigger('keydown', { key: 'Enter' })
 		expect(wrapper.emitted('enter')).toHaveLength(1)
+	})
+
+	it('refits its height when its width changes', () => {
+		const wrapper = mount(InlineText, {
+			props: { modelValue: 'A long title', placeholder: 'Title' },
+		})
+		const field = wrapper.get('textarea').element
+		Object.defineProperty(field, 'scrollHeight', { value: 33 })
+		resized.at(-1)!([{ contentRect: { width: 800 } }])
+		expect(field.style.height).toBe('35px')
+		field.style.height = '64px'
+		resized.at(-1)!([{ contentRect: { width: 800 } }])
+		expect(field.style.height).toBe('64px')
 	})
 })
 

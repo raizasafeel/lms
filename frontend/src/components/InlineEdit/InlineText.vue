@@ -14,6 +14,7 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, useTemplateRef, watch } from 'vue'
+import { useResizeObserver } from '@vueuse/core'
 import {
 	BLEED_TEXT,
 	GHOST_FIELD,
@@ -53,6 +54,13 @@ function onInput(event: Event): void {
 }
 
 onMounted(fitHeight)
+// The text rewraps when the width settles after mount, so refit then.
+let width = 0
+useResizeObserver(textarea, ([entry]) => {
+	if (entry.contentRect.width === width) return
+	width = entry.contentRect.width
+	fitHeight()
+})
 watch(
 	() => props.modelValue,
 	() => nextTick(fitHeight)
