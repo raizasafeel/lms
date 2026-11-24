@@ -1,21 +1,25 @@
 <template>
-	<div
-		class="grid grid-cols-1 flex-1 min-h-0"
-		:class="{ '@2xl:grid-cols-[70%,30%]': chaptersShown }"
-	>
-		<div class="relative flex flex-col overflow-hidden">
-			<Button
-				v-if="!isMobile && outlineVisible && !chaptersOpen"
-				variant="subtle"
-				class="absolute end-5 top-4 z-10"
-				data-testid="show-chapters"
-				@click="openChaptersPanel()"
+	<div class="flex flex-1 min-h-0">
+		<div class="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+			<Transition
+				enter-active-class="transition-opacity duration-200 delay-200"
+				enter-from-class="opacity-0"
+				leave-active-class="transition-opacity duration-100"
+				leave-to-class="opacity-0"
 			>
-				<template #prefix>
-					<span class="lucide-panel-right-open size-4" />
-				</template>
-				{{ __('Chapters') }}
-			</Button>
+				<Button
+					v-if="panelAvailable && !chaptersOpen"
+					variant="subtle"
+					class="absolute end-5 top-4 z-10"
+					data-testid="show-chapters"
+					@click="openChaptersPanel()"
+				>
+					<template #prefix>
+						<span class="lucide-panel-right-open size-4" />
+					</template>
+					{{ __('Chapters') }}
+				</Button>
+			</Transition>
 			<div class="overflow-y-auto h-full">
 				<SkeletonLoader
 					v-if="outline.loading && !outline.data"
@@ -45,33 +49,43 @@
 			</div>
 		</div>
 
-		<aside v-if="chaptersShown" class="flex min-h-0 flex-col border-s">
-			<CourseChaptersHeader
-				collapsible
-				class="shrink-0 px-5 pt-4"
-				:count="outline.data?.length"
-				@add-chapter="openAddChapter"
-				@upload-scorm="openScormUpload"
-				@hide="foldChaptersPanel"
-			/>
-			<div class="min-h-0 flex-1 overflow-y-auto">
-				<SkeletonLoader
-					v-if="outline.loading && !outline.data"
-					variant="editor-sidebar"
+		<!-- Slides like the app sidebar: its width animates, the content keeps
+		     its own width so it doesn't reflow while the panel moves. -->
+		<aside
+			v-if="panelAvailable"
+			class="hidden min-h-0 shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out @2xl:flex"
+			:class="chaptersOpen ? 'w-[30%] border-s' : 'w-0'"
+			:inert="!chaptersOpen || undefined"
+			data-testid="chapters-panel"
+		>
+			<div class="flex min-h-0 w-full min-w-72 flex-col">
+				<CourseChaptersHeader
+					collapsible
+					class="shrink-0 px-5 pt-4"
+					:count="outline.data?.length"
+					@add-chapter="openAddChapter"
+					@upload-scorm="openScormUpload"
+					@hide="foldChaptersPanel"
 				/>
-				<CourseOutline
-					v-else-if="props.course?.data"
-					:courseName="props.course.data.name"
-					:title="__('Chapters')"
-					:allowEdit="true"
-					:hideHeader="true"
-					:inlineSelect="true"
-					:selectedLessonNumber="selected?.number"
-					@select-lesson="onSelectLesson"
-					@lesson-deleted="onLessonDeleted"
-					@chapter-deleted="onChapterDeleted"
-					@add-lesson="onAddLesson"
-				/>
+				<div class="min-h-0 flex-1 overflow-y-auto">
+					<SkeletonLoader
+						v-if="outline.loading && !outline.data"
+						variant="editor-sidebar"
+					/>
+					<CourseOutline
+						v-else-if="props.course?.data"
+						:courseName="props.course.data.name"
+						:title="__('Chapters')"
+						:allowEdit="true"
+						:hideHeader="true"
+						:inlineSelect="true"
+						:selectedLessonNumber="selected?.number"
+						@select-lesson="onSelectLesson"
+						@lesson-deleted="onLessonDeleted"
+						@chapter-deleted="onChapterDeleted"
+						@add-lesson="onAddLesson"
+					/>
+				</div>
 			</div>
 		</aside>
 
@@ -467,9 +481,7 @@ const outlineVisible = computed(() => !outline.data || outline.data.length > 0)
 const chaptersOpen = ref(true)
 let closedForFlow = false
 const flowDocked = useFlowDocked()
-const chaptersShown = computed(
-	() => !isMobile.value && outlineVisible.value && chaptersOpen.value
-)
+const panelAvailable = computed(() => !isMobile.value && outlineVisible.value)
 
 function foldChaptersPanel() {
 	chaptersOpen.value = false

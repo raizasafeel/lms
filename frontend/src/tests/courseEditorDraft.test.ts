@@ -429,6 +429,11 @@ describe('CourseEditor chapters panel', () => {
 	})
 
 	const showButton = () => wrapper.find('[data-testid="show-chapters"]')
+	// The panel stays mounted so its width can animate; folded, it is inert.
+	const panelOpen = () => {
+		const panel = wrapper.get('[data-testid="chapters-panel"]')
+		return panel.attributes('inert') === undefined && panel.classes('w-[30%]')
+	}
 	const dockFlow = async (docked: boolean) => {
 		document.documentElement.style.marginRight = docked ? '400px' : ''
 		await flushPromises()
@@ -439,19 +444,19 @@ describe('CourseEditor chapters panel', () => {
 		expect(header().props('collapsible')).toBe(true)
 		header().vm.$emit('hide')
 		await flushPromises()
-		expect(header().exists()).toBe(false)
+		expect(panelOpen()).toBe(false)
 		await showButton().trigger('click')
-		expect(header().exists()).toBe(true)
+		expect(panelOpen()).toBe(true)
 		expect(showButton().exists()).toBe(false)
 	})
 
 	it('closes while Flow is docked and reopens when Flow closes', async () => {
 		wrapper = await mountEditor([chapterA(1)])
 		await dockFlow(true)
-		expect(header().exists()).toBe(false)
+		expect(panelOpen()).toBe(false)
 		expect(showButton().exists()).toBe(true)
 		await dockFlow(false)
-		expect(header().exists()).toBe(true)
+		expect(panelOpen()).toBe(true)
 	})
 
 	it('stays folded after Flow closes when it was folded by hand', async () => {
@@ -459,6 +464,6 @@ describe('CourseEditor chapters panel', () => {
 		header().vm.$emit('hide')
 		await dockFlow(true)
 		await dockFlow(false)
-		expect(header().exists()).toBe(false)
+		expect(panelOpen()).toBe(false)
 	})
 })
