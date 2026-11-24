@@ -3,16 +3,12 @@
 		class="w-full overflow-hidden rounded-6 border border-outline-gray-2 bg-surface-base"
 	>
 		<div class="px-5 pt-5">
-			<ImageField
-				swatches
+			<CourseVideoField
 				:image="doc.image"
-				:videoLink="doc.video_link"
 				:tint="doc.card_gradient"
 				:icon="doc.icon"
-				@update:image="(value) => setField('image', value)"
+				:videoLink="doc.video_link"
 				@update:videoLink="(value) => setField('video_link', value)"
-				@update:tint="(value) => setField('card_gradient', value)"
-				@update:icon="(value) => setField('icon', value)"
 			/>
 		</div>
 		<div class="space-y-4 p-5">
@@ -92,7 +88,7 @@ import { Button, Dialog } from 'frappe-ui'
 import { computed, inject, ref } from 'vue'
 import CourseCertificateBox from '@/components/Courses/CourseCertificateBox.vue'
 import CourseIncludes from '@/components/Courses/CourseIncludes.vue'
-import ImageField from '@/components/InlineEdit/ImageField.vue'
+import CourseVideoField from '@/components/Courses/CourseVideoField.vue'
 import PriceField from '@/components/InlineEdit/PriceField.vue'
 import { useSettings } from '@/stores/settings'
 import type { CourseDetails, CourseFormContext, Resource } from '@/types'

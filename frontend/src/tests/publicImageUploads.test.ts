@@ -293,9 +293,6 @@ const MANIFEST: Record<string, Privacy[]> = {
 	'components/Controls/VideoPreviewField.vue': ['public', 'public'],
 	'components/Modals/EditCoverImage.vue': ['public'],
 	'components/UnsplashImageBrowser.vue': ['public'],
-	// Card images double as share images, so guests must see them.
-	'components/InlineEdit/ImageField.vue': ['public'],
-	// The course thumbnail in Settings: the same card image as ImageField.
 	// A batch's share image; shown on link previews, so it must be public.
 	'components/InlineEdit/SettingImage.vue': ['public'],
 	// The course and batch "About" bodies are shown wherever the course or

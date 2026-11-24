@@ -66,7 +66,6 @@ vi.mock('@/components/InlineEdit/VideoLinkDialog.vue', () => ({
 vi.mock('@framework/ui/telemetry/index', () => ({}))
 vi.mock('@framework/ui/components/Onboarding/index', () => ({}))
 
-import ImageField from '@/components/InlineEdit/ImageField.vue'
 import InlineText from '@/components/InlineEdit/InlineText.vue'
 import PriceField from '@/components/InlineEdit/PriceField.vue'
 import PriceInput from '@/components/InlineEdit/PriceInput.vue'
@@ -131,106 +130,6 @@ describe('the price field', () => {
 			.findComponent({ name: 'FormControl' })
 			.vm.$emit('update:modelValue', '42')
 		expect(wrapper.emitted('update:amount')).toEqual([[42]])
-	})
-})
-
-describe('the image field', () => {
-	it('offers colour swatches for an empty course thumbnail', async () => {
-		const wrapper = mount(ImageField, {
-			props: { swatches: true, tint: 'Blue' },
-			...options,
-		})
-		await wrapper.get('[aria-label="red thumbnail"]').trigger('click')
-		expect(wrapper.emitted('update:tint')).toEqual([['Red']])
-	})
-
-	it('shows the course icon in the tint and on the icon button', () => {
-		const wrapper = mount(ImageField, {
-			props: { swatches: true, tint: 'Pink', icon: 'rocket' },
-			...options,
-		})
-		expect(wrapper.findAll('.lucide-rocket')).toHaveLength(2)
-		expect(wrapper.find('[aria-label="Thumbnail icon"]').exists()).toBe(true)
-	})
-
-	it('shuffles the colour and the icon together', async () => {
-		vi.spyOn(Math, 'random').mockReturnValue(0)
-		const wrapper = mount(ImageField, {
-			props: { swatches: true, tint: 'Blue', icon: 'rocket' },
-			...options,
-		})
-		await wrapper.get('[aria-label="Random colour and icon"]').trigger('click')
-		expect(wrapper.emitted('update:tint')).toEqual([['Red']])
-		expect(wrapper.emitted('update:icon')).toEqual([['boxes']])
-		vi.restoreAllMocks()
-	})
-
-	it('hides the thumbnail tools once there is an image', () => {
-		const wrapper = mount(ImageField, {
-			props: { swatches: true, image: '/files/a.png' },
-			...options,
-		})
-		expect(wrapper.find('[aria-label="Thumbnail icon"]').exists()).toBe(false)
-		expect(wrapper.find('[aria-label="Random colour and icon"]').exists()).toBe(
-			false
-		)
-	})
-
-	it('puts the video button in the top corner, apart from the thumbnail tools', () => {
-		const empty = mount(ImageField, { props: { swatches: true }, ...options })
-		const corner = empty.get('.end-2.top-2')
-		expect(corner.text()).toBe('Add video')
-		expect(corner.classes()).toContain('opacity-0')
-
-		const withVideo = mount(ImageField, {
-			props: { swatches: true, videoLink: 'https://youtu.be/x' },
-			...options,
-		})
-		expect(withVideo.get('.end-2.top-2').text()).toBe('Video')
-		expect(withVideo.get('.end-2.top-2').classes()).toContain('opacity-100')
-	})
-
-	it('opens the preview video dialog and writes back its link', async () => {
-		const wrapper = mount(ImageField, { props: { swatches: true }, ...options })
-		const dialog = wrapper.findComponent({ name: 'VideoLinkDialog' })
-		expect(dialog.props('open')).toBe(false)
-		await wrapper.get('.end-2.top-2 button').trigger('click')
-		expect(dialog.props('open')).toBe(true)
-		dialog.vm.$emit('update:modelValue', 'https://youtu.be/y')
-		expect(wrapper.emitted('update:videoLink')).toEqual([
-			['https://youtu.be/y'],
-		])
-	})
-
-	it('pins the icon top left and shuffle to the end of the swatch row', () => {
-		const wrapper = mount(ImageField, { props: { swatches: true }, ...options })
-		expect(
-			wrapper.get('.start-2.top-2 [aria-label="Thumbnail icon"]').exists()
-		).toBe(true)
-		const shuffle = wrapper.get('[aria-label="Random colour and icon"]')
-		expect(shuffle.classes()).toContain('ms-auto')
-		expect(shuffle.element.parentElement?.className).toContain('bottom-2')
-	})
-
-	it('marks the picked swatch with a dot, not a ring', () => {
-		const wrapper = mount(ImageField, {
-			props: { swatches: true, tint: 'Teal' },
-			...options,
-		})
-		const picked = wrapper.get('[aria-label="teal thumbnail"]')
-		expect(picked.attributes('aria-pressed')).toBe('true')
-		expect(picked.find('span').exists()).toBe(true)
-		expect(picked.classes().join(' ')).not.toContain('ring')
-		expect(
-			wrapper.get('[aria-label="red thumbnail"]').find('span').exists()
-		).toBe(false)
-	})
-
-	it('prompts for an image without swatches', () => {
-		const wrapper = mount(ImageField, options)
-		expect(wrapper.text()).toContain('Add an image')
-		expect(wrapper.find('[aria-pressed]').exists()).toBe(false)
-		expect(wrapper.find('[aria-label="Thumbnail icon"]').exists()).toBe(false)
 	})
 })
 

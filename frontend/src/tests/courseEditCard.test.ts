@@ -15,7 +15,7 @@ const { inert } = vi.hoisted(() => ({
 }))
 vi.mock('@/components/Courses/CourseCertificateBox.vue', inert)
 vi.mock('@/components/Courses/CourseIncludes.vue', inert)
-vi.mock('@/components/InlineEdit/ImageField.vue', inert)
+vi.mock('@/components/Courses/CourseVideoField.vue', inert)
 vi.mock('@/components/InlineEdit/PriceField.vue', inert)
 
 import CourseEditCard from '@/components/Courses/CourseEditCard.vue'
