@@ -151,8 +151,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{ enroll: [] }>()
 
+// The server answers a preview as a learner in that mode; an enrolled preview
+// shows as enrolled while its own enrollment is still being created.
 const membership = computed(() => {
-	if (props.preview === 'not-enrolled') return null
 	if (props.preview === 'enrolled') {
 		return props.course.data?.membership ?? { progress: 0 }
 	}
@@ -227,9 +228,18 @@ const progress = computed<number>(() => membership.value?.progress ?? 0)
 // The stored progress lags lesson edits, so count the outline's completed flags.
 const outline = createResource({
 	url: 'lms.lms.utils.get_course_outline',
-	cache: ['course_outline_student', props.course.data?.name, 'progress'],
+	cache: [
+		'course_outline_student',
+		props.course.data?.name,
+		'progress',
+		props.preview ?? null,
+	],
 	makeParams() {
-		return { course: props.course.data?.name, progress: true }
+		return {
+			course: props.course.data?.name,
+			progress: true,
+			student_view: props.preview ?? null,
+		}
 	},
 }) as Resource<{ lessons?: { is_complete?: boolean }[] }[] | null>
 

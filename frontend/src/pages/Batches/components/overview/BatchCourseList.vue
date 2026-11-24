@@ -106,6 +106,7 @@ import OverviewEmptyTile from '@/pages/Batches/components/overview/OverviewEmpty
 import { courseIcon } from '@/utils/courseIcons'
 import { courseTint } from '@/utils/courseTints'
 import { safeUrl } from '@/utils/safeUrl'
+import type { StudentViewMode } from '@/composables/useStudentView'
 
 interface BatchCourseCard {
 	name: string
@@ -121,8 +122,10 @@ interface BatchCourseCard {
 const props = defineProps<{
 	batchName?: string
 	editable?: boolean
-	/** A not-enrolled student view hides the instructor's own progress. */
+	/** The editing view shows no progress. */
 	hideProgress?: boolean
+	/** The server then answers as a learner in that mode. */
+	studentView?: StudentViewMode | null
 	/** The batch's category; courses in it are suggested first. */
 	category?: string | null
 }>()
@@ -134,12 +137,15 @@ const pickerOpen = ref<boolean>(false)
 
 const courses = createResource({
 	url: 'lms.lms.utils.get_batch_courses',
-	makeParams: () => ({ batch: props.batchName }),
+	makeParams: () => ({
+		batch: props.batchName,
+		student_view: props.studentView ?? null,
+	}),
 })
 
 watch(
-	() => props.batchName,
-	(name) => {
+	[() => props.batchName, () => props.studentView],
+	([name]) => {
 		if (!name) return
 		// A slow response for the previous batch would overwrite this one.
 		courses.abort()

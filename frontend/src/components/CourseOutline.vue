@@ -67,11 +67,12 @@
 import { Button, createResource, toast } from 'frappe-ui'
 import type { FrappeResourceError } from 'frappe-ui'
 import { resourceErrorMessage } from '@/utils/resource'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Draggable from 'vuedraggable'
 
 import ChapterRow from '@/components/ChapterRow.vue'
+import { studentViewMode } from '@/composables/useStudentView'
 import { openFormRoute } from '@/composables/useFormRoute'
 import type { OutlineChapter, OutlineLesson, Resource } from '@/types'
 import { outlineDragOptions } from '@/utils/courseOutline'
@@ -144,21 +145,24 @@ const props = withDefaults(
 
 defineExpose({ openChapterForm })
 
+const studentView = computed(() => studentViewMode(route.query.studentView))
+
 const outline = createResource({
 	url: 'lms.lms.utils.get_course_outline',
-	cache: ['course_outline', props.courseName],
+	cache: ['course_outline', props.courseName, studentView.value],
 	makeParams() {
-		return { course: props.courseName, progress: props.getProgress }
+		return {
+			course: props.courseName,
+			progress: props.getProgress,
+			student_view: studentView.value,
+		}
 	},
 	auto: Boolean(props.courseName),
 }) as Resource<OutlineChapter[] | null>
 
-watch(
-	() => props.courseName,
-	() => {
-		if (props.courseName) outline.reload()
-	}
-)
+watch([() => props.courseName, () => props.getProgress, studentView], () => {
+	if (props.courseName) outline.reload()
+})
 
 watch(
 	() => props.completedLesson,

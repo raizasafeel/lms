@@ -156,18 +156,18 @@ describe('BatchCourseList courses request', () => {
 
 		batch.batchName = 'B1'
 		await flushPromises()
-		expect(sent.at(-1)).toEqual({ batch: 'B1' })
+		expect(sent.at(-1)).toEqual({ batch: 'B1', student_view: null })
 	})
 
 	it('fetches the new batch when the page moves to another batch', async () => {
 		const batch = reactive<{ batchName?: string }>({ batchName: 'B1' })
 		mountList(batch)
 		await flushPromises()
-		expect(sent.at(-1)).toEqual({ batch: 'B1' })
+		expect(sent.at(-1)).toEqual({ batch: 'B1', student_view: null })
 
 		batch.batchName = 'B2'
 		await flushPromises()
-		expect(sent.at(-1)).toEqual({ batch: 'B2' })
+		expect(sent.at(-1)).toEqual({ batch: 'B2', student_view: null })
 	})
 
 	// Regression: a slow response for the previous batch overwrote the new

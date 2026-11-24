@@ -320,6 +320,7 @@ const course = createResource({
 	makeParams() {
 		return {
 			course: props.courseName,
+			student_view: studentViewMode(route.query.studentView),
 		}
 	},
 	auto: true,
@@ -395,6 +396,9 @@ const studentView = computed<StudentViewMode | null>({
 			},
 		}),
 })
+
+// The server answers student view as a learner in that state, so a mode switch refetches.
+watch(studentView, () => course.reload())
 
 const isFormTab = (key?: string): boolean =>
 	isAdmin.value && (key === 'overview' || key === 'settings')

@@ -17,7 +17,8 @@
 					v-model:draft="draftCourses"
 					:batchName="batch.data.name"
 					:editable="Boolean(doc)"
-					:hideProgress="hideCourseProgress"
+					:hideProgress="Boolean(doc)"
+					:studentView="studentView"
 					:category="doc?.category ?? batch.data.category"
 				/>
 
@@ -91,6 +92,7 @@ import BatchEnrollCardEditor from '@/pages/Batches/components/overview/BatchEnro
 import BatchHeading from '@/pages/Batches/components/overview/BatchHeading.vue'
 import BatchSchedule from '@/pages/Batches/components/overview/BatchSchedule.vue'
 import { useStudentView } from '@/composables/useStudentView'
+import type { StudentViewMode } from '@/composables/useStudentView'
 import { injectBatchForm } from '@/pages/Batches/composables/useBatchForm'
 import type { BatchDetails, Resource } from '@/types'
 
@@ -105,12 +107,10 @@ const doc = computed(() =>
 	isStudentView.value ? null : form?.doc.value ?? null
 )
 
-// Progress is a learner's: the editing view shows none, and a not-enrolled
-// preview hides the instructor's own preview enrollment.
-const hideCourseProgress = computed(
-	() =>
-		Boolean(doc.value) || (isStudentView.value && !props.batch.data.is_student)
-)
+const studentView = computed<StudentViewMode | null>(() => {
+	if (!isStudentView.value) return null
+	return props.batch.data.is_student ? 'enrolled' : 'not-enrolled'
+})
 
 // Set only on a new batch: its courses and assessments wait for the first save.
 const draftCourses = computed({

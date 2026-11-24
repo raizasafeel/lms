@@ -875,6 +875,7 @@ import { submitResource } from '@/utils/resource'
 import ResponsiveListView from '@/components/ResponsiveListView.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import router from '@/router'
+import { studentViewMode } from '@/composables/useStudentView'
 import QuizActivityLog from '@/components/Quiz/QuizActivityLog.vue'
 import ProctoringMonitor from '@/components/ProctoringMonitor.vue'
 import EmptyStateLayout from '@/components/Layouts/EmptyStateLayout.vue'
@@ -1085,7 +1086,13 @@ const summaryHeading = ref<HTMLElement | null>(null)
 const quiz = createResource<QuizDetails>({
 	url: 'lms.lms.utils.get_quiz_with_questions',
 	makeParams() {
-		return { quiz: props.quizName }
+		return {
+			quiz: props.quizName,
+			// Lesson blocks mount outside the page's provide(), so read the URL.
+			student_view: studentViewMode(
+				router.currentRoute.value.query.studentView
+			),
+		}
 	},
 	// Keep this resource instance-local: its callbacks update component-local
 	// question and timer state on every mount.

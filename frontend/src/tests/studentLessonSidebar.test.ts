@@ -44,8 +44,13 @@ vi.mock('vue-router', () => ({
 	useRouter: () => ({ push: vi.fn() }),
 }))
 
+const outlineParams = vi.hoisted(() => [] as (() => Record<string, unknown>)[])
+
 vi.mock('frappe-ui', () => ({
-	createResource: () => ({ data: outline, reload: vi.fn() }),
+	createResource: (options: { makeParams: () => Record<string, unknown> }) => {
+		outlineParams.push(options.makeParams)
+		return { data: outline, reload: vi.fn() }
+	},
 	Tooltip: {
 		props: ['text'],
 		template: '<span :data-tooltip="text"><slot /></span>',
@@ -147,15 +152,18 @@ describe('StudentLessonSidebar in a not-enrolled preview', () => {
 		route.query = {}
 	})
 
-	it("hides the previewer's own progress and completion ticks", () => {
-		route.query = { studentView: 'not-enrolled' }
-		const wrapper = mountSidebar()
-
-		expect(wrapper.text()).not.toContain('completed')
-		expect(wrapper.text()).not.toContain('Completed')
-		expect(wrapper.find('[style*="width"]').exists()).toBe(false)
-		expect(wrapper.find('.text-ink-green-8').exists()).toBe(false)
-		expect(wrapper.findAll('li li')[2].find('.sr-only').text()).toBe('Locked')
+	it('asks the server for the outline a learner in that mode gets', () => {
+		for (const [studentView, mode] of [
+			['not-enrolled', 'not-enrolled'],
+			['1', 'enrolled'],
+		]) {
+			route.query = { studentView }
+			mountSidebar()
+			expect(outlineParams.at(-1)!().student_view).toBe(mode)
+		}
+		route.query = {}
+		mountSidebar()
+		expect(outlineParams.at(-1)!().student_view).toBeNull()
 	})
 
 	it('keeps progress in the enrolled preview', () => {

@@ -6,7 +6,7 @@
 			doctype="LMS Course"
 			:name="courseName"
 			@exit="router.push(editorRoute)"
-			@change="lesson.reload()"
+			@change="reloadAsStudent()"
 		/>
 		<PageHeader :breadcrumbs="breadcrumbs">
 			<template #actions>
@@ -654,6 +654,7 @@ const lesson = createResource({
 			course: props.courseName,
 			chapter: values ? values.chapter : props.chapterNumber,
 			lesson: values ? values.lesson : props.lessonNumber,
+			student_view: studentViewMode(route.query.studentView),
 		}
 	},
 	auto: true,
@@ -852,16 +853,30 @@ const breadcrumbs = computed(() => {
 
 const outline = createResource({
 	url: 'lms.lms.utils.get_course_outline',
-	cache: ['course_outline_student', props.courseName, 'progress'],
+	cache: [
+		'course_outline_student',
+		props.courseName,
+		'progress',
+		studentViewMode(route.query.studentView),
+	],
 	makeParams() {
 		return {
 			course: props.courseName,
 			progress: true,
+			student_view: studentViewMode(route.query.studentView),
 		}
 	},
 	auto: false,
 })
 outline.fetch()
+
+// The server answers student view as a learner in that mode: switching modes,
+// enrolling or resetting progress changes the locks and the lesson itself.
+const reloadAsStudent = (): void => {
+	lesson.reload()
+	outline.reload()
+}
+watch(() => studentViewMode(route.query.studentView), reloadAsStudent)
 
 watch(
 	() => props.courseName,
@@ -1337,15 +1352,8 @@ const canEditLesson = computed(() => {
 	return Boolean(realUser.data?.is_moderator) || isInstructor
 })
 
-// A learner who has not enrolled sees only the lessons in the preview; so
-// does an editor previewing as one, whom the server would show everything.
-const isPreviewLocked = computed(
-	() =>
-		Boolean(lesson.data?.no_preview) ||
-		(isStudentView.value &&
-			studentMode.value === 'not-enrolled' &&
-			!lesson.data?.include_in_preview)
-)
+// A learner who has not enrolled sees only the lessons in the preview.
+const isPreviewLocked = computed(() => Boolean(lesson.data?.no_preview))
 
 // Course editors see a lesson in the editor; the learner page is student view.
 watch(

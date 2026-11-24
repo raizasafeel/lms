@@ -152,12 +152,8 @@ const editable = computed<boolean>(
 	() => !props.preview && Boolean(form?.resource.doc)
 )
 
-// A not-enrolled preview hides the instructor's own student view enrollment.
-const membership = computed(() =>
-	props.preview === 'not-enrolled'
-		? null
-		: props.course.data?.membership || null
-)
+// In student view the server already answers as a learner in that mode.
+const membership = computed(() => props.course.data?.membership || null)
 
 const isCourseAdmin = computed<boolean>(
 	() =>
