@@ -1,24 +1,20 @@
 import { describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
-const { call, openFileSelector } = vi.hoisted(() => ({
+const { call, upload } = vi.hoisted(() => ({
 	call: vi.fn(),
-	openFileSelector: vi.fn(),
+	upload: vi.fn(),
 }))
 
 vi.mock('frappe-ui', () => ({
 	call,
-	FileUploader: {
-		name: 'FileUploader',
-		props: ['private', 'fileTypes', 'validateFile'],
-		emits: ['success'],
-		setup: () => ({ openFileSelector }),
-		template:
-			'<div><slot :progress="0" :uploading="false" :openFileSelector="openFileSelector" /></div>',
+	toast: { error: vi.fn() },
+	FileUploadHandler: class {
+		upload = upload
 	},
 	Button: {
 		name: 'Button',
-		props: ['theme', 'variant', 'loading'],
+		props: ['theme', 'variant', 'loading', 'tooltip'],
 		emits: ['click'],
 		template: '<button @click="$emit(\'click\')"><slot /></button>',
 	},
@@ -35,7 +31,6 @@ vi.mock('frappe-ui', () => ({
 			'<button role="switch" @click="$emit(\'update:modelValue\', !modelValue)" />',
 	},
 }))
-vi.mock('@/utils', () => ({ validateFile: () => undefined }))
 vi.mock('@/components/Controls/Link.vue', () => ({
 	default: {
 		name: 'Link',
@@ -129,37 +124,46 @@ describe('the settings image', () => {
 			props: { label: 'Meta image', modelValue },
 			global,
 		})
+	const png = new File(['png'], 'share.png', { type: 'image/png' })
 
-	it('uploads public from an empty box on the end of the row', async () => {
+	it('sits under the label as a dropzone that uploads a dropped image public', async () => {
+		upload.mockResolvedValueOnce({ file_url: '/files/share.png' })
 		const wrapper = mountImage(null)
-		expect(
-			wrapper.getComponent({ name: 'FileUploader' }).props('private')
-		).toBe(false)
-		const pick = wrapper.get('[data-testid="setting-image-pick"]')
-		expect(pick.element.closest('.shrink-0')).not.toBeNull()
-		expect(pick.attributes('aria-label')).toBe('Upload image')
+		const zone = wrapper.get('[data-testid="setting-image-drop"]')
+		expect(zone.element.closest('.shrink-0')).toBeNull()
+		expect(zone.classes()).toContain('border-dashed')
+		expect(zone.text()).toContain('Drop an image here, or')
 		expect(wrapper.find('[data-testid="setting-image-remove"]').exists()).toBe(
 			false
 		)
-		await wrapper
-			.getComponent({ name: 'FileUploader' })
-			.vm.$emit('success', { file_url: '/files/share.png' })
+		const drop = new Event('drop', { bubbles: true, cancelable: true })
+		Object.defineProperty(drop, 'dataTransfer', {
+			value: { files: [png], items: [{ kind: 'file', type: 'image/png' }] },
+		})
+		await zone.trigger('dragenter')
+		expect(zone.classes()).toContain('bg-surface-gray-2')
+		zone.element.dispatchEvent(drop)
+		await flushPromises()
+		expect(zone.classes()).not.toContain('bg-surface-gray-2')
+		expect(upload).toHaveBeenCalledWith(png, { private: false })
 		expect(wrapper.emitted('update:modelValue')).toEqual([['/files/share.png']])
 	})
 
-	it('changes the image from its hover overlay', async () => {
+	it('opens the file picker from the browse link', async () => {
 		const wrapper = mountImage('/files/share.png')
-		const pick = wrapper.get('[data-testid="setting-image-pick"]')
-		expect(pick.attributes('aria-label')).toBe('Change image')
-		expect(pick.text()).toContain('Change')
-		expect(pick.html()).toContain('group-hover:opacity-100')
-		await pick.trigger('click')
-		expect(openFileSelector).toHaveBeenCalled()
+		expect(wrapper.text()).toContain('Drop a new image to replace, or')
+		const input = wrapper.get('input[type="file"]')
+		const click = vi.spyOn(input.element as HTMLInputElement, 'click')
+		const browse = wrapper.get('[data-testid="setting-image-browse"]')
+		expect(browse.element.tagName).toBe('BUTTON')
+		await browse.trigger('click')
+		expect(click).toHaveBeenCalled()
 	})
 
-	it('clears the image from the corner cross', async () => {
+	it('clears the image from the cross', async () => {
 		const wrapper = mountImage('/files/share.png')
-		const remove = wrapper.get('[data-testid="setting-image-remove"]')
+		const remove = wrapper.getComponent({ name: 'Button' })
+		expect(remove.props('tooltip')).toBe('Remove image')
 		expect(remove.attributes('aria-label')).toBe('Remove image')
 		await remove.trigger('click')
 		expect(wrapper.emitted('update:modelValue')).toEqual([[null]])

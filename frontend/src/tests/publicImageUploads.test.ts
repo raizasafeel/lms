@@ -293,8 +293,8 @@ const MANIFEST: Record<string, Privacy[]> = {
 	'components/Controls/VideoPreviewField.vue': ['public'],
 	'components/Modals/EditCoverImage.vue': ['public'],
 	'components/UnsplashImageBrowser.vue': ['public'],
-	// A batch's share image; shown on link previews, so it must be public.
-	'components/InlineEdit/SettingImage.vue': ['public'],
+	// SettingImage.vue (a batch's share image) uploads through useImageUpload,
+	// which has no tag here; settingFields.test.ts asserts it uploads public.
 	// The course and batch "About" bodies are shown wherever the course or
 	// batch is, Guest included; a private image in them was a 403 for everyone
 	// but its uploader (#3213).
