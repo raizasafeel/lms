@@ -47,7 +47,7 @@
 			</Button>
 		</div>
 
-		<div class="flex sm:h-[94vh]">
+		<div class="flex">
 			<div v-if="isPreviewLocked" class="min-w-0 flex-1 sm:border-e">
 				<div class="mx-auto flex max-w-4xl flex-col gap-6 px-5 pt-5">
 					<h1 :class="lessonHeadingClass">
@@ -308,7 +308,7 @@
 			<!-- Slides like the app sidebar; folded, it is inert. -->
 			<aside
 				v-if="!isMobile"
-				class="sticky top-10 hidden h-[94vh] shrink-0 overflow-hidden transition-[width] duration-200 ease-flow @2xl:block"
+				class="sticky top-[var(--header-frame-h)] hidden h-[calc(100dvh-var(--header-frame-h))] shrink-0 self-start overflow-hidden transition-[width] duration-200 ease-flow @2xl:block"
 				:class="chaptersOpen ? 'w-[30%]' : 'w-0'"
 				:inert="!chaptersOpen || undefined"
 				data-testid="chapters-panel"
