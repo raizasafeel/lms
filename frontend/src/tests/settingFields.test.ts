@@ -58,6 +58,7 @@ import SettingAction from '@/components/InlineEdit/SettingAction.vue'
 import SettingField from '@/components/InlineEdit/SettingField.vue'
 import SettingSwitch from '@/components/InlineEdit/SettingSwitch.vue'
 import SearchPreview from '@/components/InlineEdit/SearchPreview.vue'
+import SettingRow from '@/components/InlineEdit/SettingRow.vue'
 import SettingsPage from '@/components/InlineEdit/SettingsPage.vue'
 import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import RelatedCoursesEditor from '@/components/Courses/RelatedCoursesEditor.vue'
@@ -97,20 +98,6 @@ describe('the shared settings fields', () => {
 		expect(textarea.element.closest('.shrink-0')).toBeNull()
 	})
 
-	it('shows slotted content above a textarea, with no divider between', () => {
-		const wrapper = mount(SettingField, {
-			props: { label: 'Meta description', type: 'textarea' },
-			slots: { default: '<p data-testid="extra">Preview</p>' },
-			global,
-		})
-		const extra = wrapper.get('[data-testid="extra"]').element
-		const textarea = wrapper.getComponent({ name: 'FormControl' }).element
-		expect(extra.parentElement).toBe(textarea.parentElement)
-		expect(
-			extra.compareDocumentPosition(textarea) & Node.DOCUMENT_POSITION_FOLLOWING
-		).toBeTruthy()
-	})
-
 	it('draws a danger action red and reports the click', async () => {
 		const wrapper = mount(SettingAction, {
 			props: { label: 'Delete course', action: 'Delete', danger: true },
@@ -139,6 +126,19 @@ describe('the search preview', () => {
 		expect(wrapper.classes()).toEqual(
 			expect.arrayContaining(['rounded-6', 'border', 'border-outline-gray-2'])
 		)
+	})
+
+	it('sits in a labelled settings row with no control', () => {
+		const wrapper = mount(
+			{
+				components: { SettingRow, SearchPreview },
+				template: `<SettingRow label="Meta preview"><SearchPreview url="x" /></SettingRow>`,
+			},
+			{ global }
+		)
+		expect(wrapper.text()).toContain('Meta preview')
+		expect(wrapper.find('.shrink-0').exists()).toBe(false)
+		expect(wrapper.find('[data-testid="search-preview"]').exists()).toBe(true)
 	})
 
 	it('asks for a description while there is none', () => {

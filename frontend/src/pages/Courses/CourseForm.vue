@@ -24,20 +24,10 @@
 				type="textarea"
 				:label="__('Meta description')"
 				:summary="
-					__(
-						'How the course appears in search results. Edit to change the preview; leave empty to use the short introduction.'
-					)
+					__('About 150 characters. Leave empty to use the short introduction.')
 				"
 				@update:modelValue="form.markDirty()"
-			>
-				<SearchPreview
-					:url="courseUrl"
-					:title="form.resource.doc.title"
-					:description="
-						form.meta.description || form.resource.doc.short_introduction
-					"
-				/>
-			</SettingField>
+			/>
 			<SettingField
 				type="textarea"
 				v-model="form.meta.keywords"
@@ -45,6 +35,15 @@
 				:summary="__('Comma separated keywords for search engines.')"
 				@update:modelValue="form.markDirty()"
 			/>
+			<SettingRow :label="__('Meta preview')">
+				<SearchPreview
+					:url="courseUrl"
+					:title="form.resource.doc.title"
+					:description="
+						form.meta.description || form.resource.doc.short_introduction
+					"
+				/>
+			</SettingRow>
 		</SettingsGroup>
 
 		<SettingsGroup
@@ -96,6 +95,7 @@ import SettingAction from '@/components/InlineEdit/SettingAction.vue'
 import SettingField from '@/components/InlineEdit/SettingField.vue'
 import SettingsPage from '@/components/InlineEdit/SettingsPage.vue'
 import SearchPreview from '@/components/InlineEdit/SearchPreview.vue'
+import SettingRow from '@/components/InlineEdit/SettingRow.vue'
 import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import CoursePublishSettings from '@/pages/Courses/CoursePublishSettings.vue'
 import { COURSE_ACTIONS } from '@/composables/useCourseActions'

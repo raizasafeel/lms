@@ -57,25 +57,22 @@
 				v-model="form!.meta.description"
 				type="textarea"
 				:label="__('Meta description')"
-				:summary="
-					__(
-						'How the batch appears in search results. Edit to change the preview; leave empty to use the short description.'
-					)
-				"
+				:summary="__('Leave empty to use the short description.')"
 				:placeholder="doc.description"
-			>
-				<SearchPreview
-					:url="batchUrl"
-					:title="doc.title"
-					:description="form?.meta.description || doc.description"
-				/>
-			</SettingField>
+			/>
 			<SettingField
 				type="textarea"
 				v-model="form!.meta.keywords"
 				:label="__('Meta keywords')"
 				:summary="__('Comma separated keywords for search engines.')"
 			/>
+			<SettingRow :label="__('Meta preview')">
+				<SearchPreview
+					:url="batchUrl"
+					:title="doc.title"
+					:description="form?.meta.description || doc.description"
+				/>
+			</SettingRow>
 			<SettingImage
 				v-model="doc.meta_image"
 				:label="__('Meta image')"
@@ -97,6 +94,7 @@ import SettingSwitch from '@/components/InlineEdit/SettingSwitch.vue'
 import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import SettingsPage from '@/components/InlineEdit/SettingsPage.vue'
 import SearchPreview from '@/components/InlineEdit/SearchPreview.vue'
+import SettingRow from '@/components/InlineEdit/SettingRow.vue'
 import BatchManageGroup from '@/pages/Batches/components/BatchManageGroup.vue'
 import { openBatchForm } from '@/composables/useBatchForms'
 import { injectBatchForm } from '@/pages/Batches/composables/useBatchForm'
