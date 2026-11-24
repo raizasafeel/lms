@@ -74,6 +74,7 @@ vi.mock('@vueuse/core', async (original) => ({
 }))
 vi.mock('@framework/ui/components/Onboarding/index', () => ({}))
 
+import DraftCourseOutline from '@/components/Courses/DraftCourseOutline.vue'
 import InlineText from '@/components/InlineEdit/InlineText.vue'
 import PriceField from '@/components/InlineEdit/PriceField.vue'
 import PriceInput from '@/components/InlineEdit/PriceInput.vue'
@@ -118,6 +119,23 @@ describe('the inline text field', () => {
 		field.style.height = '64px'
 		resized.at(-1)!([{ contentRect: { width: 800 } }])
 		expect(field.style.height).toBe('64px')
+	})
+})
+
+describe('the draft course outline', () => {
+	it('keeps a row field clear of its icon but its text in the icon column', () => {
+		const wrapper = mount(DraftCourseOutline, {
+			props: { modelValue: [{ title: 'Basics', lessons: ['Setup'] }] },
+			...options,
+		})
+		// The row gap is 8px: a 4px pull leaves 4px before the border, and
+		// border plus 3px padding puts the text back 8px from the icon.
+		for (const field of wrapper.findAll('textarea')) {
+			expect(field.classes()).toEqual(
+				expect.arrayContaining(['-ms-1', 'ps-[3px]'])
+			)
+			expect(field.classes()).not.toContain('-ms-[11px]')
+		}
 	})
 })
 

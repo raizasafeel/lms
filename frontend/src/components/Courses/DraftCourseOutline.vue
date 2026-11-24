@@ -14,7 +14,7 @@
 					v-model="chapter.title"
 					:placeholder="__('Chapter title')"
 					:label="__('Chapter {0} title').format(chapterIndex + 1)"
-					class="-ms-[11px] min-w-0 flex-1 text-p-base-medium text-ink-gray-9"
+					class="-ms-1 min-w-0 flex-1 ps-[3px] text-p-base-medium text-ink-gray-9"
 					@enter="addLesson(chapter)"
 				/>
 				<span class="text-p-sm tabular-nums text-ink-gray-6">
@@ -45,7 +45,7 @@
 					v-model="chapter.lessons[lessonIndex]"
 					:placeholder="__('Lesson title')"
 					:label="__('Lesson {0} title').format(lessonIndex + 1)"
-					class="-ms-[11px] min-w-0 flex-1 text-p-base text-ink-gray-8"
+					class="-ms-1 min-w-0 flex-1 ps-[3px] text-p-base text-ink-gray-8"
 					@enter="addLesson(chapter)"
 				/>
 				<Button
