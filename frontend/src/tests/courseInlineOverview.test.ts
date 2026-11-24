@@ -182,9 +182,9 @@ describe('the certificate box', () => {
 		expect(wrapper.emitted('needsPayments')).toBeTruthy()
 	})
 
-	// Ghost fields draw their prefix at ps-2 in a 16px slot, so the rows
-	// around the price field put their icons in that same column.
-	it('lines every row icon up with the price field prefix', () => {
+	// The ghost price field and settings link bleed by their padding, so their
+	// prefix icons share the box's content edge with the label icon.
+	it('lines every row icon up on the box content edge', () => {
 		const wrapper = mount(CourseCertificateBox as never, {
 			props: { paymentsAppMissing: false },
 			global: {
@@ -203,8 +203,13 @@ describe('the certificate box', () => {
 			expect(icon.classes()).toContain('size-4')
 			expect(icon.element.parentElement?.className).toMatch(/\bgap-2\b/)
 		}
-		expect(rows[0].element.parentElement?.className).toMatch(/\bps-2\b/)
-		expect(wrapper.find('a').classes()).toContain('px-2')
+		expect(rows[0].element.parentElement?.className).not.toMatch(/\bps-2\b/)
+		expect(wrapper.find('a').classes()).toEqual(
+			expect.arrayContaining(['-mx-2', 'px-2'])
+		)
+		expect(wrapper.findComponent({ name: 'PriceInput' }).classes()).toContain(
+			'-mx-2'
+		)
 	})
 })
 

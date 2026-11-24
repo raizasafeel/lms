@@ -1,7 +1,11 @@
 <template>
 	<div class="space-y-2">
 		<Dropdown :options="menu">
-			<Button variant="ghost" :aria-label="label" class="!h-auto !px-1.5">
+			<Button
+				variant="ghost"
+				:aria-label="label"
+				class="-ms-1.5 !h-auto !px-1.5"
+			>
 				<span class="text-xl-semibold text-ink-gray-9">{{ headline }}</span>
 				<template #suffix>
 					<span
@@ -16,6 +20,7 @@
 			:currency="currency"
 			:amount="amount"
 			:missing="missing"
+			class="-mx-2"
 			@update:currency="(value) => emit('update:currency', value)"
 			@update:amount="(value) => emit('update:amount', value)"
 		/>

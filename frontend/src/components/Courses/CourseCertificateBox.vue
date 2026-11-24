@@ -1,9 +1,7 @@
 <template>
 	<div class="space-y-2.5 rounded-5 border border-outline-gray-2 p-3 text-p-sm">
 		<div class="flex items-center justify-between gap-2">
-			<span
-				class="flex items-center gap-2 ps-2 text-p-sm-medium text-ink-gray-8"
-			>
+			<span class="flex items-center gap-2 text-p-sm-medium text-ink-gray-8">
 				<span class="lucide-award size-4 shrink-0" />
 				{{ __('Certificate') }}
 			</span>
@@ -13,7 +11,7 @@
 				variant="ghost"
 				size="sm"
 				:aria-label="__('Certificate')"
-				class="w-24"
+				class="-me-2 w-24"
 				@update:modelValue="(value) => setKind(value as CertificateKind)"
 			/>
 		</div>
@@ -22,13 +20,14 @@
 			:currency="resource.doc.currency"
 			:amount="resource.doc.course_price"
 			:missing="isMissing?.('price')"
+			class="-mx-2"
 			@update:currency="(value) => setPrice('currency', value)"
 			@update:amount="(value) => setPrice('course_price', value)"
 		/>
 		<router-link
 			v-if="kind !== 'none'"
 			:to="{ hash: '#settings' }"
-			class="flex w-full items-center justify-between gap-2 rounded-3 px-2 py-0.5 text-ink-gray-6 hover:bg-surface-gray-2"
+			class="-mx-2 flex items-center justify-between gap-2 rounded-3 px-2 py-0.5 text-ink-gray-6 hover:bg-surface-gray-2"
 		>
 			<span class="flex min-w-0 items-center gap-2">
 				<span
