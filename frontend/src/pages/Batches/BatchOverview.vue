@@ -32,6 +32,7 @@
 						{{ __('About this batch') }}
 					</h2>
 					<RichTextField
+						bleed
 						v-model="doc.batch_details"
 						:ariaLabelledby="aboutHeadingId"
 						:placeholder="

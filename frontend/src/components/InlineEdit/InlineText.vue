@@ -5,8 +5,8 @@
 		rows="1"
 		:placeholder="placeholder"
 		:aria-label="label || placeholder"
-		class="block w-full resize-none overflow-hidden px-2.5 py-1.5"
-		:class="[GHOST_FIELD, missingRing(missing)]"
+		class="block resize-none overflow-hidden px-2.5 py-1.5"
+		:class="[GHOST_FIELD, missingRing(missing), bleed ? BLEED_TEXT : 'w-full']"
 		@input="onInput"
 		@keydown.enter.prevent="emit('enter')"
 	/>
@@ -14,7 +14,11 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, useTemplateRef, watch } from 'vue'
-import { GHOST_FIELD, missingRing } from '@/components/InlineEdit/fieldClasses'
+import {
+	BLEED_TEXT,
+	GHOST_FIELD,
+	missingRing,
+} from '@/components/InlineEdit/fieldClasses'
 
 /**
  * A one-paragraph ghost field that grows with its text. frappe-ui inputs
@@ -25,6 +29,8 @@ const props = defineProps<{
 	placeholder: string
 	label?: string
 	missing?: boolean
+	/** Line its text up with the surrounding text, padding outside. */
+	bleed?: boolean
 }>()
 
 const emit = defineEmits<{

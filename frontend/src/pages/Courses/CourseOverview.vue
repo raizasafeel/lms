@@ -57,6 +57,7 @@
 						{{ __('About this course') }}
 					</h2>
 					<RichTextField
+						bleed
 						:modelValue="form.resource.doc.description"
 						:ariaLabelledby="aboutHeadingId"
 						:placeholder="

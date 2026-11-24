@@ -2,6 +2,7 @@
 	<section class="space-y-4">
 		<h1 v-if="doc" class="sr-only">{{ doc.title || __('Untitled course') }}</h1>
 		<InlineText
+			bleed
 			v-if="doc"
 			v-model="doc.title"
 			:placeholder="__('Course title')"
@@ -17,6 +18,7 @@
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-ink-gray-7">
 			<CategoryField
 				v-if="doc"
+				class="-ms-2"
 				v-model="doc.category"
 				@update:modelValue="markDirty?.()"
 			/>
@@ -99,6 +101,7 @@
 		</div>
 
 		<InlineText
+			bleed
 			v-if="doc"
 			ref="introField"
 			v-model="doc.short_introduction"

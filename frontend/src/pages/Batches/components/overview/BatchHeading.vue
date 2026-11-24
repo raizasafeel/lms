@@ -1,6 +1,7 @@
 <template>
 	<section class="space-y-4">
 		<InlineText
+			bleed
 			v-if="doc"
 			v-model="doc.title"
 			:placeholder="__('Batch title')"
@@ -13,7 +14,7 @@
 		</h1>
 
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-ink-gray-7">
-			<CategoryField v-if="doc" v-model="doc.category" />
+			<CategoryField v-if="doc" v-model="doc.category" class="-ms-2" />
 			<span
 				v-else-if="batch.category"
 				class="flex items-center gap-1.5 font-medium"
@@ -54,6 +55,7 @@
 		</div>
 
 		<InlineText
+			bleed
 			v-if="doc"
 			ref="descriptionField"
 			v-model="doc.description"

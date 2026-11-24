@@ -5,6 +5,13 @@ export const GHOST_FIELD =
 /** The same, as classes for controls frappe-ui offers no ghost variant for. */
 export const ghostFieldClasses = GHOST_FIELD
 
+/**
+ * Pulls a ghost field out by its padding and border so its text lines up with
+ * the headings around it; the hover fill spills into the margin instead.
+ */
+export const BLEED_TEXT = '-mx-[11px] w-[calc(100%+22px)]'
+export const BLEED_RICH_TEXT = '-mx-[13px]'
+
 /** Rings a required field that is still empty while the form shows its gaps. */
 export const MISSING_RING = 'bg-surface-red-1 ring-2 ring-outline-red-3'
 
