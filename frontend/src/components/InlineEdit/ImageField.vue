@@ -93,24 +93,26 @@
 					@click="shuffle"
 				/>
 			</template>
+		</div>
+		<!-- Apart from the thumbnail tools below, and on show once a video is set. -->
+		<div
+			class="absolute end-2 top-2 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+			:class="videoLink ? 'opacity-100' : 'opacity-0'"
+		>
 			<Popover side="bottom" align="end">
 				<template #trigger>
-					<Button
-						size="sm"
-						class="ms-auto"
-						:label="__('Preview video')"
-						:tooltip="__('Preview video')"
-					>
-						<template #icon>
+					<Button size="sm" :tooltip="__('Preview video')">
+						<template #prefix>
 							<span
 								class="size-4"
 								:class="videoLink ? 'lucide-video' : 'lucide-video-off'"
 							/>
 						</template>
+						{{ videoLink ? __('Video') : __('Add video') }}
 					</Button>
 				</template>
 				<template #default>
-					<div class="w-[28rem] max-w-[90vw] p-1">
+					<div class="w-[28rem] max-w-[90vw] p-3">
 						<VideoPreviewField
 							:modelValue="videoLink"
 							:label="__('Preview video')"

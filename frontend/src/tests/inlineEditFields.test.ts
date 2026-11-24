@@ -170,6 +170,20 @@ describe('the image field', () => {
 		)
 	})
 
+	it('puts the video button in the top corner, apart from the thumbnail tools', () => {
+		const empty = mount(ImageField, { props: { swatches: true }, ...options })
+		const corner = empty.get('.top-2')
+		expect(corner.text()).toBe('Add video')
+		expect(corner.classes()).toContain('opacity-0')
+
+		const withVideo = mount(ImageField, {
+			props: { swatches: true, videoLink: 'https://youtu.be/x' },
+			...options,
+		})
+		expect(withVideo.get('.top-2').text()).toBe('Video')
+		expect(withVideo.get('.top-2').classes()).toContain('opacity-100')
+	})
+
 	it('prompts for an image without swatches', () => {
 		const wrapper = mount(ImageField, options)
 		expect(wrapper.text()).toContain('Add an image')
