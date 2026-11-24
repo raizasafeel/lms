@@ -408,7 +408,12 @@ def get_instructors(doctype: str, docname: str):
 
 
 def get_public_instructors(doctype: str, docname: str) -> list:
-	return hide_user_emails(get_instructors(doctype, docname), "name")
+	"""Instructors without their emails; guests also get no bio, in the same shape."""
+	instructors = hide_user_emails(get_instructors(doctype, docname), "name")
+	if frappe.session.user == "Guest":
+		for instructor in instructors:
+			instructor.bio = None
+	return instructors
 
 
 def hide_user_emails(rows: list, *fields: str) -> list:
