@@ -50,7 +50,7 @@ describe('the instructor names', () => {
 	it('collapses more than three to the first and a count', () => {
 		const wrapper = mountNames(['A', 'B', 'C', 'D'])
 		expect(names(wrapper)).toEqual(['A'])
-		expect(wrapper.text()).toContain('and 3 others')
+		expect(wrapper.text()).toBe('A and 3 others')
 	})
 
 	it("shows each named instructor's card when asked", () => {

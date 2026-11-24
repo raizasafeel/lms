@@ -27,7 +27,7 @@
 			</component>
 		</template>
 		<template v-if="others">
-			{{ __('and {0} others').format(others) }}
+			{{ ` ${__('and {0} others').format(others)}` }}
 		</template>
 	</div>
 </template>
