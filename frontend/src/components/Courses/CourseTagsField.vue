@@ -29,12 +29,31 @@
 					{{ tags.length ? __('Tag') : __('Add tags') }}
 				</button>
 			</template>
+			<template #footer="{ clear, selectAll }">
+				<div
+					v-if="tags.length || hasUnselectedOption"
+					class="flex items-center justify-between gap-2 border-t border-outline-gray-1 px-2 py-1.5"
+				>
+					<Button v-if="tags.length" variant="ghost" size="sm" @click="clear">
+						{{ __('Clear All') }}
+					</Button>
+					<Button
+						v-if="hasUnselectedOption"
+						variant="ghost"
+						size="sm"
+						class="ms-auto"
+						@click="selectAll"
+					>
+						{{ __('Select All') }}
+					</Button>
+				</div>
+			</template>
 		</MultiSelect>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { Badge, MultiSelect } from 'frappe-ui'
+import { Badge, Button, MultiSelect } from 'frappe-ui'
 import { computed, inject, ref } from 'vue'
 import type { CourseFormContext } from '@/types'
 
@@ -65,6 +84,11 @@ const tagOptions = computed<TagOption[]>(() => {
 		{ label: __('Create "{0}"').format(typed), value: typed },
 	]
 })
+
+// frappe-ui's default footer offers Select All even with no options to select.
+const hasUnselectedOption = computed<boolean>(() =>
+	tagOptions.value.some((option) => !tags.value.includes(option.value))
+)
 
 function removeTag(tag: string): void {
 	tags.value = tags.value.filter((existing) => existing !== tag)
