@@ -1,11 +1,13 @@
 <template>
 	<div
-		class="grid w-full items-start gap-x-12 gap-y-10 px-5 py-8 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,16rem)]"
+		class="grid w-full items-start gap-x-12 gap-y-10 px-5 py-8"
+		:class="{ '@4xl:grid-cols-[minmax(0,1fr)_minmax(0,16rem)]': !flowDocked }"
 	>
 		<div class="min-w-0 space-y-10">
 			<slot />
 		</div>
 		<aside
+			v-if="!flowDocked"
 			class="hidden @4xl:sticky @4xl:top-[calc(var(--header-frame-h)+1.25rem)] @4xl:block"
 		>
 			<SettingsSectionNav
@@ -20,6 +22,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, provide, ref, shallowRef } from 'vue'
 import SettingsSectionNav from '@/components/InlineEdit/SettingsSectionNav.vue'
+import { useFlowDocked } from '@/composables/useFlowDocked'
 import {
 	SETTINGS_SECTIONS,
 	inPageOrder,
@@ -27,6 +30,8 @@ import {
 } from '@/components/InlineEdit/settingsSections'
 
 /** A settings tab: its sections in one column, a nav of them beside it from lg. */
+// With Flow docked beside the app, one more panel is too many.
+const flowDocked = useFlowDocked()
 const sections = shallowRef<SettingsSection[]>([])
 const active = ref<string | null>(null)
 const inView = new Set<string>()

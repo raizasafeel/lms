@@ -175,6 +175,18 @@ describe('the settings page section nav', () => {
 		wrapper.unmount()
 	})
 
+	it('hides the section panel while Flow is docked beside the app', async () => {
+		const wrapper = mountPage()
+		await flushPromises()
+		document.documentElement.style.marginRight = '400px'
+		await flushPromises()
+		expect(wrapper.find('nav').exists()).toBe(false)
+		document.documentElement.style.marginRight = ''
+		await flushPromises()
+		expect(wrapper.find('nav').exists()).toBe(true)
+		wrapper.unmount()
+	})
+
 	it('drops a section that goes away', async () => {
 		const wrapper = mountPage()
 		await flushPromises()
