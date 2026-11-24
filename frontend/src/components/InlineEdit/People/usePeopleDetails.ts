@@ -39,5 +39,5 @@ export function usePeopleDetails(users: MaybeRefOrGetter<string[]>) {
 	const describe = (id: string): PersonDetails =>
 		details.value.get(id) ?? { name: id, full_name: id, roles: [] }
 
-	return { details, describe, remember, load }
+	return { details, describe, load }
 }

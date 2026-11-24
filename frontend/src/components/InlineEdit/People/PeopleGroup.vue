@@ -117,7 +117,6 @@ interface UserHit {
 	label?: string
 	value?: string
 	user_image?: string
-	roles?: string[]
 }
 
 /** Who works on a course or batch: the owner, then each person and their role. */
@@ -134,7 +133,7 @@ const showOwnerDialog = ref(false)
 const members = computed(() => [
 	...new Set(people.value.map((row) => row.member)),
 ])
-const { describe, remember, load } = usePeopleDetails(() => [
+const { describe, load } = usePeopleDetails(() => [
 	props.owner,
 	...members.value,
 ])
@@ -157,14 +156,6 @@ const ownerDescription = computed(() =>
 
 function toOptions(rows: Record<string, unknown>[]) {
 	const hits = rows as UserHit[]
-	remember(
-		hits.map((hit) => ({
-			name: hit.value || '',
-			full_name: hit.label,
-			user_image: hit.user_image,
-			roles: hit.roles || [],
-		}))
-	)
 	return hits.map((hit) => ({
 		label: hit.label || hit.value || '',
 		value: hit.value || '',

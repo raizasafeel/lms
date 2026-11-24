@@ -128,7 +128,7 @@ const graders = computed<string[]>({
 	},
 })
 
-const { describe, remember } = usePeopleDetails(() => graders.value)
+const { describe } = usePeopleDetails(() => graders.value)
 
 const knownGraders = computed(() =>
 	graders.value.map((grader) => ({
@@ -143,16 +143,7 @@ function toOptions(rows: Record<string, unknown>[]) {
 		label?: string
 		value?: string
 		user_image?: string
-		roles?: string[]
 	}[]
-	remember(
-		hits.map((hit) => ({
-			name: hit.value || '',
-			full_name: hit.label,
-			user_image: hit.user_image,
-			roles: hit.roles || [],
-		}))
-	)
 	return hits.map((hit) => ({
 		label: hit.label || hit.value || '',
 		value: hit.value || '',
