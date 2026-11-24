@@ -13,37 +13,55 @@
 				{{ count }}
 			</span>
 		</div>
-		<div class="flex items-center">
+		<div class="flex items-center gap-1">
 			<Button
-				data-testid="add-chapter"
-				class="!rounded-e-none"
-				@click="emit('add-chapter')"
+				v-if="collapsible"
+				variant="ghost"
+				data-testid="hide-chapters"
+				:label="__('Hide chapters')"
+				:tooltip="__('Hide chapters')"
+				@click="emit('hide')"
 			>
-				<template #prefix>
-					<span class="lucide-plus size-4" />
+				<template #icon>
+					<span class="lucide-panel-right-close size-4" />
 				</template>
-				{{ __('Add') }}
 			</Button>
-			<Dropdown align="end" :options="addOptions">
+			<div class="flex items-center">
 				<Button
-					data-testid="add-options"
-					class="!rounded-s-none border-s border-outline-gray-2"
-					:label="__('More ways to add')"
+					data-testid="add-chapter"
+					class="!rounded-e-none"
+					@click="emit('add-chapter')"
 				>
-					<template #icon>
-						<span class="lucide-chevron-down size-4" />
+					<template #prefix>
+						<span class="lucide-plus size-4" />
 					</template>
+					{{ __('Add') }}
 				</Button>
-			</Dropdown>
+				<Dropdown align="end" :options="addOptions">
+					<Button
+						data-testid="add-options"
+						class="!rounded-s-none border-s border-outline-gray-2"
+						:label="__('More ways to add')"
+					>
+						<template #icon>
+							<span class="lucide-chevron-down size-4" />
+						</template>
+					</Button>
+				</Dropdown>
+			</div>
 		</div>
 	</div>
 </template>
 <script setup lang="ts">
 import { Button, Dropdown } from 'frappe-ui'
 
-defineProps<{ count?: number }>()
+defineProps<{ count?: number; collapsible?: boolean }>()
 
-const emit = defineEmits<{ 'add-chapter': []; 'upload-scorm': [] }>()
+const emit = defineEmits<{
+	'add-chapter': []
+	'upload-scorm': []
+	hide: []
+}>()
 
 const addOptions = [
 	{

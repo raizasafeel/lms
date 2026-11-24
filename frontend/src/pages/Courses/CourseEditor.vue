@@ -1,9 +1,21 @@
 <template>
 	<div
 		class="grid grid-cols-1 flex-1 min-h-0"
-		:class="{ '@2xl:grid-cols-[70%,30%]': outlineVisible }"
+		:class="{ '@2xl:grid-cols-[70%,30%]': chaptersShown }"
 	>
-		<div class="flex flex-col overflow-hidden">
+		<div class="relative flex flex-col overflow-hidden">
+			<Button
+				v-if="!isMobile && outlineVisible && !chaptersOpen"
+				variant="outline"
+				class="absolute end-5 top-4 z-10"
+				data-testid="show-chapters"
+				@click="openChaptersPanel()"
+			>
+				<template #prefix>
+					<span class="lucide-panel-right size-4" />
+				</template>
+				{{ __('Chapters') }}
+			</Button>
 			<div class="overflow-y-auto h-full">
 				<SkeletonLoader
 					v-if="outline.loading && !outline.data"
@@ -33,15 +45,14 @@
 			</div>
 		</div>
 
-		<aside
-			v-if="!isMobile && outlineVisible"
-			class="flex min-h-0 flex-col border-s"
-		>
+		<aside v-if="chaptersShown" class="flex min-h-0 flex-col border-s">
 			<CourseChaptersHeader
+				collapsible
 				class="shrink-0 px-5 pt-4"
 				:count="outline.data?.length"
 				@add-chapter="openAddChapter"
 				@upload-scorm="openScormUpload"
+				@hide="foldChaptersPanel"
 			/>
 			<div class="min-h-0 flex-1 overflow-y-auto">
 				<SkeletonLoader
@@ -106,12 +117,13 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { createResource } from 'frappe-ui'
+import { Button, createResource } from 'frappe-ui'
 import { useSidebar } from '@/stores/sidebar'
 import { useScreenSize } from '@/utils/composables'
 import CourseOutline from '@/components/CourseOutline.vue'
 import CourseEditorEmptyState from '@/components/CourseEditorEmptyState.vue'
 import CourseChaptersHeader from '@/components/Courses/CourseChaptersHeader.vue'
+import { useFlowDocked } from '@/composables/useFlowDocked'
 import ScormUploadDialog from '@/components/Modals/ScormUploadDialog.vue'
 import { openFormRoute } from '@/composables/useFormRoute'
 import { setFormSource } from '@/composables/formTracking'
@@ -449,6 +461,36 @@ function openVideoStats() {
 // state full-width rather than that plus a bare chapters panel. The panel
 // stays while the outline loads, so a course with chapters doesn't flash.
 const outlineVisible = computed(() => !outline.data || outline.data.length > 0)
+
+// The chapters panel folds away by hand, and on its own while Flow is docked;
+// it comes back when Flow closes unless it was folded by hand.
+const chaptersOpen = ref(true)
+let closedForFlow = false
+const flowDocked = useFlowDocked()
+const chaptersShown = computed(
+	() => !isMobile.value && outlineVisible.value && chaptersOpen.value
+)
+
+function foldChaptersPanel() {
+	chaptersOpen.value = false
+	closedForFlow = false
+}
+
+function openChaptersPanel() {
+	chaptersOpen.value = true
+	closedForFlow = false
+}
+
+watch(
+	flowDocked,
+	(isDocked) => {
+		if (isDocked && chaptersOpen.value) {
+			chaptersOpen.value = false
+			closedForFlow = true
+		} else if (!isDocked && closedForFlow) openChaptersPanel()
+	},
+	{ immediate: true }
+)
 
 // Opened from here rather than through the outline: on a phone the outline
 // lives in the chapters sheet, which isn't mounted while it is closed. The

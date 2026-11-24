@@ -32,7 +32,7 @@ vi.mock('vue-router', () => ({
 // The outline's reload stays pending until a test settles it. Settling with
 // null is a failed request: frappe-ui resolves it and keeps the old data.
 vi.mock('frappe-ui', async () => {
-	const { reactive } = await import('vue')
+	const { h, reactive } = await import('vue')
 	return {
 		createResource: () => {
 			const r: any = reactive({ data: null, loading: false })
@@ -50,7 +50,13 @@ vi.mock('frappe-ui', async () => {
 			state.outline = r
 			return r
 		},
-		Button: { name: 'Button', render: () => null },
+		Button: {
+			name: 'Button',
+			setup:
+				(_: unknown, { attrs, slots }: any) =>
+				() =>
+					h('button', attrs, slots.default?.()),
+		},
 	}
 })
 
@@ -98,8 +104,8 @@ vi.mock('@/components/Courses/CourseChaptersHeader.vue', async () => {
 	return {
 		default: defineComponent({
 			name: 'CourseChaptersHeader',
-			props: ['count'],
-			emits: ['add-chapter', 'upload-scorm'],
+			props: { count: Number, collapsible: Boolean },
+			emits: ['add-chapter', 'upload-scorm', 'hide'],
 			setup: () => () => h('div'),
 		}),
 	}
@@ -420,5 +426,39 @@ describe('CourseEditor chapters panel', () => {
 		wrapper = await mountEditor([chapterA(1)])
 		dialog().vm.$emit('added')
 		expect(state.outline.reload).toHaveBeenCalled()
+	})
+
+	const showButton = () => wrapper.find('[data-testid="show-chapters"]')
+	const dockFlow = async (docked: boolean) => {
+		document.documentElement.style.marginRight = docked ? '400px' : ''
+		await flushPromises()
+	}
+
+	it('folds away by hand and comes back from the Chapters button', async () => {
+		wrapper = await mountEditor([chapterA(1)])
+		expect(header().props('collapsible')).toBe(true)
+		header().vm.$emit('hide')
+		await flushPromises()
+		expect(header().exists()).toBe(false)
+		await showButton().trigger('click')
+		expect(header().exists()).toBe(true)
+		expect(showButton().exists()).toBe(false)
+	})
+
+	it('closes while Flow is docked and reopens when Flow closes', async () => {
+		wrapper = await mountEditor([chapterA(1)])
+		await dockFlow(true)
+		expect(header().exists()).toBe(false)
+		expect(showButton().exists()).toBe(true)
+		await dockFlow(false)
+		expect(header().exists()).toBe(true)
+	})
+
+	it('stays folded after Flow closes when it was folded by hand', async () => {
+		wrapper = await mountEditor([chapterA(1)])
+		header().vm.$emit('hide')
+		await dockFlow(true)
+		await dockFlow(false)
+		expect(header().exists()).toBe(false)
 	})
 })
