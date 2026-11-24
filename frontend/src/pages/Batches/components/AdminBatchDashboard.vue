@@ -15,7 +15,8 @@
 		/>
 		<div
 			v-else
-			class="grid grid-cols-1 gap-5 lg:min-h-[30rem] lg:flex-1 @5xl:grid-cols-[minmax(0,1fr)_22rem] @[73.5rem]:grid-cols-[minmax(0,1fr)_26rem] @7xl:grid-cols-[minmax(0,1fr)_30rem]"
+			class="grid grid-cols-1 gap-5 lg:min-h-[30rem] lg:flex-1"
+			:class="gridClass"
 		>
 			<div class="flex min-w-0 flex-col gap-5 lg:min-h-0">
 				<DashboardKpiCards :kpis="kpis" :loading="!stats.data">
@@ -76,6 +77,7 @@ import DashboardEmptyState from '@/components/Dashboard/DashboardEmptyState.vue'
 import LoadError from '@/components/LoadError.vue'
 import { openBatchForm } from '@/composables/useBatchForms'
 import { syncDashboardState } from '@/composables/dashboard/useDashboard'
+import { useDashboardColumns } from '@/composables/dashboard/useDashboardColumns'
 import router from '@/router'
 import BatchAttendancePanel from '@/pages/Batches/components/BatchAttendancePanel.vue'
 import BatchFunnelPanel from '@/pages/Batches/components/BatchFunnelPanel.vue'
@@ -111,6 +113,7 @@ const reloadBatchDetails = inject<(() => void) | null>(
 )
 
 const batchName: string = props.batch?.data?.name ?? ''
+const { gridClass } = useDashboardColumns()
 const stage = ref<BatchFilter | null>(null)
 const classFilter = ref<ClassAttendanceFilter | null>(null)
 const showProgressModal = ref<boolean>(false)
