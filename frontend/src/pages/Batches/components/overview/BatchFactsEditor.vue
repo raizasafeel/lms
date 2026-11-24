@@ -108,7 +108,6 @@ import type { LMSBatch } from '@/types/lms/LMSBatch'
 const props = defineProps<{
 	doc: LMSBatch
 	form: BatchForm
-	studentCount?: number
 }>()
 
 const ring = (key: string) => missingRing(props.form.isMissing(key))
@@ -130,12 +129,9 @@ const mediumOptions = computed(() => [
 	{ label: __('In person'), value: 'Offline' },
 ])
 
-const seatsLabel = computed<string>(() => {
-	if (!props.doc.seat_count) return __('No seat limit')
-	if (props.studentCount === undefined) return __('seats')
-	const left = Math.max(props.doc.seat_count - props.studentCount, 0)
-	return __('seats · {0} left').format(left)
-})
+const seatsLabel = computed<string>(() =>
+	props.doc.seat_count ? __('seats') : __('No seat limit')
+)
 
 const timezones = createResource({
 	url: 'frappe.geo.country_info.get_country_timezone_info',

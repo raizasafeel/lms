@@ -4,12 +4,7 @@
 			<div class="min-w-0 space-y-10 @4xl:w-[70%]">
 				<BatchHeading :batch="batch.data" :doc="doc" :form="form" />
 				<div class="w-full @4xl:hidden">
-					<BatchEnrollCardEditor
-						v-if="doc"
-						:doc="doc"
-						:form="form!"
-						:studentCount="batch.data.student_count"
-					/>
+					<BatchEnrollCardEditor v-if="doc" :doc="doc" :form="form!" />
 					<BatchOverlay v-else :batch="batch" />
 				</div>
 
@@ -70,12 +65,7 @@
 			<aside
 				class="hidden w-full shrink-0 self-start sticky-below-header @4xl:block @4xl:w-[30%]"
 			>
-				<BatchEnrollCardEditor
-					v-if="doc"
-					:doc="doc"
-					:form="form!"
-					:studentCount="batch.data.student_count"
-				/>
+				<BatchEnrollCardEditor v-if="doc" :doc="doc" :form="form!" />
 				<BatchOverlay v-else :batch="batch" />
 			</aside>
 		</div>

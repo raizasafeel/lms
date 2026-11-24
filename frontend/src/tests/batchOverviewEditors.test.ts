@@ -85,9 +85,9 @@ import BatchFactsEditor from '@/pages/Batches/components/overview/BatchFactsEdit
 const form = { isMissing: () => false }
 const options = { global: { mocks: { __: globalThis.__ } } }
 
-const mountCard = (doc: Record<string, unknown>, studentCount?: number) =>
+const mountCard = (doc: Record<string, unknown>) =>
 	mount(BatchEnrollCardEditor, {
-		props: { doc, form, studentCount } as never,
+		props: { doc, form } as never,
 		...options,
 	})
 
@@ -141,9 +141,9 @@ describe('the batch enroll card editor', () => {
 })
 
 describe('the batch facts editor', () => {
-	const mountFacts = (doc: Record<string, unknown>, studentCount?: number) =>
+	const mountFacts = (doc: Record<string, unknown>) =>
 		mount(BatchFactsEditor, {
-			props: { doc, form, studentCount } as never,
+			props: { doc, form } as never,
 			...options,
 		})
 
@@ -167,11 +167,10 @@ describe('the batch facts editor', () => {
 		expect(range.props('start')).toBe('10:00:00')
 	})
 
-	it('counts the seats left once a limit is set', () => {
-		expect(mountFacts({ seat_count: 20 }, 18).text()).toContain(
-			'seats · 2 left'
-		)
-		expect(mountFacts({ seat_count: 20 }).text()).toContain('seats')
+	it('shows only the seat count once a limit is set', () => {
+		const text = mountFacts({ seat_count: 20 }).text()
+		expect(text).toContain('seats')
+		expect(text).not.toContain('left')
 		expect(mountFacts({}).text()).toContain('No seat limit')
 	})
 

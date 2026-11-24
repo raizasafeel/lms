@@ -19,7 +19,7 @@
 				@update:amount="(value) => (doc.amount = value)"
 			/>
 		</div>
-		<BatchFactsEditor :doc="doc" :form="form" :studentCount="studentCount" />
+		<BatchFactsEditor :doc="doc" :form="form" />
 		<div class="space-y-2">
 			<VideoPreview
 				:video-link="doc.video_link"
@@ -72,7 +72,6 @@ import { formatNumberIntoCurrency } from '@/utils'
 const props = defineProps<{
 	doc: LMSBatch
 	form: BatchForm
-	studentCount?: number
 }>()
 
 const showVideoDialog = ref(false)
