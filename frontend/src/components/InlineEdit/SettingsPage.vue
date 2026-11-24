@@ -50,6 +50,9 @@ const props = defineProps<{
 const sections = shallowRef<SettingsSection[]>([])
 const active = ref<string | null>(null)
 const inView = new Set<string>()
+// The section a nav click scrolls to stays marked until that scroll ends,
+// even when the page bottoms out before it reaches the top band.
+let picked: string | null = null
 
 // A section counts as in view while it crosses the band below the header.
 // Absent outside a browser, where the nav simply marks the section picked.
@@ -65,15 +68,19 @@ function onIntersect(entries: IntersectionObserverEntry[]): void {
 		if (entry.isIntersecting) inView.add(entry.target.id)
 		else inView.delete(entry.target.id)
 	}
+	if (picked) return
 	const first = sections.value.find((section) => inView.has(section.id))
 	if (first) active.value = first.id
 }
 
 function goTo(section: SettingsSection): void {
-	active.value = section.id
+	active.value = picked = section.id
+	const scroller = scrollParent(section.element)
+	const target = scroller ?? window
+	target.addEventListener('scrollend', () => (picked = null), { once: true })
 	// The first section goes to the very top, tabs and all, as on arrival.
 	if (section.id === sections.value[0]?.id) {
-		scrollParent(section.element)?.scrollTo({ top: 0, behavior: 'smooth' })
+		scroller?.scrollTo({ top: 0, behavior: 'smooth' })
 		return
 	}
 	section.element.scrollIntoView({ behavior: 'smooth', block: 'start' })

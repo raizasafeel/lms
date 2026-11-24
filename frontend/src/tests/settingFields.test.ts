@@ -175,6 +175,38 @@ describe('the settings page section nav', () => {
 		wrapper.unmount()
 	})
 
+	it('keeps a picked section marked until its scroll ends', async () => {
+		Element.prototype.scrollIntoView = vi.fn()
+		let report: (entries: Partial<IntersectionObserverEntry>[]) => void
+		vi.stubGlobal(
+			'IntersectionObserver',
+			class {
+				constructor(callback: typeof report) {
+					report = callback
+				}
+				observe() {}
+				unobserve() {}
+				disconnect() {}
+			}
+		)
+		const wrapper = mountPage()
+		await flushPromises()
+		const items = () => wrapper.findAll('nav button')
+		const thumbnail = document.getElementById('settings-thumbnail')!
+		await items()[2].trigger('click')
+		// The page bottoms out with Thumbnail still in the top band.
+		report!([{ target: thumbnail, isIntersecting: true }])
+		await flushPromises()
+		expect(items()[2].attributes('aria-current')).toBe('location')
+
+		window.dispatchEvent(new Event('scrollend'))
+		report!([{ target: thumbnail, isIntersecting: true }])
+		await flushPromises()
+		expect(items()[1].attributes('aria-current')).toBe('location')
+		wrapper.unmount()
+		vi.unstubAllGlobals()
+	})
+
 	it('hides the section panel while Flow is docked beside the app', async () => {
 		const wrapper = mountPage()
 		await flushPromises()
