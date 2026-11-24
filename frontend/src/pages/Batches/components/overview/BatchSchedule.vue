@@ -6,23 +6,30 @@
 				{{ countLabel }}
 			</span>
 		</div>
-		<p
+		<OverviewEmptyTile
 			v-if="!classes.length"
-			class="rounded-5 border border-outline-gray-2 px-4 py-3 text-p-base text-ink-gray-7"
+			icon="lucide-calendar-plus"
+			:title="emptyState.title"
+			:description="emptyState.description"
 		>
-			{{
-				__(
-					'No classes yet. Learners see the schedule here once you add classes.'
-				)
-			}}
-			<router-link
-				v-if="batchName"
-				:to="{ hash: '#classes' }"
-				class="font-medium text-ink-gray-9 underline-offset-2 hover:underline"
+			<Button
+				v-if="batchName && needsProvider"
+				variant="subtle"
+				:label="__('Open Settings')"
+				@click="router.push({ ...route, hash: '#settings' })"
+			/>
+			<Button
+				v-else-if="batchName"
+				data-testid="schedule-add-class"
+				variant="subtle"
+				@click="openBatchForm(router, 'NewLiveClass', batchName, route.hash)"
 			>
-				{{ __('Add a class') }}
-			</router-link>
-		</p>
+				<template #prefix>
+					<span class="lucide-plus size-4" />
+				</template>
+				{{ __('Schedule a class') }}
+			</Button>
+		</OverviewEmptyTile>
 		<ul
 			v-else
 			class="divide-y divide-outline-gray-1 overflow-hidden rounded-5 border border-outline-gray-2"
@@ -53,8 +60,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { createListResource } from 'frappe-ui'
+import { Button, createListResource } from 'frappe-ui'
+import { useRoute, useRouter } from 'vue-router'
 import dayjs from '@/utils/dayjs'
+import { openBatchForm } from '@/composables/useBatchForms'
+import { injectBatchForm } from '@/pages/Batches/composables/useBatchForm'
+import OverviewEmptyTile from '@/pages/Batches/components/overview/OverviewEmptyTile.vue'
 
 interface LiveClassRow {
 	name: string
@@ -63,6 +74,10 @@ interface LiveClassRow {
 }
 
 const SHOWN = 4
+
+const route = useRoute()
+const router = useRouter()
+const form = injectBatchForm()
 
 /** The batch's next live classes, with a link to the Classes tab. */
 const props = defineProps<{
@@ -91,6 +106,31 @@ const nextClasses = computed<LiveClassRow[]>(() => {
 		? upcoming.slice(0, SHOWN)
 		: classes.value.slice(-SHOWN)
 })
+
+// The same check as the Classes tab: a class needs a Zoom or Google Meet account.
+const needsProvider = computed<boolean>(() => {
+	const doc = form?.doc.value
+	if (doc?.conferencing_provider === 'Zoom') return !doc.zoom_account
+	if (doc?.conferencing_provider === 'Google Meet')
+		return !doc.google_meet_account
+	return true
+})
+
+const emptyState = computed(() =>
+	props.batchName && needsProvider.value
+		? {
+				title: __('Set up live classes'),
+				description: __(
+					'Pick Zoom or Google Meet for this batch in Settings, then schedule classes your students join from here.'
+				),
+		  }
+		: {
+				title: __('No classes scheduled'),
+				description: __(
+					'Schedule a live class and learners get an invite with the joining link.'
+				),
+		  }
+)
 
 const countLabel = computed<string>(() =>
 	classes.value.length === 1
