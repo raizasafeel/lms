@@ -1264,6 +1264,9 @@ const fallbackToDwellTimer = (reason: string): void => {
 }
 
 const startTimer = () => {
+	// A second lesson load before the first clears its timer would orphan it,
+	// and the orphan ignores the video hold.
+	clearInterval(timerInterval)
 	if (!lesson.data?.membership) return
 	const dwell = resolveDwellSeconds(
 		settingsStore.settings?.data?.lesson_dwell_time
