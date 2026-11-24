@@ -26,7 +26,7 @@
 								v-if="item.icon"
 								:class="[item.icon, 'size-4 text-ink-gray-6']"
 							/>
-							<div v-safe-html:rich="item.title"></div>
+							<div v-safe-html:rich="item.title" class="text-base"></div>
 						</div>
 						<template v-if="item.modified" #suffix>
 							<div class="text-ink-gray-6">
