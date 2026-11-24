@@ -50,6 +50,7 @@ const setupPlyrForVideo = (video, players) => {
 		'fullscreen',
 	]
 
+	const embed = video.closest('.embed-tool')
 	const player = new Plyr(video, {
 		youtube: { noCookie: true },
 		controls: controls,
@@ -57,6 +58,9 @@ const setupPlyrForVideo = (video, players) => {
 		speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] },
 	})
 
+	player.on('ready', () =>
+		embed?.classList.remove('embed-tool--player-loading')
+	)
 	guardPlayerSkips(player)
 	keepFocusInPlayer(player)
 	video.plyrInstance = player

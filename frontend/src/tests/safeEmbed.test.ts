@@ -68,4 +68,11 @@ describe('SafeEmbed', () => {
 		expect(isSafeEmbedSource('drive', 'QhA4h6qD4wY')).toBe(false)
 		expect(isSafeEmbedSource('youtube', 'javascript:alert(1)')).toBe(false)
 	})
+
+	it('marks only Plyr embeds as loading until their player is ready', () => {
+		const loading = 'embed-tool--player-loading'
+		expect(render('youtube', 'QhA4h6qD4wY').classList).toContain(loading)
+		const url = 'https://drive.google.com/file/d/1A2B/preview'
+		expect(render('drive', url).classList).not.toContain(loading)
+	})
 })
