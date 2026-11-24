@@ -4,7 +4,7 @@
 			v-if="!hideHeader || withProgress || collapsible"
 			class="bg-surface-gray-1 px-5 py-5 border-b"
 		>
-			<div v-if="!hideHeader || collapsible" class="flex items-start gap-1.5">
+			<div v-if="!hideHeader || collapsible" class="flex items-center gap-1.5">
 				<Button
 					v-if="collapsible"
 					variant="ghost"
