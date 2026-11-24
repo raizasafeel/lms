@@ -55,15 +55,11 @@
 					variant="solid"
 					size="md"
 					class="w-full mb-8 text-p-base-medium"
-					:route="
-						preview
-							? undefined
-							: {
-									name: 'Billing',
-									params: { type: 'course', name: course.data.name },
-							  }
-					"
-					@click="preview && emit('enroll')"
+					:route="{
+						name: 'Billing',
+						params: { type: 'course', name: course.data.name },
+						query: studentViewQuery(preview ?? null),
+					}"
 				>
 					<template #prefix>
 						<span class="lucide-credit-card size-4" />

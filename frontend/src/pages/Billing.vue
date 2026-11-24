@@ -1,7 +1,20 @@
 <template>
 	<PageHeader :breadcrumbs="breadcrumbs" />
 	<PageBody :title="__('Billing Details')">
-		<div v-if="access.data?.access && orderSummary.data" class="px-5 pb-10">
+		<div
+			v-if="(access.data?.access || isPreview) && orderSummary.data"
+			class="px-5 pb-10"
+		>
+			<Alert
+				v-if="isPreview"
+				class="mb-6"
+				:title="__('Student view')"
+				:description="
+					__(
+						'This is the checkout a learner sees. No payment is taken: proceeding enrolls you as a preview learner.'
+					)
+				"
+			/>
 			<div class="flex flex-col @4xl:flex-row justify-between">
 				<div class="flex flex-col lg:order-last mb-10 lg:mt-10 lg:w-1/4">
 					<div class="h-fit bg-surface-gray-2 rounded-5 p-5 space-y-4">
@@ -246,6 +259,7 @@
 </template>
 <script setup>
 import {
+	Alert,
 	Button,
 	Combobox,
 	createResource,
@@ -254,6 +268,8 @@ import {
 	toast,
 } from 'frappe-ui'
 import { reactive, inject, onMounted, computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { studentViewMode } from '@/composables/useStudentView'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
 import PageBody from '@/components/Layouts/pages/PageBody.vue'
 import { sessionStore } from '../stores/session'
@@ -375,7 +391,24 @@ const paymentLink = createResource({
 	},
 })
 
+// An instructor previewing the course as a learner: show the real checkout,
+// but finish by enrolling them in student view instead of taking payment.
+const route = useRoute()
+const router = useRouter()
+const isPreview = computed(
+	() =>
+		props.type === 'course' && Boolean(studentViewMode(route.query.studentView))
+)
+
 const generatePaymentLink = () => {
+	if (isPreview.value) {
+		router.push({
+			name: 'CourseDetail',
+			params: { courseName: props.name },
+			query: { studentView: 1 },
+		})
+		return
+	}
 	if (paymentLink.loading) return
 	paymentLink.submit(
 		{},
