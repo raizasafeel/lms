@@ -1,8 +1,5 @@
 <template>
-	<div
-		v-if="doc"
-		class="grid w-full items-start gap-x-12 gap-y-10 px-5 py-8 lg:grid-cols-2"
-	>
+	<SettingsPage v-if="doc">
 		<SettingsGroup
 			:title="__('Enrollment')"
 			:description="__('How people join this batch.')"
@@ -97,7 +94,14 @@
 		</SettingsGroup>
 
 		<BatchManageGroup :batch="batch" />
-	</div>
+		<template #aside>
+			<SearchPreview
+				:url="batchUrl"
+				:title="doc.title"
+				:description="form?.meta.description || doc.description"
+			/>
+		</template>
+	</SettingsPage>
 </template>
 
 <script setup lang="ts">
@@ -108,6 +112,8 @@ import SettingImage from '@/components/InlineEdit/SettingImage.vue'
 import SettingLink from '@/components/InlineEdit/SettingLink.vue'
 import SettingSwitch from '@/components/InlineEdit/SettingSwitch.vue'
 import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
+import SettingsPage from '@/components/InlineEdit/SettingsPage.vue'
+import SearchPreview from '@/components/InlineEdit/SearchPreview.vue'
 import BatchManageGroup from '@/pages/Batches/components/BatchManageGroup.vue'
 import { openBatchForm } from '@/composables/useBatchForms'
 import { injectBatchForm } from '@/pages/Batches/composables/useBatchForm'
@@ -121,6 +127,11 @@ const router = useRouter()
 const route = useRoute()
 const form = injectBatchForm()
 const doc = computed(() => form?.doc.value ?? null)
+
+// The address learners share, without the scheme, as search results print it.
+const batchUrl = computed<string>(
+	() => `${window.location.host}/lms/batches/${doc.value?.name ?? ''}`
+)
 
 const conferencingOptions = [
 	{ label: __('None'), value: '' },

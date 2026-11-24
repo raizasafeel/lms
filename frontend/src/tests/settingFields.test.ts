@@ -58,6 +58,7 @@ import SettingAction from '@/components/InlineEdit/SettingAction.vue'
 import SettingField from '@/components/InlineEdit/SettingField.vue'
 import SettingSwitch from '@/components/InlineEdit/SettingSwitch.vue'
 import SearchPreview from '@/components/InlineEdit/SearchPreview.vue'
+import SettingsPage from '@/components/InlineEdit/SettingsPage.vue'
 import RelatedCoursesEditor from '@/components/Courses/RelatedCoursesEditor.vue'
 
 // frappe's translation layer patches String.prototype.format in at runtime.
@@ -123,6 +124,22 @@ describe('the search preview', () => {
 	it('asks for a description while there is none', () => {
 		const wrapper = mount(SearchPreview, { props: { url: 'x' }, global })
 		expect(wrapper.text()).toContain('Add a description to show here.')
+	})
+})
+
+describe('the settings page layout', () => {
+	it('keeps sections in one column with the panel beside them from lg, after them below', () => {
+		const wrapper = mount(SettingsPage, {
+			slots: { default: '<section>Access</section>', aside: '<p>Preview</p>' },
+		})
+		const [sections, panel] = wrapper.element.children
+		expect(sections.textContent).toBe('Access')
+		expect(panel.tagName).toBe('ASIDE')
+		expect(panel.textContent).toBe('Preview')
+		expect(wrapper.classes()).toContain(
+			'lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]'
+		)
+		expect(panel.className).toContain('lg:sticky')
 	})
 })
 

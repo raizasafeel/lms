@@ -203,6 +203,7 @@ declare module 'vue' {
     SettingsLayout: typeof import('./src/components/Layouts/settings/desktop/SettingsLayout.vue')['default']
     SettingsList: typeof import('./src/components/Layouts/settings/desktop/SettingsList.vue')['default']
     SettingsListPanel: typeof import('./src/components/Layouts/settings/desktop/SettingsListPanel.vue')['default']
+    SettingsPage: typeof import('./src/components/InlineEdit/SettingsPage.vue')['default']
     SettingsRow: typeof import('./src/components/Layouts/settings/mobile/SettingsRow.vue')['default']
     SettingsRowGroup: typeof import('./src/components/Layouts/settings/mobile/SettingsRowGroup.vue')['default']
     SettingsRowList: typeof import('./src/components/Layouts/settings/mobile/SettingsRowList.vue')['default']
