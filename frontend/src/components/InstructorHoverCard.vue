@@ -1,5 +1,5 @@
 <template>
-	<HoverCard :hoverDelay="200">
+	<HoverCard v-if="user?.data?.name" :hoverDelay="200">
 		<template #trigger>
 			<slot />
 		</template>
@@ -25,17 +25,20 @@
 			</Button>
 		</div>
 	</HoverCard>
+	<slot v-else />
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import { Button, HoverCard } from 'frappe-ui'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { decodeEntities, htmlToText } from '@/utils'
-import type { CourseInstructorInfo } from '@/types'
+import type { CourseInstructorInfo, SessionUser } from '@/types'
 
-/** An instructor's avatar, name and bio, shown on hovering their name or avatar. */
+/** An instructor's avatar, name and bio, shown to signed-in users on hovering their name or avatar. */
 const props = defineProps<{ instructor: CourseInstructorInfo }>()
+
+const user = inject<SessionUser | undefined>('$user', undefined)
 
 const bio = computed(() =>
 	htmlToText(decodeEntities(props.instructor.bio || '')).trim()

@@ -9,7 +9,7 @@
 			<template v-if="index">
 				{{ index === named.length - 1 && !others ? ` ${__('and')} ` : ', ' }}
 			</template>
-			<InstructorHoverCard v-if="hoverCards" :instructor="instructor">
+			<InstructorHoverCard v-if="showHoverCards" :instructor="instructor">
 				<component
 					:is="instructor.username ? 'router-link' : 'span'"
 					v-bind="linkProps(instructor)"
@@ -33,16 +33,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import InstructorHoverCard from '@/components/InstructorHoverCard.vue'
-import type { CourseInstructorInfo } from '@/types'
+import type { CourseInstructorInfo, SessionUser } from '@/types'
 
 /** Up to three instructors by name; more collapse to "and N others". */
 const props = defineProps<{
 	instructors: CourseInstructorInfo[]
-	/** Show each named instructor's card on hover. */
+	/** Show each named instructor's card on hover to signed-in users. */
 	hoverCards?: boolean
 }>()
+
+const user = inject<SessionUser | undefined>('$user', undefined)
+
+const showHoverCards = computed(() => props.hoverCards && !!user?.data?.name)
 
 const MAX_NAMED = 3
 

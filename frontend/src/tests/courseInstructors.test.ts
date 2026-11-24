@@ -16,6 +16,7 @@ vi.mock('@/utils', () => ({
 vi.stubGlobal('__', translate)
 
 import CourseInstructors from '@/components/CourseInstructors.vue'
+import InstructorHoverCard from '@/components/InstructorHoverCard.vue'
 
 const person = (first: string) => ({
 	username: first.toLowerCase(),
@@ -24,10 +25,14 @@ const person = (first: string) => ({
 	bio: `<p>${first} teaches.</p>`,
 })
 
-const mountNames = (names: string[], hoverCards = false) =>
+const signedIn = { data: { name: 'ada@example.com' } }
+const guest = { data: null }
+
+const mountNames = (names: string[], hoverCards = false, user = signedIn) =>
 	mount(CourseInstructors, {
 		props: { instructors: names.map(person), hoverCards },
 		global: {
+			provide: { $user: user },
 			mocks: { __: translate },
 			stubs: { RouterLink: { template: '<a><slot /></a>' } },
 		},
@@ -59,5 +64,31 @@ describe('the instructor names', () => {
 		expect(cards).toHaveLength(2)
 		expect(cards[0].text()).toContain('Dipen teaches.')
 		expect(cards[0].text()).toContain('View profile')
+	})
+	it('shows guests plain names with no card', () => {
+		const wrapper = mountNames(['Dipen', 'Umair'], true, guest)
+		expect(wrapper.find('[data-testid="instructor-card"]').exists()).toBe(false)
+		expect(wrapper.text()).not.toContain('teaches')
+		expect(names(wrapper)).toEqual(['Dipen', 'Umair'])
+		expect(wrapper.find('.decoration-dotted').exists()).toBe(false)
+	})
+})
+
+describe('the instructor card', () => {
+	const mountCard = (user: object) =>
+		mount(InstructorHoverCard, {
+			props: { instructor: person('Dipen') },
+			slots: { default: '<i>avatar</i>' },
+			global: { provide: { $user: user }, mocks: { __: translate } },
+		})
+
+	it('opens for signed-in users', () => {
+		const wrapper = mountCard(signedIn)
+		expect(wrapper.find('[data-testid="instructor-card"]').exists()).toBe(true)
+	})
+
+	it('leaves only the trigger for guests', () => {
+		const wrapper = mountCard(guest)
+		expect(wrapper.html()).toBe('<i>avatar</i>')
 	})
 })
