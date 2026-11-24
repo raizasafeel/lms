@@ -115,22 +115,22 @@ describe('the Save button', () => {
 		const form = formWith({ ...fullDoc, title: '' })
 		const wrapper = mountWithForm(CourseSaveButton, form, { form })
 
-		await wrapper.find('span').trigger('mouseenter')
+		await wrapper.find('span.inline-flex').trigger('mouseenter')
 		expect(form.showRequired.value).toBe(true)
 		expect(form.isMissing('title')).toBe(true)
 		const tooltip = wrapper.findComponent({ name: 'Tooltip' })
 		expect(tooltip.props('text')).toContain('a title')
 
-		await wrapper.find('span').trigger('mouseleave')
+		await wrapper.find('span.inline-flex').trigger('mouseleave')
 		expect(form.showRequired.value).toBe(false)
 	})
 
 	it('keeps the rings after a save with gaps', async () => {
 		const form = formWith({ ...fullDoc, title: '' })
 		const wrapper = mountWithForm(CourseSaveButton, form, { form })
-		await wrapper.find('span').trigger('mouseenter')
+		await wrapper.find('span.inline-flex').trigger('mouseenter')
 		await wrapper.find('button').trigger('click')
-		await wrapper.find('span').trigger('mouseleave')
+		await wrapper.find('span.inline-flex').trigger('mouseleave')
 		expect(form.submitCourse).toHaveBeenCalled()
 		expect(form.showRequired.value).toBe(true)
 	})
