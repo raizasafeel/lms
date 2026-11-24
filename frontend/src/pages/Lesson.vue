@@ -3,12 +3,6 @@
 		<PageHeader :breadcrumbs="breadcrumbs">
 			<template #actions>
 				<CertificationLinks :courseName="courseName" />
-				<HeaderButton
-					v-if="canEditLesson && !isStudentView"
-					:label="__('Editor View')"
-					icon="lucide-pencil"
-					:route="editorRoute"
-				/>
 			</template>
 		</PageHeader>
 		<StudentViewBar
@@ -431,7 +425,6 @@ import StudentLessonSidebar from '@/components/StudentLessonSidebar.vue'
 import StudentViewBar from '@/components/StudentViewBar.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
-import HeaderButton from '@/components/HeaderButton.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import Notes from '@/components/Notes/Notes.vue'
 import InlineLessonMenu from '@/components/Notes/InlineLessonMenu.vue'
@@ -1345,6 +1338,15 @@ const canEditLesson = computed(() => {
 	)
 	return Boolean(realUser.data?.is_moderator) || isInstructor
 })
+
+// Course editors see a lesson in the editor; the learner page is student view.
+watch(
+	canEditLesson,
+	(canEdit) => {
+		if (canEdit && !isStudentView.value) router.replace(editorRoute.value)
+	},
+	{ immediate: true }
+)
 
 const allowInstructorContent = () => {
 	if (window.read_only_mode) return false
