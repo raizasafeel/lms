@@ -2,7 +2,9 @@
 	<div
 		class="w-full min-w-80 max-w-sm overflow-hidden rounded-6 border border-outline-gray-2 bg-surface-base"
 	>
+		<!-- Inset like the editor's card, so media and content share one edge. -->
 		<VideoPreview
+			class="mx-5 mt-5 !w-auto !rounded-5"
 			:video-link="course.data?.video_link"
 			:fallback-image="course.data?.image"
 		/>

@@ -2,7 +2,7 @@
 	<div
 		class="w-full overflow-hidden rounded-6 border border-outline-gray-2 bg-surface-base"
 	>
-		<div class="p-2 pb-0">
+		<div class="px-5 pt-5">
 			<ImageField
 				swatches
 				:image="doc.image"
@@ -38,12 +38,11 @@
 					</template>
 					{{ doc.paid_course ? __('Buy this course') : __('Start learning') }}
 				</Button>
-				<p class="text-center text-p-xs text-ink-gray-6">
-					{{
-						doc.disable_self_learning
-							? __('Self enrollment is off, so you enroll learners yourself.')
-							: __('Learners see this button.')
-					}}
+				<p
+					v-if="doc.disable_self_learning"
+					class="text-center text-p-xs text-ink-gray-6"
+				>
+					{{ __('Self enrollment is off, so you enroll learners yourself.') }}
 				</p>
 			</div>
 			<CourseCertificateBox

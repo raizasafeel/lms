@@ -87,7 +87,7 @@ describe('the batch enroll card editor', () => {
 	it('names the formatted price on a paid batch', () => {
 		const card = mountCard({ paid_batch: 1, amount: 30000, currency: 'INR' })
 		expect(card.text()).toContain('Enroll for INR 30000')
-		expect(card.text()).toContain('Learners see this button.')
+		expect(card.text()).not.toContain('Learners see this button.')
 	})
 
 	it('reads Enroll on a free self-enroll batch, else the contact message', () => {

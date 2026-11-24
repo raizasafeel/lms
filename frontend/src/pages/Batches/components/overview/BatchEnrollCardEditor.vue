@@ -32,7 +32,7 @@
 				</template>
 				{{ buttonLabel }}
 			</Button>
-			<p class="mt-1.5 text-center text-p-xs text-ink-gray-6">
+			<p v-if="buttonNote" class="mt-1.5 text-center text-p-xs text-ink-gray-6">
 				{{ buttonNote }}
 			</p>
 		</div>
@@ -82,7 +82,7 @@ const buttonLabel = computed<string>(() => {
 
 const buttonNote = computed(() =>
 	isSelfEnroll.value
-		? __('Learners see this button.')
+		? ''
 		: __(
 				'Self enrollment is off in Settings, so learners see this message and you enroll them.'
 		  )
