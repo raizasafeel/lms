@@ -1,5 +1,6 @@
 import type { Component } from 'vue'
 import type { SettingsListColumn, SettingsListRow } from '@/types/settingsList'
+import type { IntegrationKey } from '@/components/Settings/Integrations/integrations'
 
 /**
  * The settings tree, as data: a page of fields, a page of records, or a
@@ -331,6 +332,8 @@ export interface SettingsRoutableGroup {
 export interface SettingsItem extends SettingsRoutableItem {
 	icon: string
 	condition?: () => boolean
+	/** Listed in the sidebar only while one of these integrations is on. */
+	integration?: IntegrationKey | IntegrationKey[]
 	page: SettingsPage
 }
 

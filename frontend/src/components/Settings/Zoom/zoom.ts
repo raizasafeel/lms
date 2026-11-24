@@ -1,3 +1,4 @@
+import { markRaw } from 'vue'
 import { toast } from 'frappe-ui'
 import { useTelemetry } from '@framework/ui/telemetry/index'
 import {
@@ -7,7 +8,8 @@ import {
 } from '@/components/Settings/rowActions'
 import { recordForm } from '@/components/Settings/recordForm'
 import { openSettings } from '@/utils'
-import type { ListPage } from '@/types/settingsSchema'
+import ZoomAttendanceSwitch from '@/components/Settings/Zoom/ZoomAttendanceSwitch.vue'
+import type { ListPanelPage } from '@/components/Layouts/settings/desktop/SettingsListPanel.vue'
 import type { SettingsListColumn, SettingsListRow } from '@/types'
 
 /**
@@ -139,7 +141,7 @@ const form = recordForm({
 	},
 })
 
-export const zoomSettingsPage: ListPage = {
+export const zoomSettingsPage: ListPanelPage = {
 	kind: 'list',
 	resource: {
 		doctype: DOCTYPE,
@@ -161,4 +163,5 @@ export const zoomSettingsPage: ListPage = {
 	empty: { name: 'Zoom Settings', icon: 'lucide-video' },
 	create: { detail: form.forNew() },
 	rowDetail: form.forRecord(),
+	headerActions: { component: markRaw(ZoomAttendanceSwitch) },
 }

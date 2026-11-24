@@ -23,6 +23,33 @@
 							<span class="lucide-chevron-left size-4.5 rtl:rotate-180" />
 						</template>
 					</Button>
+					<nav
+						v-else-if="crumb && title"
+						:aria-label="__('Breadcrumb')"
+						class="flex min-w-0 items-center gap-1.5 text-p-lg-semibold"
+						data-testid="settings-crumb"
+					>
+						<Button
+							variant="ghost"
+							size="sm"
+							class="-ms-1.5"
+							:aria-label="__('Back to {0}').format(__(crumb.label))"
+							@click="crumb.open()"
+						>
+							<template #icon>
+								<span class="lucide-arrow-left size-4 rtl:rotate-180" />
+							</template>
+						</Button>
+						<button
+							type="button"
+							class="text-ink-gray-6 hover:text-ink-gray-8"
+							@click="crumb.open()"
+						>
+							{{ __(crumb.label) }}
+						</button>
+						<span class="text-ink-gray-6" aria-hidden="true">/</span>
+						<h2 class="truncate text-ink-gray-8">{{ title }}</h2>
+					</nav>
 					<h2 v-else-if="title" class="text-p-lg-semibold text-ink-gray-8">
 						{{ title }}
 					</h2>
@@ -65,11 +92,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import { Badge, Button } from 'frappe-ui'
 import type { BadgeProps } from 'frappe-ui'
 import type { AutosaveStatus } from '@/composables/useAutosave'
 import SwitchRow from '@/components/Controls/SwitchRow.vue'
+import { settingsCrumbKey } from '@/components/Layouts/settings/desktop/settingsCrumb'
 
 // The header of every settings panel, in two variants: "back" is the title
 // itself as a control (CRM's EditEmailTemplate), used by sub-pages; "plain"
@@ -93,6 +121,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ back: [] }>()
+
+const crumb = inject(settingsCrumbKey, null)
 
 // A record's own on/off state belongs beside the actions, not as the first
 // field in the body. Undefined on panels with no such state, which hides it.

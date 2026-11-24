@@ -2,7 +2,7 @@
 	<SettingsDialog v-model:open="show" v-model:tab="activeSlug" size="5xl">
 		<template #title>{{ __('Settings') }}</template>
 		<SettingsSidebar class="lms-settings-nav">
-			<SettingsNavGroup v-for="group in tabs" :key="group.label">
+			<SettingsNavGroup v-for="group in sidebarTabs" :key="group.label">
 				<template #label>
 					<span class="text-xs-medium text-ink-gray-6">
 						{{ __(group.label) }}
@@ -27,26 +27,28 @@
 				:value="item.slug"
 				class="min-w-0"
 			>
-				<SettingsFieldsPanel
-					v-if="item.page.kind === 'fields'"
-					:page="item.page"
-					:title="__(item.label)"
-					:data="sharedDocument(item.page)"
-				/>
-				<SettingsListPanel
-					v-else-if="item.page.kind === 'list'"
-					:page="item.page"
-					:title="__(item.label)"
-					:record="recordFor(item)"
-					@update:record="(record) => openRecord(item, record)"
-					@renamed="(name) => renameRecord(item, name)"
-				/>
-				<component
-					v-else
-					:is="item.page.component"
-					:label="__(item.label)"
-					v-bind="recordModel(item)"
-				/>
+				<SettingsCrumbScope :crumb="crumbFor(item)">
+					<SettingsFieldsPanel
+						v-if="item.page.kind === 'fields'"
+						:page="item.page"
+						:title="__(item.label)"
+						:data="sharedDocument(item.page)"
+					/>
+					<SettingsListPanel
+						v-else-if="item.page.kind === 'list'"
+						:page="item.page"
+						:title="__(item.label)"
+						:record="recordFor(item)"
+						@update:record="(record) => openRecord(item, record)"
+						@renamed="(name) => renameRecord(item, name)"
+					/>
+					<component
+						v-else
+						:is="item.page.component"
+						:label="__(item.label)"
+						v-bind="recordModel(item)"
+					/>
+				</SettingsCrumbScope>
 			</SettingsPanel>
 		</SettingsContent>
 		<Dialog.Close as-child>
@@ -75,13 +77,18 @@ import {
 	SettingsSidebar,
 	createDocumentResource,
 } from 'frappe-ui'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSettings } from '@/stores/settings'
 import DiscardChangesDialog from '@/components/Settings/DiscardChangesDialog.vue'
 import { confirmDiscard, installDirtyGuard } from '@/composables/useDirtyGuard'
 import SettingsFieldsPanel from '@/components/Layouts/settings/desktop/SettingsFieldsPanel.vue'
 import SettingsListPanel from '@/components/Layouts/settings/desktop/SettingsListPanel.vue'
+import SettingsCrumbScope from '@/components/Layouts/settings/desktop/SettingsCrumbScope.vue'
+import {
+	isSidebarItemVisible,
+	loadIntegrationStatus,
+} from '@/components/Settings/Integrations/integrations'
 import { isGroupVisible, settingsTree } from '@/components/Settings/settings'
 import { useSettingsHash } from '@/composables/useSettingsHash'
 
@@ -136,6 +143,18 @@ const tabs = computed(() => {
 		.filter((tab) => tab.items.length)
 })
 
+// Every page stays reachable by URL and from the Integrations grid; the
+// sidebar lists an integration's pages only while it is on.
+const sidebarTabs = computed(() =>
+	tabs.value
+		.map((tab) => ({ ...tab, items: tab.items.filter(isSidebarItemVisible) }))
+		.filter((tab) => tab.items.length)
+)
+
+const hasIntegrations = computed(() =>
+	tabs.value.some((tab) => tab.items.some((item) => item.integration))
+)
+
 const {
 	items,
 	isOpen,
@@ -149,6 +168,24 @@ const {
 
 // The hash owns the dialog: it is open because the URL says so, and dismissing
 // it navigates rather than flipping a flag no one else can see.
+watch(
+	() => isOpen.value && hasIntegrations.value,
+	(open) => {
+		if (open) void loadIntegrationStatus()
+	},
+	{ immediate: true }
+)
+
+const crumbFor = (item) =>
+	item.integration
+		? {
+				label: 'Integrations',
+				open: () => selectTab(itemForSlug('integrations')),
+		  }
+		: null
+
+const itemForSlug = (slug) => items.value.find((item) => item.slug === slug)
+
 const show = computed({
 	get: () => isOpen.value,
 	set: (value) => {

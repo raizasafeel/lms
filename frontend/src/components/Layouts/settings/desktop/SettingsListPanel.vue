@@ -37,6 +37,9 @@
 		@load-more="list.loadMore()"
 		@row-click="openRow"
 	>
+		<template v-if="page.headerActions" #header-actions>
+			<component :is="page.headerActions.component" />
+		</template>
 		<template v-if="page.filter" #header-bottom>
 			<Select
 				v-model="filterValue"
@@ -52,6 +55,7 @@
 </template>
 
 <script lang="ts">
+import type { Component } from 'vue'
 import type { ListPage, SelectOption } from '@/types/settingsSchema'
 import type { SettingsListRow } from '@/types'
 import type { SettingsListFilters } from '@/composables/useSettingsListResource'
@@ -89,6 +93,8 @@ export interface ListPanelPage extends ListPage {
 	 * leaves settings entirely, while the record sub-page is reached from the row menu.
 	 */
 	rowClick?: (row: SettingsListRow) => void
+	/** A control drawn before New in the header, such as Zoom's attendance switch. */
+	headerActions?: { component: Component }
 }
 </script>
 

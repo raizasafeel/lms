@@ -14,6 +14,16 @@ export interface LMSSettings {
 	idx?: number
 	/**	LiveCode URL : Data	*/
 	livecode_url?: string
+	/**	Enable Code Runner : Check	*/
+	enable_code_runner?: 0 | 1
+	/**	Enable Unsplash : Check	*/
+	enable_unsplash?: 0 | 1
+	/**	Enable Zoom : Check	*/
+	enable_zoom?: 0 | 1
+	/**	Track Zoom Attendance : Check	*/
+	track_zoom_attendance?: 0 | 1
+	/**	Enable Google Meet : Check	*/
+	enable_google_meet?: 0 | 1
 	/**	Mentor Request Creation Template : Link - Email Template	*/
 	mentor_request_creation?: string
 	/**	Mentor Request Status Update Template : Link - Email Template	*/

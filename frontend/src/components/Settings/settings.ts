@@ -24,6 +24,7 @@ import { canManageGoogleIntegrations } from '@/components/Settings/GoogleApi/goo
 import Services from '@/components/Settings/Services/Services.vue'
 import { googleCalendarSettingsPage } from '@/components/Settings/GoogleCalendar/googleCalendar'
 import RavenSettings from '@/components/Settings/Raven/RavenSettings.vue'
+import Integrations from '@/components/Settings/Integrations/Integrations.vue'
 import Preferences from '@/components/Settings/Preferences.vue'
 import CloudPanel from '@/components/Settings/CloudPanel.vue'
 import { hasCloudSettings } from '@/composables/cloudSettings'
@@ -445,9 +446,16 @@ export const settingsTree: SettingsGroup[] = [
 		label: __('Integrations'),
 		items: [
 			{
+				label: __('Integrations'),
+				slug: 'integrations',
+				icon: 'lucide-blocks',
+				page: { kind: 'custom', component: markRaw(Integrations) },
+			},
+			{
 				label: __('Services'),
 				slug: 'services',
 				icon: 'lucide-key-round',
+				integration: ['google', 'code_runner', 'unsplash'],
 				page: { kind: 'custom', component: markRaw(Services) },
 			},
 			{
@@ -456,6 +464,7 @@ export const settingsTree: SettingsGroup[] = [
 				icon: 'lucide-calendar',
 				records: true,
 				condition: canManageGoogleIntegrations,
+				integration: 'google_calendar',
 				page: googleCalendarSettingsPage,
 			},
 			{
@@ -464,6 +473,7 @@ export const settingsTree: SettingsGroup[] = [
 				icon: 'lucide-presentation',
 				records: true,
 				condition: canManageGoogleMeet,
+				integration: 'google_meet',
 				page: googleMeetSettingsPage,
 			},
 			{
@@ -471,12 +481,14 @@ export const settingsTree: SettingsGroup[] = [
 				slug: 'zoom',
 				icon: 'lucide-video',
 				records: true,
+				integration: 'zoom',
 				page: zoomSettingsPage,
 			},
 			{
 				label: __('Raven'),
 				slug: 'raven',
 				icon: 'lucide-messages-square',
+				integration: 'raven',
 				page: { kind: 'custom', component: markRaw(RavenSettings) },
 			},
 		],
