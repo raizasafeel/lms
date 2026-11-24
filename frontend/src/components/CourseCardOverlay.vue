@@ -9,7 +9,7 @@
 			:fallback-image="course.data?.image"
 		/>
 		<div class="p-5">
-			<div class="text-3xl-semibold text-ink-gray-9 mb-4">
+			<div v-if="!membership" class="text-3xl-semibold text-ink-gray-9 mb-4">
 				{{ priceLabel }}
 			</div>
 			<div v-if="!readOnlyMode">
@@ -46,6 +46,7 @@
 					<CertificationLinks
 						v-if="!preview"
 						:courseName="course.data.name"
+						:price="certificatePrice"
 						class="w-full"
 					/>
 				</div>
@@ -94,6 +95,14 @@
 						{{ __('Enroll Now') }}
 					</span>
 				</Button>
+				<div
+					v-if="!membership && certificatePrice"
+					class="-mt-6 mb-8 flex items-center gap-2 rounded-5 bg-surface-gray-2 px-3 py-2 text-p-base text-ink-gray-8"
+					data-testid="certificate-price"
+				>
+					<span class="lucide-award size-4 shrink-0" aria-hidden="true" />
+					{{ __('Certificate · {0}').format(certificatePrice) }}
+				</div>
 				<Button
 					v-if="canGetCertificate && !preview"
 					:loading="certificate.loading"
@@ -203,6 +212,13 @@ const priceLabel = computed<string>(() => {
 	if (props.course.data?.paid_course) return props.course.data?.price || ''
 	return __('Free')
 })
+
+// A free course sells only its certificate; a paid one includes it.
+const certificatePrice = computed<string>(() =>
+	!props.course.data?.paid_course && props.course.data?.paid_certificate
+		? props.course.data?.price || ''
+		: ''
+)
 
 const certificateKind = computed<'free' | 'paid' | null>(() => {
 	if (props.course.data?.paid_certificate) return 'paid'

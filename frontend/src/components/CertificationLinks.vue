@@ -21,6 +21,7 @@
 	>
 		<Button
 			v-if="!certification.data.membership.purchased_certificate"
+			:variant="price ? 'solid' : 'subtle'"
 			:route="{
 				name: 'Billing',
 				params: {
@@ -33,7 +34,9 @@
 			<template #prefix>
 				<span class="lucide-graduation-cap size-4" />
 			</template>
-			{{ __('Get Certified') }}
+			{{
+				price ? __('Buy certificate · {0}').format(price) : __('Get Certified')
+			}}
 		</Button>
 		<Button
 			v-else-if="!certification.data.membership.certificate"
@@ -61,6 +64,8 @@ const user = inject<SessionUser>('$user')!
 
 const props = defineProps<{
 	courseName: string
+	/** Shown on the buy button when the certificate is sold on its own. */
+	price?: string
 }>()
 
 const certification = createResource({

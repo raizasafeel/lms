@@ -21,7 +21,11 @@ vi.mock('frappe-ui', () => ({
 }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/components/CertificationLinks.vue', () => ({
-	default: { render: () => null },
+	default: {
+		name: 'CertificationLinks',
+		props: ['courseName', 'price'],
+		render: () => null,
+	},
 }))
 vi.mock('@/components/VideoPreview.vue', () => ({
 	default: { render: () => null },
@@ -109,5 +113,35 @@ describe('the side card in student view', () => {
 		const wrapper = mountPreview('enrolled')
 		expect(wrapper.text()).toContain('Start Learning')
 		expect(wrapper.text()).not.toContain('Enroll Now')
+	})
+})
+
+describe('the price in the course side card', () => {
+	const certified = { paid_certificate: 1, price: '₹15,000' }
+
+	it('names a free course and what its certificate costs before enrolling', () => {
+		const wrapper = mountWith(certified, [])
+		expect(wrapper.text()).toContain('Free')
+		expect(wrapper.get('[data-testid="certificate-price"]').text()).toBe(
+			'Certificate · ₹15,000'
+		)
+	})
+
+	it('drops the price once enrolled, leaving the certificate to buy', () => {
+		const wrapper = mountWith({ ...certified, membership: { progress: 0 } }, [])
+		expect(wrapper.text()).not.toContain('Free')
+		expect(wrapper.find('[data-testid="certificate-price"]').exists()).toBe(
+			false
+		)
+		expect(
+			wrapper.getComponent({ name: 'CertificationLinks' }).props('price')
+		).toBe('₹15,000')
+	})
+
+	it('sells no separate certificate with a paid course', () => {
+		const wrapper = mountWith({ ...certified, paid_course: 1 }, [])
+		expect(wrapper.find('[data-testid="certificate-price"]').exists()).toBe(
+			false
+		)
 	})
 })
