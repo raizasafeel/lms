@@ -146,8 +146,11 @@ describe('the batch facts editor', () => {
 		expect(icons.length).toBe(6)
 		for (const icon of icons) {
 			const row = icon.element.parentElement!
-			expect([...row.classList]).toContain('ps-2')
 			expect([...row.classList]).toContain('gap-2')
+			// A switch fact pads its whole clickable row instead of the icon line.
+			const switchRow = row.closest('[data-testid="switch-row"]')
+			const padded = switchRow ? [...switchRow.classList] : [...row.classList]
+			expect(padded).toContain(switchRow ? 'px-2' : 'ps-2')
 			const field = icon.element.nextElementSibling
 			if (field?.tagName === 'DIV')
 				expect([...field.classList]).toContain('-ms-2')
