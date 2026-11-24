@@ -33,36 +33,45 @@
 			</div>
 		</div>
 
-		<aside v-if="!isMobile && outlineVisible" class="border-s overflow-y-auto">
-			<SkeletonLoader
-				v-if="outline.loading && !outline.data"
-				variant="editor-sidebar"
+		<aside
+			v-if="!isMobile && outlineVisible"
+			class="flex min-h-0 flex-col border-s"
+		>
+			<CourseChaptersHeader
+				class="shrink-0 px-5 pt-4"
+				:count="outline.data?.length"
+				@add-chapter="openAddChapter"
+				@upload-scorm="openScormUpload"
 			/>
-			<CourseOutline
-				v-else-if="props.course?.data"
-				:courseName="props.course.data.name"
-				:title="__('Chapters')"
-				:allowEdit="true"
-				:hideHeader="true"
-				:inlineSelect="true"
-				:selectedLessonNumber="selected?.number"
-				@select-lesson="onSelectLesson"
-				@lesson-deleted="onLessonDeleted"
-				@chapter-deleted="onChapterDeleted"
-				@add-lesson="onAddLesson"
-			/>
+			<div class="min-h-0 flex-1 overflow-y-auto">
+				<SkeletonLoader
+					v-if="outline.loading && !outline.data"
+					variant="editor-sidebar"
+				/>
+				<CourseOutline
+					v-else-if="props.course?.data"
+					:courseName="props.course.data.name"
+					:title="__('Chapters')"
+					:allowEdit="true"
+					:hideHeader="true"
+					:inlineSelect="true"
+					:selectedLessonNumber="selected?.number"
+					@select-lesson="onSelectLesson"
+					@lesson-deleted="onLessonDeleted"
+					@chapter-deleted="onChapterDeleted"
+					@add-lesson="onAddLesson"
+				/>
+			</div>
 		</aside>
 
 		<BottomSheet v-if="isMobile" v-model="showChapters">
 			<template #header>
-				<div class="text-p-lg-semibold text-ink-gray-9">
-					{{ __('Chapters') }}
-				</div>
-				<Button :label="__('Add chapter')" @click="openAddChapter">
-					<template #icon>
-						<span class="lucide-plus size-4" />
-					</template>
-				</Button>
+				<CourseChaptersHeader
+					class="flex-1"
+					:count="outline.data?.length"
+					@add-chapter="openAddChapter"
+					@upload-scorm="openScormUpload"
+				/>
 			</template>
 			<CourseOutline
 				v-if="props.course?.data"
@@ -79,6 +88,13 @@
 			/>
 		</BottomSheet>
 
+		<ScormUploadDialog
+			v-if="props.course?.data"
+			v-model:open="showScormUpload"
+			:courseName="props.course.data.name"
+			@added="outline.reload()"
+		/>
+
 		<VideoStatistics
 			v-model="showStats"
 			:lessonName="statsLessonName"
@@ -90,11 +106,13 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Button, createResource } from 'frappe-ui'
+import { createResource } from 'frappe-ui'
 import { useSidebar } from '@/stores/sidebar'
 import { useScreenSize } from '@/utils/composables'
 import CourseOutline from '@/components/CourseOutline.vue'
 import CourseEditorEmptyState from '@/components/CourseEditorEmptyState.vue'
+import CourseChaptersHeader from '@/components/Courses/CourseChaptersHeader.vue'
+import ScormUploadDialog from '@/components/Modals/ScormUploadDialog.vue'
 import { openFormRoute } from '@/composables/useFormRoute'
 import { setFormSource } from '@/composables/formTracking'
 import { useTelemetry } from '@framework/ui/telemetry/index'
@@ -446,12 +464,17 @@ function openChapterForm(source = 'course_editor') {
 }
 const openAddChapter = () => openChapterForm('course_editor')
 
+const showScormUpload = ref(false)
+function openScormUpload() {
+	showChapters.value = false
+	showScormUpload.value = true
+}
+
 defineExpose({
 	saveSelectedLesson,
 	isDirty,
 	lessonHasVideo,
 	openVideoStats,
-	openAddChapter,
 	outlineVisible,
 	lessonIndex,
 	lessonTotal,

@@ -183,32 +183,6 @@
 				</template>
 				{{ __('Chapters') }}
 			</Button>
-
-			<div
-				v-if="
-					tab?.key === 'editor' &&
-					course.data &&
-					courseEditorRef?.outlineVisible
-				"
-				class="pointer-events-none absolute inset-x-0 top-0 z-10 hidden md:flex"
-			>
-				<div class="w-[70%]" />
-				<!-- h-12 is the tab strip's height: the bar sits level with it, so
-				     the two bottom borders have to meet. -->
-				<div
-					class="pointer-events-auto flex h-12 w-[30%] items-center justify-between gap-x-2 border-s border-b bg-surface-base px-5"
-				>
-					<div class="text-p-base-medium text-ink-gray-9">
-						{{ __('Chapters') }}
-					</div>
-					<Button size="sm" @click="courseEditorRef?.openAddChapter()">
-						<template #prefix>
-							<span class="lucide-plus size-4" />
-						</template>
-						{{ __('Add') }}
-					</Button>
-				</div>
-			</div>
 		</template>
 	</TabbedDetailPage>
 	<LessonHelp v-model="showLessonHelp" />
@@ -283,7 +257,6 @@ type CourseEditorApi = {
 	isDirty: ComputedRef<boolean>
 	lessonHasVideo: ComputedRef<boolean>
 	openVideoStats: () => void
-	openAddChapter: () => void
 	outlineVisible: ComputedRef<boolean>
 	lessonIndex: ComputedRef<number>
 	lessonTotal: ComputedRef<number>

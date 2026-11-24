@@ -93,6 +93,28 @@ vi.mock('@/components/SkeletonLoader.vue', () => ({
 vi.mock('@/components/Modals/VideoStatistics.vue', () => ({
 	default: { render: () => null },
 }))
+vi.mock('@/components/Courses/CourseChaptersHeader.vue', async () => {
+	const { defineComponent, h } = await import('vue')
+	return {
+		default: defineComponent({
+			name: 'CourseChaptersHeader',
+			props: ['count'],
+			emits: ['add-chapter', 'upload-scorm'],
+			setup: () => () => h('div'),
+		}),
+	}
+})
+vi.mock('@/components/Modals/ScormUploadDialog.vue', async () => {
+	const { defineComponent, h } = await import('vue')
+	return {
+		default: defineComponent({
+			name: 'ScormUploadDialog',
+			props: ['open', 'courseName'],
+			emits: ['update:open', 'added'],
+			setup: () => () => h('div'),
+		}),
+	}
+})
 vi.mock('@/stores/sidebar', () => ({
 	useSidebar: () => ({ isSidebarCollapsed: false }),
 }))
@@ -370,5 +392,33 @@ describe('CourseEditor draft lesson identity', () => {
 		expect(state.route.query.editLesson).toBe('1-2')
 		expect(form(wrapper).props('chapterNumber')).toBe('1')
 		expect(state.formMounts).toBe(1)
+	})
+})
+
+describe('CourseEditor chapters panel', () => {
+	let wrapper: VueWrapper
+	afterEach(() => wrapper?.unmount())
+
+	const header = () => wrapper.findComponent({ name: 'CourseChaptersHeader' })
+	const dialog = () => wrapper.findComponent({ name: 'ScormUploadDialog' })
+
+	it('heads the panel with the chapter count', async () => {
+		wrapper = await mountEditor([chapterA(1), chapterB(2)])
+		expect(header().props('count')).toBe(2)
+	})
+
+	it('opens the SCORM upload dialog from the add menu', async () => {
+		wrapper = await mountEditor([chapterA(1)])
+		expect(dialog().props('open')).toBe(false)
+		header().vm.$emit('upload-scorm')
+		await flushPromises()
+		expect(dialog().props('open')).toBe(true)
+		expect(dialog().props('courseName')).toBe('C1')
+	})
+
+	it('reloads the outline once packages are added', async () => {
+		wrapper = await mountEditor([chapterA(1)])
+		dialog().vm.$emit('added')
+		expect(state.outline.reload).toHaveBeenCalled()
 	})
 })
