@@ -76,14 +76,6 @@
 				:label="__('Meta image')"
 				:summary="__('Shown when the batch link is shared.')"
 			/>
-			<SettingField
-				v-model="doc.video_link"
-				:label="__('Preview video')"
-				:summary="
-					__('A YouTube or video link shown to learners before they enroll.')
-				"
-				placeholder="https://"
-			/>
 		</SettingsGroup>
 
 		<BatchManageGroup :batch="batch" />

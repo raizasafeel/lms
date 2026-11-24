@@ -57,6 +57,20 @@ vi.mock('@/components/InlineEdit/PickerDialog.vue', () => ({
 		template: '<div />',
 	},
 }))
+vi.mock('@/components/InlineEdit/VideoLinkDialog.vue', () => ({
+	default: {
+		name: 'VideoLinkDialog',
+		props: ['open', 'modelValue'],
+		template: '<div />',
+	},
+}))
+vi.mock('@/components/VideoPreview.vue', () => ({
+	default: {
+		name: 'VideoPreview',
+		props: ['videoLink', 'fallbackImage'],
+		template: '<div />',
+	},
+}))
 vi.mock('@/components/InlineEdit/PriceInput.vue', () => ({
 	default: { name: 'PriceInput', template: '<div />' },
 }))
@@ -78,10 +92,40 @@ const mountCard = (doc: Record<string, unknown>, studentCount?: number) =>
 	})
 
 describe('the batch enroll card editor', () => {
-	it('has no cover image or video field', () => {
+	it('has no cover image field', () => {
 		const html = mountCard({}).html()
 		expect(html).not.toContain('ImageField')
 		expect(mountCard({}).text()).not.toContain('This batch includes')
+	})
+
+	it('sets the preview video under the details, above the enroll button', async () => {
+		const doc: Record<string, unknown> = { meta_image: '/files/m.png' }
+		const card = mountCard(doc)
+		const text = card.text()
+		expect(text.indexOf('Add preview video')).toBeLessThan(
+			text.indexOf('Contact the Administrator')
+		)
+		const dialog = card.findComponent({ name: 'VideoLinkDialog' })
+		const button = card
+			.findAll('button')
+			.find((each) => each.text() === 'Add preview video')
+		await button?.trigger('click')
+		expect(dialog.props('open')).toBe(true)
+		dialog.vm.$emit('update:modelValue', 'https://youtu.be/x')
+		expect(doc.video_link).toBe('https://youtu.be/x')
+	})
+
+	it('previews a set video with the meta image as its poster', () => {
+		const card = mountCard({
+			video_link: 'https://youtu.be/x',
+			meta_image: '/files/m.png',
+		})
+		const preview = card.findComponent({ name: 'VideoPreview' })
+		expect(preview.props()).toEqual({
+			videoLink: 'https://youtu.be/x',
+			fallbackImage: '/files/m.png',
+		})
+		expect(card.text()).toContain('Change video')
 	})
 
 	it('names the formatted price on a paid batch', () => {

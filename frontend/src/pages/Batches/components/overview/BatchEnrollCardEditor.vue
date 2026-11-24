@@ -20,6 +20,24 @@
 			/>
 		</div>
 		<BatchFactsEditor :doc="doc" :form="form" :studentCount="studentCount" />
+		<div class="space-y-2">
+			<VideoPreview
+				:video-link="doc.video_link"
+				:fallback-image="doc.meta_image"
+				class="rounded-5"
+			/>
+			<Button variant="ghost" @click="showVideoDialog = true">
+				<template #prefix>
+					<span class="lucide-video size-4" />
+				</template>
+				{{ doc.video_link ? __('Change video') : __('Add preview video') }}
+			</Button>
+		</div>
+		<VideoLinkDialog
+			v-model:open="showVideoDialog"
+			:modelValue="doc.video_link"
+			@update:modelValue="(link) => (doc.video_link = link || '')"
+		/>
 		<div class="pt-1">
 			<Button variant="subtle" class="w-full" disabled>
 				<template #prefix>
@@ -40,9 +58,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Button, Select } from 'frappe-ui'
 import PriceInput from '@/components/InlineEdit/PriceInput.vue'
+import VideoLinkDialog from '@/components/InlineEdit/VideoLinkDialog.vue'
+import VideoPreview from '@/components/VideoPreview.vue'
 import BatchFactsEditor from '@/pages/Batches/components/overview/BatchFactsEditor.vue'
 import type { BatchForm } from '@/pages/Batches/composables/useBatchForm'
 import type { LMSBatch } from '@/types/lms/LMSBatch'
@@ -54,6 +74,8 @@ const props = defineProps<{
 	form: BatchForm
 	studentCount?: number
 }>()
+
+const showVideoDialog = ref(false)
 
 const priceOptions = [
 	{ label: __('Free'), value: 'free' },

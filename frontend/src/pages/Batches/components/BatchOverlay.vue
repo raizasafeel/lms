@@ -1,97 +1,91 @@
 <template>
 	<div
 		v-if="batch.data"
-		class="space-y-4 rounded-6 border border-outline-gray-2 p-2 pb-4"
+		class="space-y-4 rounded-6 border border-outline-gray-2 px-5 py-4"
 	>
+		<div class="flex items-center justify-between gap-2">
+			<span class="text-xl-semibold text-ink-gray-9">
+				{{
+					batch.data.paid_batch && batch.data.amount
+						? formatNumberIntoCurrency(batch.data.amount, batch.data.currency)
+						: __('Free')
+				}}
+			</span>
+			<Badge
+				v-if="batch.data.seat_count && batch.data.seats_left > 0"
+				theme="green"
+				:label="
+					batch.data.seats_left > 1
+						? __('{0} seats left').format(batch.data.seats_left)
+						: __('1 seat left')
+				"
+			/>
+			<Badge
+				v-else-if="batch.data.seat_count && batch.data.seats_left <= 0"
+				theme="red"
+				:label="__('Sold Out')"
+			/>
+		</div>
+
 		<VideoPreview
 			:video-link="batch.data.video_link"
 			:fallback-image="batch.data.meta_image"
-			class="overflow-hidden rounded-5"
+			class="rounded-5"
 		/>
-		<div class="space-y-4 px-3" :class="{ 'pt-2': !hasMedia }">
-			<div class="flex items-center justify-between gap-2">
-				<span class="text-xl-semibold text-ink-gray-9">
-					{{
-						batch.data.paid_batch && batch.data.amount
-							? formatNumberIntoCurrency(batch.data.amount, batch.data.currency)
-							: __('Free')
-					}}
-				</span>
-				<Badge
-					v-if="batch.data.seat_count && batch.data.seats_left > 0"
-					theme="green"
-					:label="
-						batch.data.seats_left > 1
-							? __('{0} seats left').format(batch.data.seats_left)
-							: __('1 seat left')
-					"
-				/>
-				<Badge
-					v-else-if="batch.data.seat_count && batch.data.seats_left <= 0"
-					theme="red"
-					:label="__('Sold Out')"
-				/>
-			</div>
 
-			<div v-if="!readOnlyMode && !canAccessBatch">
-				<Button
-					v-if="
-						batch.data.paid_batch &&
-						hasSeatsLeft &&
-						batch.data.accept_enrollments
-					"
-					class="w-full"
-					variant="solid"
-					:route="preview ? undefined : billingRoute"
-					@click="preview?.enroll()"
-				>
-					<template #prefix>
-						<span class="lucide-credit-card size-4" />
-					</template>
-					{{ __('Register Now') }}
-				</Button>
-				<Button
-					v-else-if="
-						batch.data.allow_self_enrollment &&
-						hasSeatsLeft &&
-						batch.data.accept_enrollments
-					"
-					variant="solid"
-					class="w-full"
-					:loading="enroll.loading"
-					@click="enrollInBatch()"
-				>
-					<template #prefix>
-						<span class="lucide-graduation-cap size-4" />
-					</template>
-					{{ __('Enroll Now') }}
-				</Button>
-				<p
-					v-else-if="!batch.data.accept_enrollments"
-					class="text-center text-p-sm text-ink-gray-6"
-				>
-					{{ __('Enrollment for this batch is closed') }}
-				</p>
-				<p
-					v-else-if="hasSeatsLeft"
-					class="text-center text-p-sm text-ink-gray-6"
-				>
-					{{ __('Contact the Administrator to enroll for this batch') }}
-				</p>
-			</div>
-			<Button v-else-if="isStudent" variant="subtle" class="w-full" disabled>
+		<div v-if="!readOnlyMode && !canAccessBatch">
+			<Button
+				v-if="
+					batch.data.paid_batch && hasSeatsLeft && batch.data.accept_enrollments
+				"
+				class="w-full"
+				variant="solid"
+				:route="preview ? undefined : billingRoute"
+				@click="preview?.enroll()"
+			>
 				<template #prefix>
-					<span class="lucide-check size-4" />
+					<span class="lucide-credit-card size-4" />
 				</template>
-				{{ __('You’re enrolled') }}
+				{{ __('Register Now') }}
 			</Button>
+			<Button
+				v-else-if="
+					batch.data.allow_self_enrollment &&
+					hasSeatsLeft &&
+					batch.data.accept_enrollments
+				"
+				variant="solid"
+				class="w-full"
+				:loading="enroll.loading"
+				@click="enrollInBatch()"
+			>
+				<template #prefix>
+					<span class="lucide-graduation-cap size-4" />
+				</template>
+				{{ __('Enroll Now') }}
+			</Button>
+			<p
+				v-else-if="!batch.data.accept_enrollments"
+				class="text-center text-p-sm text-ink-gray-6"
+			>
+				{{ __('Enrollment for this batch is closed') }}
+			</p>
+			<p v-else-if="hasSeatsLeft" class="text-center text-p-sm text-ink-gray-6">
+				{{ __('Contact the Administrator to enroll for this batch') }}
+			</p>
+		</div>
+		<Button v-else-if="isStudent" variant="subtle" class="w-full" disabled>
+			<template #prefix>
+				<span class="lucide-check size-4" />
+			</template>
+			{{ __('You’re enrolled') }}
+		</Button>
 
-			<div class="space-y-2.5 border-t border-outline-gray-1 pt-4">
-				<div class="text-p-base-medium text-ink-gray-9">
-					{{ __('This batch includes') }}
-				</div>
-				<BatchFacts :batch="batch.data" />
+		<div class="space-y-2.5 border-t border-outline-gray-1 pt-4">
+			<div class="text-p-base-medium text-ink-gray-9">
+				{{ __('This batch includes') }}
 			</div>
+			<BatchFacts :batch="batch.data" />
 		</div>
 	</div>
 </template>
@@ -119,10 +113,6 @@ const props = defineProps({
 
 /** Set while an instructor previews: enrolling only switches the preview. */
 const preview = computed(() => (isStudentView.value ? batchPreview : null))
-
-const hasMedia = computed(() =>
-	Boolean(props.batch.data?.video_link || props.batch.data?.meta_image)
-)
 
 const billingRoute = computed(() => ({
 	name: 'Billing',
