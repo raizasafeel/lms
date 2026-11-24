@@ -336,6 +336,16 @@ describe('the empty assessments list', () => {
 		const buttons = list.findAll('button').map((b) => b.text())
 		expect(buttons).toEqual(['Add assessment'])
 	})
+
+	it('says where learners meet them, since the overview never shows them', () => {
+		const list = mount(BatchAssessmentList, {
+			props: { batchName: 'B1' },
+			global: { mocks: { __: globalThis.__ }, stubs: { RouterLink: true } },
+		})
+		expect(list.text()).toContain(
+			'Learners take these from their batch dashboard'
+		)
+	})
 })
 
 describe('the picker filter', () => {

@@ -59,6 +59,13 @@ describe('BatchSchedule empty state', () => {
 		expect(router.currentRoute.value.hash).toBe('#overview')
 	})
 
+	it('tells the editor learners see it only once there are classes', async () => {
+		const { wrapper } = await mountSchedule({ conferencing_provider: 'Zoom' })
+		expect(wrapper.text()).toContain(
+			'Shown to enrolled learners once you add classes'
+		)
+	})
+
 	it('points to Settings while no conferencing account is set', async () => {
 		const { wrapper } = await mountSchedule({
 			conferencing_provider: 'Google Meet',

@@ -5,6 +5,9 @@
 			<span v-if="classes.length" class="text-p-base text-ink-gray-6">
 				{{ countLabel }}
 			</span>
+			<span v-else-if="editable" class="text-p-sm text-ink-gray-6">
+				{{ __('Shown to enrolled learners once you add classes') }}
+			</span>
 		</div>
 		<OverviewEmptyTile
 			v-if="!classes.length"

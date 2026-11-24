@@ -4,8 +4,8 @@
 			<h2 class="text-3xl-semibold text-ink-gray-9">
 				{{ __('Assessments') }}
 			</h2>
-			<span v-if="rows.length" class="text-p-base text-ink-gray-6">
-				{{ rows.length }}
+			<span class="text-p-sm text-ink-gray-6">
+				{{ __('Learners take these from their batch dashboard') }}
 			</span>
 		</div>
 		<OverviewEmptyTile

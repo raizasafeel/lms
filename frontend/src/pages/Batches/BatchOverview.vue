@@ -49,16 +49,16 @@
 					/>
 				</section>
 
-				<BatchAssessmentList
-					v-if="doc"
-					v-model:draft="draftAssessments"
-					:batchName="batch.data.name"
-				/>
-
 				<div
 					v-if="batch.data.batch_details_raw"
 					v-safe-html:rich="batch.data.batch_details_raw"
 					class="batch-description"
+				/>
+
+				<BatchAssessmentList
+					v-if="doc"
+					v-model:draft="draftAssessments"
+					:batchName="batch.data.name"
 				/>
 			</div>
 
