@@ -199,12 +199,10 @@ describe('the course thumbnail picker', () => {
 		expect(wrapper.emitted('update:icon')).toEqual([['globe']])
 	})
 
-	it('uploads a public image instead', () => {
+	it('takes an image from the dropzone under it', () => {
 		const wrapper = mountPicker()
-		const uploader = wrapper.findComponent({ name: 'FileUploader' })
-		expect(uploader.props('private')).toBe(false)
-		expect(wrapper.text()).toContain('Upload an image instead')
-		uploader.vm.$emit('success', { file_url: '/files/cover.png' })
+		const dropzone = wrapper.findComponent({ name: 'ImageDropzone' })
+		dropzone.vm.$emit('update:image', '/files/cover.png')
 		expect(wrapper.emitted('update:image')).toEqual([['/files/cover.png']])
 	})
 })

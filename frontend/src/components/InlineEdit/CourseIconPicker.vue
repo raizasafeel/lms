@@ -15,7 +15,7 @@
 			<div
 				ref="grid"
 				class="grid gap-1.5"
-				:class="columns === 12 ? 'grid-cols-12' : 'grid-cols-6'"
+				:class="GRID_COLUMNS[columns]"
 				role="group"
 				:aria-label="__('Thumbnail icon')"
 				@keydown="moveFocus"
@@ -24,7 +24,7 @@
 					v-for="name in visible"
 					:key="name"
 					type="button"
-					class="flex aspect-square items-center justify-center rounded-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+					class="flex h-9 items-center justify-center rounded-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
 					:class="
 						isPicked(name)
 							? 'bg-surface-gray-3 text-ink-gray-9'
@@ -57,7 +57,13 @@ import { COURSE_ICONS, courseIcon } from '@/utils/courseIcons'
 import { loadIconTags } from '@/utils/lucideIconStyles'
 
 /** Any lucide icon for a course thumbnail: curated first, searchable by name or keyword. */
-const props = withDefaults(defineProps<{ columns?: 6 | 12 }>(), {
+const GRID_COLUMNS = {
+	6: 'grid-cols-6',
+	12: 'grid-cols-12',
+	16: 'grid-cols-[repeat(16,minmax(0,1fr))]',
+} as const
+
+const props = withDefaults(defineProps<{ columns?: 6 | 12 | 16 }>(), {
 	columns: 6,
 })
 
