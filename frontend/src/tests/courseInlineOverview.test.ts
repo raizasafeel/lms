@@ -66,6 +66,7 @@ function formWith(doc: Record<string, unknown>, dirty = true) {
 	)
 	return {
 		resource: reactive({ doc, setValue: { loading: false } }),
+		people: ref([]),
 		markDirty: vi.fn(),
 		isDirty: ref(dirty),
 		showRequired,

@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
 import CoursePublishSettings from '@/pages/Courses/CoursePublishSettings.vue'
 
 vi.hoisted(() => {
@@ -34,12 +35,29 @@ vi.mock('frappe-ui', () => ({
 	}),
 }))
 
-// NewMemberModal.vue -> RoleSwitches.vue pulls in members.ts -> Members.vue ->
-// MemberForm.vue, which imports `@framework/ui/telemetry` and
-// `@framework/ui/components/Onboarding`. Both must resolve even though nothing
-// here renders MemberForm.vue.
 vi.mock('@framework/ui/telemetry/index', () => ({}))
 vi.mock('@framework/ui/components/Onboarding/index', () => ({}))
+
+// The People groups have their own tests; here they only hand on their slots.
+const PeopleGroup = {
+	name: 'PeopleGroup',
+	props: ['modelValue', 'owner', 'canChangeOwner'],
+	template: '<div />',
+}
+const EvaluationGroup = {
+	name: 'EvaluationGroup',
+	props: ['enabled', 'people', 'format', 'duration'],
+	emits: ['update:enabled'],
+	template: '<div><slot /><slot name="certificate" /></div>',
+}
+const groups = { PeopleGroup, EvaluationGroup }
+
+const formFor = (courseDoc: Record<string, unknown>, markDirty = vi.fn()) => ({
+	resource: { doc: courseDoc },
+	people: ref([{ member: 'eve@example.com', role: 'Grader' }]),
+	markDirty,
+})
+const $user = { data: { name: 'ash@example.com', is_moderator: false } }
 
 vi.stubGlobal('__', (s: string) => s)
 
@@ -58,13 +76,14 @@ describe('CoursePublishSettings', () => {
 			global: {
 				mocks: { __: (s: string) => s },
 				provide: {
-					courseForm: { resource: { doc: { ...doc } }, markDirty },
+					courseForm: formFor({ ...doc }, markDirty),
+					$user,
 					$dayjs: (v: unknown) => ({ format: () => String(v) }),
 				},
 				stubs: {
+					...groups,
 					CollapsibleSection: { template: '<div><slot /></div>' },
 					Link: true,
-					NewMemberModal: true,
 					BooleanSwitch: {
 						props: ['modelValue', 'label'],
 						emits: ['update:modelValue'],
@@ -95,13 +114,14 @@ describe('CoursePublishSettings certificate design', () => {
 			global: {
 				mocks: { __: (s: string) => s },
 				provide: {
-					courseForm: { resource: { doc: courseDoc }, markDirty },
+					courseForm: formFor(courseDoc, markDirty),
+					$user,
 					$dayjs: (v: unknown) => ({ format: () => String(v) }),
 				},
 				stubs: {
+					...groups,
 					CollapsibleSection: { template: '<div><slot /></div>' },
 					Link: true,
-					NewMemberModal: true,
 					BooleanSwitch: true,
 					CertificateDesignDialog: {
 						name: 'CertificateDesignDialog',
@@ -143,47 +163,62 @@ describe('CoursePublishSettings certificate design', () => {
 	})
 })
 
-describe('CoursePublishSettings evaluator', () => {
-	it('asks for an evaluator only on a paid certificate', () => {
-		const mountWith = (extra: Record<string, unknown>) =>
-			mount(CoursePublishSettings, {
-				global: {
-					mocks: { __: (s: string) => s },
-					provide: {
-						courseForm: {
-							resource: { doc: { ...doc, ...extra } },
-							markDirty: vi.fn(),
-						},
-					},
-					stubs: {
-						Link: true,
-						NewMemberModal: true,
-						BooleanSwitch: true,
-						CertificateDesignDialog: true,
-					},
-				},
-			})
-		const evaluatorPicker = (wrapper: ReturnType<typeof mountWith>) =>
-			wrapper
-				.findAllComponents({ name: 'Link' })
-				.some((link) => link.props('doctype') === 'Course Evaluator')
-
-		expect(evaluatorPicker(mountWith({ paid_certificate: 1 }))).toBe(true)
-		expect(evaluatorPicker(mountWith({ enable_certification: 1 }))).toBe(false)
-	})
-
-	it('points to the Overview when the course has no certificate', () => {
+describe('CoursePublishSettings evaluation', () => {
+	const mountWith = (extra: Record<string, unknown>, user = $user) => {
+		const courseDoc: Record<string, unknown> = {
+			...doc,
+			owner: 'ash@example.com',
+			...extra,
+		}
+		const markDirty = vi.fn()
 		const wrapper = mount(CoursePublishSettings, {
 			global: {
 				mocks: { __: (s: string) => s },
-				provide: {
-					courseForm: { resource: { doc: { ...doc } }, markDirty: vi.fn() },
+				provide: { courseForm: formFor(courseDoc, markDirty), $user: user },
+				stubs: {
+					...groups,
+					BooleanSwitch: true,
+					CertificateDesignDialog: true,
 				},
-				stubs: { Link: true, NewMemberModal: true, BooleanSwitch: true },
 			},
 		})
-		expect(wrapper.text()).toContain(
-			'Turn on a certificate on the Overview page first.'
-		)
+		return { wrapper, courseDoc, markDirty }
+	}
+
+	it('turns evaluations on as the paid certificate, off the automatic one', async () => {
+		const { wrapper, courseDoc, markDirty } = mountWith({
+			enable_certification: 1,
+		})
+		const group = wrapper.findComponent({ name: 'EvaluationGroup' })
+		expect(group.props('enabled')).toBe(false)
+		group.vm.$emit('update:enabled', true)
+		expect(courseDoc.paid_certificate).toBe(1)
+		expect(courseDoc.enable_certification).toBe(0)
+		expect(markDirty).toHaveBeenCalled()
+	})
+
+	it('hands the Grader rows to both People and the evaluators list', () => {
+		const { wrapper } = mountWith({ paid_certificate: 1 })
+		const rows = [{ member: 'eve@example.com', role: 'Grader' }]
+		expect(
+			wrapper.findComponent({ name: 'PeopleGroup' }).props('modelValue')
+		).toEqual(rows)
+		expect(
+			wrapper.findComponent({ name: 'EvaluationGroup' }).props('people')
+		).toEqual(rows)
+	})
+
+	it('lets only the owner or a Moderator change the owner', () => {
+		const canChange = (user: typeof $user) =>
+			mountWith({}, user)
+				.wrapper.findComponent({ name: 'PeopleGroup' })
+				.props('canChangeOwner')
+		expect(canChange($user)).toBe(true)
+		expect(
+			canChange({ data: { name: 'bo@example.com', is_moderator: false } })
+		).toBe(false)
+		expect(
+			canChange({ data: { name: 'bo@example.com', is_moderator: true } })
+		).toBe(true)
 	})
 })

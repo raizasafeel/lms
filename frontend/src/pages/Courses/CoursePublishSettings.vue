@@ -10,41 +10,49 @@
 		/>
 	</SettingsGroup>
 
-	<SettingsGroup :title="__('Evaluation and certificate')" icon="lucide-award">
-		<template v-if="hasCertificate">
+	<PeopleGroup
+		v-model="people"
+		doctype="LMS Course"
+		:name="doc.name"
+		:owner="doc.owner"
+		:canChangeOwner="canChangeOwner"
+		@ownerChanged="(owner) => (doc.owner = owner)"
+	/>
+
+	<EvaluationGroup
+		v-model:people="people"
+		v-model:enabled="evaluated"
+		v-model:format="doc.evaluation_format"
+		v-model:duration="doc.evaluation_duration"
+		doctype="LMS Course"
+		@update:format="markDirty()"
+		@update:duration="markDirty()"
+	>
+		<SettingField
+			v-model="doc.timezone"
+			type="combobox"
+			:label="__('Timezone')"
+			:summary="__('Evaluation slots are shown in this timezone.')"
+			:options="timezoneOptions"
+			:placeholder="__('Select timezone')"
+			@update:modelValue="markDirty()"
+		/>
+		<template #certificate>
+			<SettingSwitch
+				:modelValue="Boolean(doc.enable_certification)"
+				:label="__('Issue automatically on completion')"
+				:summary="__('Learners press Get certificate after finishing.')"
+				@update:modelValue="setAutomatic"
+			/>
 			<SettingAction
+				v-if="hasCertificate"
 				:label="__('Certificate design')"
 				:summary="certificateDesignLabel"
 				:action="__('Change')"
 				@click="showDesignDialog = true"
 			/>
-			<SettingLink
-				v-if="doc.paid_certificate"
-				v-model="doc.evaluator"
-				:label="__('Evaluator')"
-				:summary="__('Learners book a session with them after finishing.')"
-				doctype="Course Evaluator"
-				:placeholder="__('Select evaluator')"
-				:onCreate="openEvaluatorModal"
-				@update:modelValue="markDirty()"
-			/>
-			<SettingField
-				v-if="doc.paid_certificate"
-				v-model="doc.timezone"
-				type="combobox"
-				:label="__('Timezone')"
-				:summary="__('Evaluation slots are shown in this timezone.')"
-				:options="timezoneOptions"
-				:placeholder="__('Select timezone')"
-				@update:modelValue="markDirty()"
-			/>
 		</template>
-		<SettingRow
-			v-else
-			:label="__('No certificate')"
-			:summary="__('Turn on a certificate on the Overview page first.')"
-		/>
-	</SettingsGroup>
+	</EvaluationGroup>
 
 	<CertificateDesignDialog
 		v-if="showDesignDialog"
@@ -54,12 +62,6 @@
 		:current="doc.certificate_template || null"
 		@select="setCertificateDesign"
 	/>
-
-	<NewMemberModal
-		v-model="showMemberModal"
-		:defaultRoles="['batch_evaluator']"
-		@created="onEvaluatorCreated"
-	/>
 </template>
 
 <script setup lang="ts">
@@ -67,23 +69,52 @@ import { createResource } from 'frappe-ui'
 import { computed, inject, ref } from 'vue'
 import SettingAction from '@/components/InlineEdit/SettingAction.vue'
 import SettingField from '@/components/InlineEdit/SettingField.vue'
-import SettingLink from '@/components/InlineEdit/SettingLink.vue'
-import SettingRow from '@/components/InlineEdit/SettingRow.vue'
 import SettingSwitch from '@/components/InlineEdit/SettingSwitch.vue'
 import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import CertificateDesignDialog from '@/components/Modals/CertificateDesignDialog.vue'
-import NewMemberModal from '@/components/Modals/NewMemberModal.vue'
-import type { CourseFormContext, Resource } from '@/types'
+import EvaluationGroup from '@/components/InlineEdit/People/EvaluationGroup.vue'
+import PeopleGroup from '@/components/InlineEdit/People/PeopleGroup.vue'
+import type { CourseFormContext, Resource, SessionUser } from '@/types'
+import type { PersonRow } from '@/types/lms/LMSRoleAssignment'
 import type { LMSCourse } from '@/types/lms/LMSCourse'
 import type { CertificateDesignList } from '@/types/api'
 import { describeDesign } from '@/utils/certificateDesigns'
 
-/** The Access and certificate sections of the Settings tab. */
-const { resource, markDirty } = inject<CourseFormContext>('courseForm')!
+/** The Access, People and evaluation sections of the Settings tab. */
+const form = inject<CourseFormContext>('courseForm')!
+const { resource, markDirty } = form
+const user = inject<SessionUser>('$user')!
 
 const doc = computed(() => resource.doc!)
-const showMemberModal = ref<boolean>(false)
 const showDesignDialog = ref<boolean>(false)
+
+const people = computed<PersonRow[]>({
+	get: () => form.people.value,
+	set: (rows) => {
+		form.people.value = rows
+		markDirty()
+	},
+})
+
+const canChangeOwner = computed<boolean>(() =>
+	Boolean(user.data?.is_moderator || user.data?.name === doc.value.owner)
+)
+
+// An evaluated certificate is the course's paid certificate; the automatic one is free.
+const evaluated = computed<boolean>({
+	get: () => Boolean(doc.value.paid_certificate),
+	set: (on) => {
+		doc.value.paid_certificate = on ? 1 : 0
+		if (on) doc.value.enable_certification = 0
+		markDirty()
+	},
+})
+
+function setAutomatic(on: boolean): void {
+	doc.value.enable_certification = on ? 1 : 0
+	if (on) doc.value.paid_certificate = 0
+	markDirty()
+}
 
 type Flag = 'upcoming' | 'featured' | 'enforce_lesson_completion'
 
@@ -153,15 +184,6 @@ const certificateDesignLabel = computed<string>(() => {
 
 function setCertificateDesign(design: string): void {
 	doc.value.certificate_template = design
-	markDirty()
-}
-
-function openEvaluatorModal(): void {
-	showMemberModal.value = true
-}
-
-function onEvaluatorCreated(created: { name: string }): void {
-	doc.value.evaluator = created.name
 	markDirty()
 }
 </script>

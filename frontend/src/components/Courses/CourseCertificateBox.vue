@@ -51,6 +51,7 @@
 import { Select } from 'frappe-ui'
 import { computed, inject } from 'vue'
 import PriceInput from '@/components/InlineEdit/PriceInput.vue'
+import { membersWith } from '@/components/InlineEdit/People/people'
 import type { CourseFormContext } from '@/types'
 
 type CertificateKind = 'none' | 'free' | 'paid'
@@ -59,7 +60,7 @@ type CertificateKind = 'none' | 'free' | 'paid'
 const props = defineProps<{ paymentsAppMissing: boolean }>()
 const emit = defineEmits<{ needsPayments: [] }>()
 
-const { resource, markDirty, isMissing } =
+const { resource, people, markDirty, isMissing } =
 	inject<CourseFormContext>('courseForm')!
 
 const labels: Record<CertificateKind, string> = {
@@ -82,12 +83,12 @@ const options = computed(() => {
 	return kinds.map((value) => ({ label: labels[value], value }))
 })
 
+// The evaluators are the course's Graders, set in Settings.
 const evaluatorLabel = computed<string>(() => {
-	const evaluator = resource.doc?.evaluator
 	if (kind.value !== 'paid') return ''
-	return evaluator
-		? __('Evaluated by {0}').format(evaluator)
-		: __('No evaluator yet')
+	const count = membersWith(people.value, 'Grader').length
+	if (!count) return __('No evaluator yet')
+	return count === 1 ? __('1 evaluator') : __('{0} evaluators').format(count)
 })
 
 function setPrice(field: 'currency' | 'course_price', value: unknown): void {

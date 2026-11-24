@@ -22,6 +22,46 @@
 			/>
 		</SettingsGroup>
 
+		<PeopleGroup
+			v-model="form!.people.value"
+			doctype="LMS Batch"
+			:name="doc.name"
+			:owner="doc.owner"
+			:canChangeOwner="canChangeOwner"
+			@ownerChanged="(owner) => (doc!.owner = owner)"
+		/>
+
+		<EvaluationGroup
+			v-model:people="form!.people.value"
+			v-model:enabled="evaluated"
+			v-model:format="doc.evaluation_format"
+			v-model:duration="doc.evaluation_duration"
+			doctype="LMS Batch"
+		>
+			<SettingRow
+				:label="__('Book by')"
+				:summary="__('The last day learners can book an evaluation.')"
+			>
+				<template #control>
+					<DatePicker
+						v-model="doc.evaluation_end_date"
+						variant="outline"
+						format="D MMM YYYY"
+						:min="doc.end_date"
+						:placeholder="__('Evaluation end date')"
+						class="w-60"
+					/>
+				</template>
+			</SettingRow>
+			<template #certificate>
+				<SettingSwitch
+					v-model="doc.certification"
+					:label="__('Certificate')"
+					:summary="__('Graders issue it to learners who complete the batch.')"
+				/>
+			</template>
+		</EvaluationGroup>
+
 		<SettingsGroup :title="__('Live classes')" icon="lucide-video">
 			<SettingField
 				v-model="doc.conferencing_provider"
@@ -91,7 +131,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { DatePicker } from 'frappe-ui'
+import { computed, inject, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SettingField from '@/components/InlineEdit/SettingField.vue'
 import SettingImage from '@/components/InlineEdit/SettingImage.vue'
@@ -102,10 +143,12 @@ import SettingsPage from '@/components/InlineEdit/SettingsPage.vue'
 import SearchPreview from '@/components/InlineEdit/SearchPreview.vue'
 import SettingRow from '@/components/InlineEdit/SettingRow.vue'
 import BatchManageGroup from '@/pages/Batches/components/BatchManageGroup.vue'
+import EvaluationGroup from '@/components/InlineEdit/People/EvaluationGroup.vue'
+import PeopleGroup from '@/components/InlineEdit/People/PeopleGroup.vue'
 import { openBatchForm } from '@/composables/useBatchForms'
 import { injectBatchForm } from '@/pages/Batches/composables/useBatchForm'
 import { openSettings } from '@/utils'
-import type { BatchDetails, Resource } from '@/types'
+import type { BatchDetails, Resource, SessionUser } from '@/types'
 
 /** Batch settings: what is not edited in place on the overview. */
 const props = defineProps<{ batch: Resource<BatchDetails | null> }>()
@@ -114,6 +157,19 @@ const router = useRouter()
 const route = useRoute()
 const form = injectBatchForm()
 const doc = computed(() => form?.doc.value ?? null)
+const user = inject<SessionUser>('$user')!
+
+const canChangeOwner = computed<boolean>(() =>
+	Boolean(user.data?.is_moderator || user.data?.name === doc.value?.owner)
+)
+
+// useBatchForm keeps checkboxes as booleans so the dirty check compares like with like.
+const evaluated = computed<boolean>({
+	get: () => Boolean(doc.value?.evaluation),
+	set: (on) => {
+		if (doc.value) (doc.value as Record<string, unknown>).evaluation = on
+	},
+})
 
 // The address learners share, without the scheme, as search results print it.
 const batchUrl = computed<string>(
