@@ -3,7 +3,6 @@
 		v-if="manage"
 		:title="__('Manage')"
 		icon="lucide-sliders-horizontal"
-		:description="__('Visibility, certificates and removal.')"
 	>
 		<SettingAction
 			:label="published ? __('Unpublish batch') : __('Publish batch')"

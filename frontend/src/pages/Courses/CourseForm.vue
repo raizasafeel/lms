@@ -3,13 +3,7 @@
 	<SettingsPage v-else>
 		<CoursePublishSettings />
 
-		<SettingsGroup
-			:title="__('Thumbnail')"
-			icon="lucide-image"
-			:description="
-				__('Shown on course cards in listings, search and related courses.')
-			"
-		>
+		<SettingsGroup :title="__('Thumbnail')" icon="lucide-image">
 			<CourseThumbnailPicker
 				:image="form.resource.doc.image"
 				:tint="form.resource.doc.card_gradient"
@@ -20,11 +14,7 @@
 			/>
 		</SettingsGroup>
 
-		<SettingsGroup
-			:title="__('Search and sharing')"
-			icon="lucide-search"
-			:description="__('How the course shows up in search results.')"
-		>
+		<SettingsGroup :title="__('Search and sharing')" icon="lucide-search">
 			<SearchPreview
 				class="mb-3"
 				:url="courseUrl"
