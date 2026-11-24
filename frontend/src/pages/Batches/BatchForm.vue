@@ -2,6 +2,7 @@
 	<SettingsPage v-if="doc">
 		<SettingsGroup
 			:title="__('Enrollment')"
+			icon="lucide-user-plus"
 			:description="__('How people join this batch.')"
 		>
 			<SettingSwitch
@@ -27,6 +28,7 @@
 
 		<SettingsGroup
 			:title="__('Live classes')"
+			icon="lucide-video"
 			:description="
 				__('Each class gets a join link from the video call account set here.')
 			"
@@ -62,10 +64,17 @@
 
 		<SettingsGroup
 			:title="__('Search and sharing')"
+			icon="lucide-search"
 			:description="
 				__('How the batch shows up in search results and shared links.')
 			"
 		>
+			<SearchPreview
+				class="mb-3"
+				:url="batchUrl"
+				:title="doc.title"
+				:description="form?.meta.description || doc.description"
+			/>
 			<SettingField
 				v-model="form!.meta.description"
 				type="textarea"
@@ -94,13 +103,6 @@
 		</SettingsGroup>
 
 		<BatchManageGroup :batch="batch" />
-		<template #aside>
-			<SearchPreview
-				:url="batchUrl"
-				:title="doc.title"
-				:description="form?.meta.description || doc.description"
-			/>
-		</template>
 	</SettingsPage>
 </template>
 

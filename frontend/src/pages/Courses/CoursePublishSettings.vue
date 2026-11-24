@@ -1,6 +1,7 @@
 <template>
 	<SettingsGroup
 		:title="__('Access')"
+		icon="lucide-door-open"
 		:description="
 			__('Who can find the course, how they join and how they move through it.')
 		"
@@ -17,6 +18,7 @@
 
 	<SettingsGroup
 		:title="__('Evaluation and certificate')"
+		icon="lucide-award"
 		:description="__('Certificate type and price are on the Overview page.')"
 	>
 		<template v-if="hasCertificate">

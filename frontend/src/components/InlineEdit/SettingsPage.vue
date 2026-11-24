@@ -1,16 +1,72 @@
 <template>
 	<div
-		class="grid w-full items-start gap-x-12 gap-y-10 px-5 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]"
+		class="grid w-full items-start gap-x-12 gap-y-10 px-5 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,16rem)]"
 	>
 		<div class="min-w-0 space-y-10">
 			<slot />
 		</div>
-		<aside class="lg:sticky lg:top-[calc(var(--header-frame-h)+1.25rem)]">
-			<slot name="aside" />
+		<aside
+			class="hidden lg:sticky lg:top-[calc(var(--header-frame-h)+1.25rem)] lg:block"
+		>
+			<SettingsSectionNav
+				:sections="sections"
+				:active="active"
+				@select="goTo"
+			/>
 		</aside>
 	</div>
 </template>
 
 <script setup lang="ts">
-/** A settings tab: its sections in one column, a panel beside them from lg and under them below. */
+import { onBeforeUnmount, provide, ref, shallowRef } from 'vue'
+import SettingsSectionNav from '@/components/InlineEdit/SettingsSectionNav.vue'
+import {
+	SETTINGS_SECTIONS,
+	inPageOrder,
+	type SettingsSection,
+} from '@/components/InlineEdit/settingsSections'
+
+/** A settings tab: its sections in one column, a nav of them beside it from lg. */
+const sections = shallowRef<SettingsSection[]>([])
+const active = ref<string | null>(null)
+const inView = new Set<string>()
+
+// A section counts as in view while it crosses the band below the header.
+// Absent outside a browser, where the nav simply marks the section picked.
+const observer =
+	'IntersectionObserver' in window
+		? new IntersectionObserver(onIntersect, {
+				rootMargin: '-80px 0px -60% 0px',
+		  })
+		: null
+
+function onIntersect(entries: IntersectionObserverEntry[]): void {
+	for (const entry of entries) {
+		if (entry.isIntersecting) inView.add(entry.target.id)
+		else inView.delete(entry.target.id)
+	}
+	const first = sections.value.find((section) => inView.has(section.id))
+	if (first) active.value = first.id
+}
+
+function goTo(section: SettingsSection): void {
+	active.value = section.id
+	section.element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+provide(SETTINGS_SECTIONS, {
+	register(section) {
+		sections.value = inPageOrder([...sections.value, section])
+		active.value ??= sections.value[0].id
+		observer?.observe(section.element)
+	},
+	unregister(id) {
+		const section = sections.value.find((current) => current.id === id)
+		if (section) observer?.unobserve(section.element)
+		sections.value = sections.value.filter((current) => current.id !== id)
+		inView.delete(id)
+	},
+})
+
+onBeforeUnmount(() => observer?.disconnect())
 </script>

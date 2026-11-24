@@ -59,6 +59,7 @@ import SettingField from '@/components/InlineEdit/SettingField.vue'
 import SettingSwitch from '@/components/InlineEdit/SettingSwitch.vue'
 import SearchPreview from '@/components/InlineEdit/SearchPreview.vue'
 import SettingsPage from '@/components/InlineEdit/SettingsPage.vue'
+import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import RelatedCoursesEditor from '@/components/Courses/RelatedCoursesEditor.vue'
 
 // frappe's translation layer patches String.prototype.format in at runtime.
@@ -127,19 +128,59 @@ describe('the search preview', () => {
 	})
 })
 
-describe('the settings page layout', () => {
-	it('keeps sections in one column with the panel beside them from lg, after them below', () => {
-		const wrapper = mount(SettingsPage, {
-			slots: { default: '<section>Access</section>', aside: '<p>Preview</p>' },
-		})
-		const [sections, panel] = wrapper.element.children
-		expect(sections.textContent).toBe('Access')
-		expect(panel.tagName).toBe('ASIDE')
-		expect(panel.textContent).toBe('Preview')
-		expect(wrapper.classes()).toContain(
-			'lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]'
+describe('the settings page section nav', () => {
+	const mountPage = (showLast = true) =>
+		mount(
+			{
+				components: { SettingsPage, SettingsGroup },
+				props: ['showLast'],
+				template: `
+					<SettingsPage>
+						<SettingsGroup title="Access" icon="lucide-door-open" />
+						<SettingsGroup title="Thumbnail" icon="lucide-image" />
+						<SettingsGroup v-if="showLast" title="Manage" />
+					</SettingsPage>`,
+			},
+			{ props: { showLast }, global, attachTo: document.body }
 		)
-		expect(panel.className).toContain('lg:sticky')
+
+	it('lists every section in page order with its icon, the first marked', async () => {
+		const wrapper = mountPage()
+		await flushPromises()
+		const items = wrapper.findAll('nav button')
+		expect(wrapper.find('nav').text()).toContain('3 sections')
+		expect(items.map((item) => item.text())).toEqual([
+			'Access',
+			'Thumbnail',
+			'Manage',
+		])
+		expect(items[0].find('.lucide-door-open').exists()).toBe(true)
+		expect(items[0].attributes('aria-current')).toBe('location')
+		wrapper.unmount()
+	})
+
+	it('scrolls to a picked section and marks it', async () => {
+		const scrollIntoView = vi.fn()
+		Element.prototype.scrollIntoView = scrollIntoView
+		const wrapper = mountPage()
+		await flushPromises()
+		await wrapper.findAll('nav button')[1].trigger('click')
+		expect(scrollIntoView).toHaveBeenCalledWith({
+			behavior: 'smooth',
+			block: 'start',
+		})
+		expect(wrapper.findAll('nav button')[1].attributes('aria-current')).toBe(
+			'location'
+		)
+		wrapper.unmount()
+	})
+
+	it('drops a section that goes away', async () => {
+		const wrapper = mountPage()
+		await flushPromises()
+		await wrapper.setProps({ showLast: false })
+		expect(wrapper.findAll('nav button')).toHaveLength(2)
+		wrapper.unmount()
 	})
 })
 

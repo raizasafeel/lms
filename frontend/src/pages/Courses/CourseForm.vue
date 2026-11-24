@@ -5,6 +5,7 @@
 
 		<SettingsGroup
 			:title="__('Thumbnail')"
+			icon="lucide-image"
 			:description="
 				__('Shown on course cards in listings, search and related courses.')
 			"
@@ -21,8 +22,17 @@
 
 		<SettingsGroup
 			:title="__('Search and sharing')"
+			icon="lucide-search"
 			:description="__('How the course shows up in search results.')"
 		>
+			<SearchPreview
+				class="mb-3"
+				:url="courseUrl"
+				:title="form.resource.doc.title"
+				:description="
+					form.meta.description || form.resource.doc.short_introduction
+				"
+			/>
 			<SettingField
 				v-model="form.meta.description"
 				type="textarea"
@@ -40,7 +50,11 @@
 			/>
 		</SettingsGroup>
 
-		<SettingsGroup v-if="actions" :title="__('Manage')">
+		<SettingsGroup
+			v-if="actions"
+			:title="__('Manage')"
+			icon="lucide-sliders-horizontal"
+		>
 			<SettingAction
 				v-if="course.data?.published && user.data?.is_moderator"
 				:label="__('Unpublish course')"
@@ -73,15 +87,6 @@
 				@click="actions.deleteCourse()"
 			/>
 		</SettingsGroup>
-		<template #aside>
-			<SearchPreview
-				:url="courseUrl"
-				:title="form.resource.doc.title"
-				:description="
-					form.meta.description || form.resource.doc.short_introduction
-				"
-			/>
-		</template>
 	</SettingsPage>
 </template>
 

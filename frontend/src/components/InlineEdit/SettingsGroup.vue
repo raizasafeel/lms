@@ -1,5 +1,5 @@
 <template>
-	<section class="space-y-3">
+	<section :id="id" ref="section" class="space-y-3">
 		<div class="space-y-1">
 			<h2 class="text-lg-semibold text-ink-gray-9">{{ title }}</h2>
 			<p v-if="description" class="text-p-sm text-ink-gray-6">
@@ -13,6 +13,28 @@
 </template>
 
 <script setup lang="ts">
+import { inject, onBeforeUnmount, onMounted, useId, useTemplateRef } from 'vue'
+import { SETTINGS_SECTIONS } from '@/components/InlineEdit/settingsSections'
+
 /** A titled settings section: one sentence, then its rows split by hairlines. */
-defineProps<{ title: string; description?: string }>()
+const props = defineProps<{
+	title: string
+	description?: string
+	/** Its icon in the page's section nav. */
+	icon?: string
+}>()
+
+const id = useId()
+const section = useTemplateRef<HTMLElement>('section')
+const sections = inject(SETTINGS_SECTIONS, null)
+
+onMounted(() =>
+	sections?.register({
+		id,
+		title: props.title,
+		icon: props.icon,
+		element: section.value!,
+	})
+)
+onBeforeUnmount(() => sections?.unregister(id))
 </script>
