@@ -67,7 +67,7 @@
 			</div>
 
 			<aside
-				class="hidden w-full shrink-0 self-start sticky-below-header transition-[width] duration-300 ease-in-out @4xl:block @4xl:w-72 @5xl:w-80 @6xl:w-[22rem] @7xl:w-96"
+				class="hidden w-full shrink-0 self-start sticky-below-header transition-[width] duration-200 ease-flow @4xl:block @4xl:w-72 @5xl:w-80 @6xl:w-[22rem] @7xl:w-96"
 			>
 				<BatchEnrollCardEditor
 					v-if="doc"

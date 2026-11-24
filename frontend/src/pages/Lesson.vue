@@ -316,7 +316,7 @@
 			<!-- Slides like the app sidebar; folded, it is inert. -->
 			<aside
 				v-if="!isMobile"
-				class="sticky top-10 hidden h-[94vh] shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out @2xl:block"
+				class="sticky top-10 hidden h-[94vh] shrink-0 overflow-hidden transition-[width] duration-200 ease-flow @2xl:block"
 				:class="chaptersOpen ? 'w-[30%]' : 'w-0'"
 				:inert="!chaptersOpen || undefined"
 				data-testid="chapters-panel"

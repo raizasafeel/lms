@@ -1,8 +1,8 @@
 <template>
-	<!-- With Flow docked the side column eases shut while the nav fades out,
-	     so the panel is gone before Flow's own finishes sliding in. -->
+	<!-- With Flow docked the side column closes and the nav fades on Flow's
+	     own slide timing, so the two panels trade places in one motion. -->
 	<div
-		class="grid w-full items-start gap-y-10 px-5 py-8 @4xl:transition-[grid-template-columns,column-gap] @4xl:duration-300 @4xl:ease-in-out"
+		class="grid w-full items-start gap-y-10 px-5 py-8 @4xl:transition-[grid-template-columns,column-gap] @4xl:duration-200 @4xl:ease-flow"
 		:class="
 			flowDocked
 				? '@4xl:grid-cols-[minmax(0,1fr)_0rem] gap-x-0'
@@ -15,7 +15,7 @@
 		<!-- Runs the full height so its rule divides the fields from the nav;
 		     the nav inside stays in view. -->
 		<aside
-			class="-my-8 hidden self-stretch overflow-x-clip border-s border-outline-gray-2 py-8 ps-6 transition-[opacity,transform] duration-200 ease-out @4xl:block"
+			class="-my-8 hidden self-stretch overflow-x-clip border-s border-outline-gray-2 py-8 ps-6 transition-[opacity,transform] duration-200 ease-flow @4xl:block"
 			:class="flowDocked ? 'pointer-events-none translate-x-4 opacity-0' : ''"
 			:inert="flowDocked || undefined"
 			data-testid="settings-sections"

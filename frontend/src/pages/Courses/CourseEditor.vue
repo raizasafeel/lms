@@ -53,7 +53,7 @@
 		     its own width so it doesn't reflow while the panel moves. -->
 		<aside
 			v-if="panelAvailable"
-			class="hidden min-h-0 shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out @2xl:flex"
+			class="hidden min-h-0 shrink-0 overflow-hidden transition-[width] duration-200 ease-flow @2xl:flex"
 			:class="chaptersOpen ? 'w-[30%] border-s' : 'w-0'"
 			:inert="!chaptersOpen || undefined"
 			data-testid="chapters-panel"

@@ -43,6 +43,10 @@ export default {
 			containers: {
 				'8xl': '96rem',
 			},
+			// Flow's slide, so what makes room for its panel moves with it.
+			transitionTimingFunction: {
+				flow: 'cubic-bezier(0.2, 0, 0, 1)',
+			},
 		},
 	},
 	plugins: [containerQueries, safeAreaPlugin],
