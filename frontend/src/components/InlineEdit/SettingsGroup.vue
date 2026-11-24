@@ -1,10 +1,6 @@
 <template>
-	<section :id="id" ref="section" class="scroll-mt-6 space-y-1">
-		<h2
-			class="border-b border-outline-gray-2 pb-3 text-lg-semibold text-ink-gray-9"
-		>
-			{{ title }}
-		</h2>
+	<section :id="id" ref="section" class="scroll-mt-6 space-y-2">
+		<h2 class="text-lg-semibold text-ink-gray-9">{{ title }}</h2>
 		<div class="divide-y divide-outline-gray-1">
 			<slot />
 		</div>
