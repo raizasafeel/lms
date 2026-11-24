@@ -49,7 +49,7 @@
 
 		<div class="flex">
 			<div v-if="isPreviewLocked" class="min-w-0 flex-1 sm:border-e">
-				<div class="mx-auto flex max-w-4xl flex-col gap-6 px-5 pt-5">
+				<div class="mx-auto flex max-w-6xl flex-col gap-6 px-5 pt-5">
 					<h1 :class="lessonHeadingClass">
 						{{ lesson.data.title }}
 					</h1>
@@ -122,7 +122,7 @@
 						'w-full md:w-3/5 mx-auto border-none !pt-10': zenModeEnabled,
 					}"
 				>
-					<div class="mx-auto max-w-4xl px-5">
+					<div class="mx-auto max-w-6xl px-5">
 						<div
 							class="flex flex-col space-y-3 md:space-y-0 @2xl:flex-row md:items-center justify-between"
 						>
