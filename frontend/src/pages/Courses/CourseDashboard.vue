@@ -10,7 +10,7 @@
 		/>
 		<div
 			v-else
-			class="grid grid-cols-1 gap-5 lg:min-h-[30rem] lg:flex-1 @4xl:grid-cols-[minmax(0,1fr)_22rem] @[73.5rem]:grid-cols-[minmax(0,1fr)_26rem] @7xl:grid-cols-[minmax(0,1fr)_30rem]"
+			class="grid grid-cols-1 gap-5 lg:min-h-[30rem] lg:flex-1 @5xl:grid-cols-[minmax(0,1fr)_22rem] @[73.5rem]:grid-cols-[minmax(0,1fr)_26rem] @7xl:grid-cols-[minmax(0,1fr)_30rem]"
 		>
 			<div class="flex min-w-0 flex-col gap-5 lg:min-h-0">
 				<DashboardKpiCards :kpis="kpis" :loading="!stats.data" />
