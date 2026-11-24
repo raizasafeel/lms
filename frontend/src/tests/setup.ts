@@ -44,9 +44,6 @@ const ALLOWED = [
 	/^\[Vue warn\]: Missing required prop: "exerciseID"/,
 	// App: ExerciseConsole's hint combo "Mod+`" should name the key, "Mod+Backtick".
 	/^\[frappe-ui\] "`" in the combo "Mod\+`" is not a key name/,
-	// App: NewCourseForm starts course.image as undefined, and Uploader's
-	// modelValue takes a string or null.
-	/^\[Vue warn\]: Invalid prop: type check failed for prop "modelValue"\. Expected String \| Null, got Undefined[\s\S]*<NewCourseForm/,
 	// App: the /quiz-submissions/:quizID redirect names a route with no quizID
 	// param, and the router drops the one it carries over.
 	/^\[Vue Router warn\]: Discarded invalid param\(s\) "quizID" when navigating/,

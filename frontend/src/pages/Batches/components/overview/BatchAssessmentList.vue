@@ -9,7 +9,7 @@
 			</span>
 		</div>
 		<OverviewEmptyTile
-			v-if="assessments.fetched && !rows.length"
+			v-if="(draft || assessments.fetched) && !rows.length"
 			icon="lucide-clipboard-check"
 			:title="__('No assessments yet')"
 			:description="
@@ -21,6 +21,7 @@
 				:added="[]"
 				inTile
 				@added="assessments.reload()"
+				@picked="addPicked"
 			/>
 		</OverviewEmptyTile>
 		<div
@@ -60,6 +61,7 @@
 					)
 				"
 				@added="assessments.reload()"
+				@picked="addPicked"
 			/>
 		</div>
 	</section>
@@ -77,22 +79,35 @@ import {
 } from '@/pages/Batches/components/overview/assessmentTypes'
 
 /** The batch's assessments as instructors edit them: open, remove, add. */
-const props = defineProps<{ batchName: string }>()
+const props = defineProps<{ batchName?: string }>()
+
+/** A new batch's assessments, kept here until the batch is first saved. */
+const draft = defineModel<BatchAssessment[]>('draft')
 
 const assessments = createResource({
 	url: 'lms.lms.utils.get_assessments',
 	params: { batch: props.batchName },
-	auto: true,
+	auto: Boolean(props.batchName),
 })
 
 const types = assessmentTypes()
 
-const rows = computed<BatchAssessment[]>(() => assessments.data || [])
+const rows = computed<BatchAssessment[]>(
+	() => draft.value ?? assessments.data ?? []
+)
+
+function addPicked(picked: BatchAssessment[]): void {
+	if (draft.value) draft.value = [...draft.value, ...picked]
+}
 
 const assessmentRoute = (row: BatchAssessment) =>
 	types[row.assessment_type]?.editRoute(row.assessment_name) ?? ''
 
 function removeAssessment(row: BatchAssessment): void {
+	if (draft.value) {
+		draft.value = draft.value.filter((current) => current.name !== row.name)
+		return
+	}
 	call('lms.lms.api.delete_documents', {
 		doctype: 'LMS Assessment',
 		documents: [row.name],

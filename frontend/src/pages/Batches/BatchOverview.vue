@@ -14,6 +14,7 @@
 				</div>
 
 				<BatchCourseList
+					v-model:draft="draftCourses"
 					:batchName="batch.data.name"
 					:editable="Boolean(doc)"
 					:hideProgress="isStudentView && !batch.data.is_student"
@@ -23,6 +24,7 @@
 				<BatchSchedule
 					v-if="doc || batch.data.is_student"
 					:batchName="batch.data.name"
+					:editable="Boolean(doc)"
 				/>
 
 				<section v-if="doc" class="space-y-3">
@@ -50,7 +52,11 @@
 					/>
 				</section>
 
-				<BatchAssessmentList v-if="doc" :batchName="batch.data.name" />
+				<BatchAssessmentList
+					v-if="doc"
+					v-model:draft="draftAssessments"
+					:batchName="batch.data.name"
+				/>
 
 				<div
 					v-if="batch.data.batch_details_raw"
@@ -97,4 +103,14 @@ const aboutHeadingId = useId()
 const doc = computed(() =>
 	isStudentView.value ? null : form?.doc.value ?? null
 )
+
+// Set only on a new batch: its courses and assessments wait for the first save.
+const draftCourses = computed({
+	get: () => form?.draft?.courses.value,
+	set: (names) => form?.draft && (form.draft.courses.value = names ?? []),
+})
+const draftAssessments = computed({
+	get: () => form?.draft?.assessments.value,
+	set: (rows) => form?.draft && (form.draft.assessments.value = rows ?? []),
+})
 </script>

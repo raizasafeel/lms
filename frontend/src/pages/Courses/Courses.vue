@@ -526,11 +526,9 @@ const courseTabs = computed(() => {
 
 const { capture } = useTelemetry()
 
-// openFormRoute, not a bare router.push: it stamps the history entry so the
-// form's own close() pops it instead of replacing.
 const openNewCourse = () => {
 	setFormSource('header_button')
-	openFormRoute(router, { name: 'NewCourse' })
+	router.push({ name: 'NewCourse' })
 }
 
 // What lands in this list and how to start it, for the person who would fill it;

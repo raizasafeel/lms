@@ -161,7 +161,6 @@ import { useRouter } from 'vue-router'
 import { sessionStore } from '@/stores/session'
 import BatchCard from '@/pages/Batches/components/BatchCard.vue'
 import ListPage from '@/components/Layouts/pages/ListPage.vue'
-import { openFormRoute } from '@/composables/useFormRoute'
 import { setFormSource } from '@/composables/formTracking'
 import EmptyStateActions from '@/components/EmptyStateActions.vue'
 
@@ -476,11 +475,9 @@ const canCreateBatch = () => {
 	return Boolean(user.data?.is_moderator || user.data?.is_evaluator)
 }
 
-// openFormRoute, not a bare router.push: it stamps the history entry so the
-// form's own close() pops it instead of replacing.
 const openNewBatch = () => {
 	setFormSource('header_button')
-	openFormRoute(router, { name: 'NewBatch' })
+	router.push({ name: 'NewBatch' })
 }
 // A new site's batch tabs are all empty, and the learner wording ("fresh
 // learning experiences are on the way") tells the person who would create

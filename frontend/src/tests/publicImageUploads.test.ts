@@ -338,8 +338,6 @@ const MANIFEST: Record<string, Privacy[]> = {
 	// The course and batch "About" bodies.
 	'components/InlineEdit/RichTextField.vue': ['undeclared'],
 	'pages/Forms/EmailTemplateForm.vue': ['undeclared'],
-	'pages/Forms/NewBatchForm.vue': ['undeclared'],
-	'pages/Forms/NewCourseForm.vue': ['undeclared'],
 	'pages/JobApplications.vue': ['undeclared'],
 	'pages/Forms/JobForm.vue': ['undeclared'],
 	'pages/Forms/ProfileEditForm.vue': ['undeclared'],

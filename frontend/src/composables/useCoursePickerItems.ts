@@ -4,7 +4,7 @@ import type { PickerItem } from '@/components/InlineEdit/PickerDialog.vue'
 import { courseIcon } from '@/utils/courseIcons'
 import { courseTint } from '@/utils/courseTints'
 
-interface CourseRow {
+export interface CourseRow {
 	name: string
 	title: string
 	category?: string | null
@@ -66,6 +66,15 @@ export function useCoursePickerItems(
 			.map((course) => toItem(course, suggestedCategory()))
 	)
 
+	const byName = computed<Record<string, CourseRow>>(() =>
+		Object.fromEntries(
+			((courses.data as CourseRow[] | null) || []).map((course) => [
+				course.name,
+				course,
+			])
+		)
+	)
+
 	const categories = computed<string[]>(
 		() =>
 			[
@@ -77,5 +86,5 @@ export function useCoursePickerItems(
 		if (!courses.data && !courses.loading) courses.fetch()
 	}
 
-	return { items, categories, load }
+	return { items, categories, byName, load }
 }

@@ -209,6 +209,61 @@ describe('the assessment add button', () => {
 	})
 })
 
+describe('assessments on a batch not saved yet', () => {
+	beforeEach(() => callMock.mockReset())
+
+	it('hands the picks back with their titles instead of inserting them', async () => {
+		const row = mount(BatchAssessmentAdd, { props: { added: [] }, ...options })
+		await row.find('button').trigger('click')
+		row
+			.findComponent({ name: 'PickerDialog' })
+			.vm.$emit('add', ['LMS Quiz::Q1'])
+		await flushPromises()
+		expect(callMock).not.toHaveBeenCalled()
+		expect(row.emitted('picked')).toEqual([
+			[
+				[
+					{
+						name: 'LMS Quiz::Q1',
+						assessment_type: 'LMS Quiz',
+						assessment_name: 'Q1',
+						title: 'Accounting quiz',
+					},
+				],
+			],
+		])
+	})
+
+	it('lists and removes the picks the page keeps', async () => {
+		const draft = [
+			{
+				name: 'LMS Quiz::Q1',
+				assessment_type: 'LMS Quiz' as const,
+				assessment_name: 'Q1',
+				title: 'Accounting quiz',
+			},
+		]
+		const list = mount(BatchAssessmentList, {
+			props: {
+				draft,
+				'onUpdate:draft': (rows: typeof draft) =>
+					list.setProps({ draft: rows }),
+			},
+			global: {
+				mocks: { __: globalThis.__ },
+				stubs: { RouterLink: { template: '<a><slot /></a>' } },
+			},
+		})
+		expect(list.text()).toContain('Accounting quiz')
+		const remove = list
+			.findAll('button')
+			.find((b) => b.text() === 'Remove Accounting quiz')
+		await remove!.trigger('click')
+		expect(list.props('draft')).toEqual([])
+		expect(callMock).not.toHaveBeenCalled()
+	})
+})
+
 describe('the empty assessments list', () => {
 	it('is one call to action with a single add button', () => {
 		const list = mount(BatchAssessmentList, {

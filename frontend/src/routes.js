@@ -14,24 +14,22 @@ export const routes = [
 		path: '/courses',
 		name: 'Courses',
 		component: () => import('@/pages/Courses/Courses.vue'),
-		// Both children are static segments, so vue-router scores them above
-		// the sibling '/courses/:courseName' and they win. The trade: a course
-		// whose docname is literally `new` or `import` becomes unreachable.
-		// Accepted and documented in the design — it is the same trade the app
-		// already makes for '/batches/details/:batchName'. Deliberately not
-		// guarded.
+		// A static segment, so vue-router scores it above the sibling
+		// '/courses/:courseName' and it wins. The trade: a course whose
+		// docname is literally `import` becomes unreachable, as '/courses/new'
+		// below does for one named `new`.
 		children: [
-			{
-				path: 'new',
-				name: 'NewCourse',
-				component: () => import('@/pages/Forms/NewCourseForm.vue'),
-			},
 			{
 				path: 'import',
 				name: 'CourseImport',
 				component: () => import('@/pages/Forms/CourseImportForm.vue'),
 			},
 		],
+	},
+	{
+		path: '/courses/new',
+		name: 'NewCourse',
+		component: () => import('@/pages/Courses/NewCoursePage.vue'),
 	},
 	{
 		path: '/courses/:courseName',
@@ -76,13 +74,11 @@ export const routes = [
 		path: '/batches',
 		name: 'Batches',
 		component: () => import('@/pages/Batches/Batches.vue'),
-		children: [
-			{
-				path: 'new',
-				name: 'NewBatch',
-				component: () => import('@/pages/Forms/NewBatchForm.vue'),
-			},
-		],
+	},
+	{
+		path: '/batches/new',
+		name: 'NewBatch',
+		component: () => import('@/pages/Batches/NewBatchPage.vue'),
 	},
 	{
 		path: '/batches/details/:batchName',

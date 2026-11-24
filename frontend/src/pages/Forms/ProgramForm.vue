@@ -313,8 +313,7 @@ const isNew = computed(() => programId.value === 'new')
 // gate, not an authorization boundary — the server's DocPerms on LMS Program
 // are; this only spares an unentitled user a form that could never save.
 const canManageProgram = computed(() => {
-	// Cast because Window has no read_only_mode declaration; same shape as
-	// NewBatchForm.vue:190.
+	// Cast because Window has no read_only_mode declaration.
 	if ((window as Window & { read_only_mode?: boolean }).read_only_mode)
 		return false
 	return Boolean(user.data?.is_moderator || user.data?.is_instructor)

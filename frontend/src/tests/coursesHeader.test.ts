@@ -80,7 +80,14 @@ const mountCourses = async () => {
 	const { default: Courses } = await import('@/pages/Courses/Courses.vue')
 	const router = createRouter({
 		history: createMemoryHistory(),
-		routes: [{ path: '/', name: 'Courses', component: { render: () => null } }],
+		routes: [
+			{ path: '/', name: 'Courses', component: { render: () => null } },
+			{
+				path: '/courses/new',
+				name: 'NewCourse',
+				component: { render: () => null },
+			},
+		],
 	})
 	await router.push('/')
 	await router.isReady()
@@ -118,9 +125,8 @@ describe('Courses page header', () => {
 		)
 
 		await header.findAll('button')[1].trigger('click')
-		expect(openFormRouteMock).toHaveBeenCalledWith(expect.anything(), {
-			name: 'NewCourse',
-		})
+		await flushPromises()
+		expect(wrapper.vm.$router.currentRoute.value.name).toBe('NewCourse')
 	})
 
 	it('reports where the form was opened from and which import was picked', async () => {

@@ -162,7 +162,6 @@ import {
 import { buildSidebarRows } from '@/utils/sidebarRows'
 import LMSLogo from '@/components/Icons/LMSLogo.vue'
 import { useRouter } from 'vue-router'
-import { openFormRoute } from '@/composables/useFormRoute'
 import {
 	ref,
 	onMounted,
@@ -220,7 +219,7 @@ const readOnlyNotice = __(
 )
 const openCourseForm = () => {
 	setFormSource('onboarding')
-	openFormRoute(router, { name: 'NewCourse' })
+	router.push({ name: 'NewCourse' })
 }
 
 // Opens the help panel, or brings it back when it was minimized.
@@ -369,7 +368,7 @@ const allSteps = [
 		onClick: () => {
 			minimize.value = true
 			setFormSource('onboarding')
-			openFormRoute(router, { name: 'NewBatch' })
+			router.push({ name: 'NewBatch' })
 		},
 	},
 ].map((step) => reactive(step))

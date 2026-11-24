@@ -27,17 +27,19 @@ import {
 	assessmentTypes,
 	type AssessmentDoctype,
 	type AssessmentRow,
+	type BatchAssessment,
 } from '@/pages/Batches/components/overview/assessmentTypes'
 
 /** One add button for the assessments; the picker lists every type together. */
 const props = defineProps<{
-	batchName: string
+	/** Unset for a batch not saved yet: picks are handed back, not inserted. */
+	batchName?: string
 	/** `assessmentKey`s already in the batch. */
 	added: string[]
 	/** Centred subtle button for the empty state's call to action. */
 	inTile?: boolean
 }>()
-const emit = defineEmits<{ added: [] }>()
+const emit = defineEmits<{ added: []; picked: [rows: BatchAssessment[]] }>()
 
 const types = assessmentTypes()
 const doctypes = Object.keys(types) as AssessmentDoctype[]
@@ -101,7 +103,22 @@ function insertAssessment(key: string) {
 	})
 }
 
+function pickedRow(key: string): BatchAssessment {
+	const [doctype, name] = key.split('::') as [AssessmentDoctype, string]
+	const row = choices[doctype].data?.find((choice) => choice.name === name)
+	return {
+		name: key,
+		assessment_type: doctype,
+		assessment_name: name,
+		title: row?.title,
+	}
+}
+
 async function addAssessments(keys: string[]): Promise<void> {
+	if (!props.batchName) {
+		emit('picked', keys.map(pickedRow))
+		return
+	}
 	// One at a time: each insert appends a row to the same batch.
 	try {
 		for (const key of keys) await insertAssessment(key)

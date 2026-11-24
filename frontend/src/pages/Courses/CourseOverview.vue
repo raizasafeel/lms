@@ -25,7 +25,11 @@
 							{{ outlineStats }}
 						</div>
 					</div>
-					<div class="border rounded-5 p-2">
+					<DraftCourseOutline
+						v-if="form?.draftChapters"
+						v-model="form.draftChapters.value"
+					/>
+					<div v-else class="border rounded-5 p-2">
 						<SkeletonLoader
 							v-if="outline.loading && !outline.data"
 							variant="course-outline"
@@ -75,6 +79,7 @@
 				</section>
 
 				<CourseReviews
+					v-if="course.data.name"
 					:courseName="course.data.name"
 					:avg_rating="course.data.rating"
 					:membership="membership"
@@ -127,6 +132,7 @@ import RelatedCourses from '@/components/RelatedCourses.vue'
 import RelatedCoursesEditor from '@/components/Courses/RelatedCoursesEditor.vue'
 import CourseEditCard from '@/components/Courses/CourseEditCard.vue'
 import CourseHeading from '@/components/Courses/CourseHeading.vue'
+import DraftCourseOutline from '@/components/Courses/DraftCourseOutline.vue'
 import RichTextField from '@/components/InlineEdit/RichTextField.vue'
 import { isInstructorOf } from '@/utils/instructors'
 
@@ -181,23 +187,28 @@ watch(
 	{ immediate: true }
 )
 
-const outlineStats = computed(() => {
-	const chapters = outline.data || []
-	const lessonCount = chapters.reduce(
-		(acc, c) => acc + (c.lessons?.length || 0),
+// A new course counts the outline being drafted; a saved one, its own.
+const outlineCounts = computed<{ chapters: number; lessons: number }>(() => {
+	const chapters = form?.draftChapters?.value ?? outline.data ?? []
+	const lessons = chapters.reduce(
+		(acc: number, chapter: { lessons?: unknown[] }) =>
+			acc + (chapter.lessons?.length || 0),
 		0
 	)
+	return { chapters: chapters.length, lessons }
+})
+
+const outlineStats = computed(() => {
+	const { chapters, lessons } = outlineCounts.value
 	const parts: string[] = []
-	if (chapters.length) {
+	if (chapters) {
 		parts.push(
-			chapters.length === 1
-				? __('1 section')
-				: __('{0} sections').format(chapters.length)
+			chapters === 1 ? __('1 chapter') : __('{0} chapters').format(chapters)
 		)
 	}
-	if (lessonCount) {
+	if (lessons) {
 		parts.push(
-			lessonCount === 1 ? __('1 lesson') : __('{0} lessons').format(lessonCount)
+			lessons === 1 ? __('1 lesson') : __('{0} lessons').format(lessons)
 		)
 	}
 	return parts.join(' · ')

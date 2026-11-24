@@ -72,8 +72,6 @@ const expectIdsDeclared = (file: string, labelledby: string) => {
 const EDITOR_FILES = [
 	'components/Notes/Notes.vue',
 	'components/DiscussionReplies.vue',
-	'pages/Forms/NewCourseForm.vue',
-	'pages/Forms/NewBatchForm.vue',
 	'pages/Batches/BatchOverview.vue',
 	'pages/Courses/CourseOverview.vue',
 	'pages/Forms/JobForm.vue',

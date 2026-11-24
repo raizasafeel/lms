@@ -19,6 +19,7 @@ import {
 } from '@/utils/batchForm'
 import { reportAutosaveError, submitResource } from '@/utils/resource'
 import type { LMSBatch } from '@/types/lms/LMSBatch'
+import type { BatchAssessment } from '@/pages/Batches/components/overview/assessmentTypes'
 import type { BatchDetails, Resource } from '@/types'
 
 const CHECKBOXES = [
@@ -54,6 +55,11 @@ export interface BatchForm {
 	saveTooltip: ComputedRef<string>
 	previewRequired: (on: boolean) => void
 	submitBatch: () => void
+	/** Set only before a new batch's first save: what to create with it. */
+	draft?: {
+		courses: Ref<string[]>
+		assessments: Ref<BatchAssessment[]>
+	}
 }
 
 export const BATCH_FORM: InjectionKey<BatchForm> = Symbol('batchForm')
@@ -78,6 +84,50 @@ function normalize(doc: LMSBatch): void {
 }
 
 /**
+ * Rings the empty required fields while Save is hovered, and after a save
+ * with gaps until they are filled.
+ */
+export function useRequiredRings(
+	missingFields: ComputedRef<MissingBatchField[]>
+) {
+	const showRequired = ref<boolean>(false)
+	let pinned = false
+
+	const isMissing = (key: string): boolean =>
+		showRequired.value && missingFields.value.some((f) => f.key === key)
+	const missingLabels = (): string =>
+		joinFieldLabels(missingFields.value.map((f) => f.label))
+
+	watch(missingFields, (missing) => {
+		if (missing.length) return
+		showRequired.value = false
+		pinned = false
+	})
+
+	function previewRequired(on: boolean): void {
+		if (on) showRequired.value = missingFields.value.length > 0
+		else if (!pinned) showRequired.value = false
+	}
+
+	/** True when the form can save; otherwise rings the gaps and names them. */
+	function checkRequired(): boolean {
+		if (!missingFields.value.length) return true
+		showRequired.value = true
+		pinned = true
+		toast.error(__('Add {0} before saving.').format(missingLabels()))
+		return false
+	}
+
+	return {
+		showRequired,
+		isMissing,
+		missingLabels,
+		previewRequired,
+		checkRequired,
+	}
+}
+
+/**
  * The batch's editable state, shared by the Overview and Settings tabs.
  * Loads only while `enabled` is true, so learners never fetch the raw doc.
  */
@@ -92,9 +142,6 @@ export function useBatchForm(
 	const meta = reactive<BatchMeta>({ description: '', keywords: '' })
 	const savedState = ref<string | null>(null)
 	const savedMeta = ref<string>('')
-	const showRequired = ref<boolean>(false)
-	// A save with gaps keeps the rings until the gaps are filled.
-	let requiredPinned = false
 
 	function createBatchResource(name: string): Resource<LMSBatch | null> {
 		return createDocumentResource({
@@ -117,10 +164,13 @@ export function useBatchForm(
 	const missingFields = computed<MissingBatchField[]>(() =>
 		missingBatchFields({ doc: doc.value, instructors: instructors.value })
 	)
-	const isMissing = (key: string): boolean =>
-		showRequired.value && missingFields.value.some((f) => f.key === key)
-	const missingLabels = () =>
-		joinFieldLabels(missingFields.value.map((f) => f.label))
+	const {
+		showRequired,
+		isMissing,
+		missingLabels,
+		previewRequired,
+		checkRequired,
+	} = useRequiredRings(missingFields)
 
 	const saveTooltip = computed<string>(() => {
 		if (missingFields.value.length) {
@@ -128,18 +178,6 @@ export function useBatchForm(
 		}
 		return isDirty.value ? __('Save') : __('No changes to save')
 	})
-
-	watch(missingFields, (missing) => {
-		if (missing.length) return
-		showRequired.value = false
-		requiredPinned = false
-	})
-
-	/** Hovering Save rings the empty required fields. */
-	function previewRequired(on: boolean): void {
-		if (on) showRequired.value = missingFields.value.length > 0
-		else if (!requiredPinned) showRequired.value = false
-	}
 
 	watch(batchName, (name) => {
 		savedState.value = null
@@ -203,13 +241,7 @@ export function useBatchForm(
 	watch([currentState, isMetaDirty], () => isDirty.value && autoSave())
 
 	function submitBatch(): void {
-		if (missingFields.value.length) {
-			showRequired.value = true
-			requiredPinned = true
-			toast.error(__('Add {0} before saving.').format(missingLabels()))
-			return
-		}
-		updateBatch()
+		if (checkRequired()) updateBatch()
 	}
 
 	function payload(): Record<string, unknown> {

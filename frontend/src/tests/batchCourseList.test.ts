@@ -48,6 +48,15 @@ vi.mock('@/composables/useCoursePickerItems', async () => {
 				return [{ value: 'C2', title: 'Two' }]
 			}),
 			categories: computed(() => ['ERPNext', 'Frappe']),
+			byName: computed(() => ({
+				C2: {
+					name: 'C2',
+					title: 'Two',
+					lessons: 3,
+					membership: { progress: 40 },
+				},
+				C3: { name: 'C3', title: 'Three', lessons: 1 },
+			})),
 			load: vi.fn(),
 		}),
 	}
@@ -262,5 +271,47 @@ describe('BatchCourseList add course', () => {
 			doctype: 'Batch Course',
 			name: 'BC1',
 		})
+	})
+})
+
+describe('BatchCourseList on a batch not saved yet', () => {
+	beforeEach(() => {
+		callMock.mockClear()
+		createResourceMock.mockReset()
+		createResourceMock.mockImplementation(fakeResource)
+		sent.length = 0
+	})
+
+	const mountDraft = (draft: string[]) => {
+		const wrapper = mount(BatchCourseList, {
+			props: {
+				editable: true,
+				draft,
+				'onUpdate:draft': (names: string[]) =>
+					wrapper.setProps({ draft: names }),
+			},
+			global: {
+				plugins: [router],
+				mocks: { __: (t: string) => t },
+				provide: { $user: { data: {} } },
+			},
+		})
+		return wrapper
+	}
+
+	it('keeps picked courses on the page without asking the server', async () => {
+		const wrapper = mountDraft(['C2'])
+		expect(wrapper.text()).toContain('Two')
+		expect(wrapper.text()).not.toContain('40%')
+		wrapper.findComponent({ name: 'PickerDialog' }).vm.$emit('add', ['C3'])
+		await flushPromises()
+		expect(wrapper.props('draft')).toEqual(['C2', 'C3'])
+		expect(wrapper.text()).toContain('Three')
+
+		const remove = wrapper.findAll('button').find((b) => b.text() === '')
+		await remove!.trigger('click')
+		expect(wrapper.props('draft')).toEqual(['C3'])
+		expect(callMock).not.toHaveBeenCalled()
+		expect(sent).toEqual([])
 	})
 })

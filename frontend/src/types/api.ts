@@ -164,6 +164,8 @@ export interface CourseFormContext {
 	/** Ring the empty required fields: Save is hovered, or a save had gaps. */
 	showRequired?: Ref<boolean>
 	isMissing?: (key: string) => boolean
+	/** Set only before a new course's first save: the outline to create with it. */
+	draftChapters?: Ref<{ title: string; lessons: string[] }[]>
 }
 
 export interface EvaluatorCalendar {

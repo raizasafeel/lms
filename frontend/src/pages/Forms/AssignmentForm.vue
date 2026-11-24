@@ -161,8 +161,7 @@ const formTitle = computed(() =>
 // through neither. This is a UX gate, not an authorization boundary — the
 // server-side DocPerms on LMS Assignment are.
 const canManageAssignments = computed<boolean>(() => {
-	// Cast because Window carries no read_only_mode declaration; same shape as
-	// NewBatchForm.vue:190.
+	// Cast because Window carries no read_only_mode declaration.
 	if ((window as Window & { read_only_mode?: boolean }).read_only_mode)
 		return false
 	return Boolean(user.data?.is_moderator || user.data?.is_instructor)
@@ -234,7 +233,7 @@ watch(
 	{ immediate: true }
 )
 
-// Deliberately NOT the parent list's cache key, unlike NewBatchForm.vue:178.
+// Deliberately NOT the parent list's cache key.
 // Assignments.vue:148-162 configures its list through CONSTRUCTOR options
 // (fields, orderBy, transform) and createListResource discards the second
 // caller's options for an identical key (listResource.js:15-22) — so on a cold

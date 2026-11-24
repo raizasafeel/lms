@@ -1,13 +1,13 @@
 <template>
-	<section v-if="editable || courses.data?.length">
+	<section v-if="editable || cards.length">
 		<div class="mb-4 flex items-baseline justify-between gap-4">
 			<h2 class="text-3xl-semibold text-ink-gray-9">{{ __('Courses') }}</h2>
-			<span v-if="courses.data?.length" class="text-p-base text-ink-gray-6">
+			<span v-if="cards.length" class="text-p-base text-ink-gray-6">
 				{{ courseCount }}
 			</span>
 		</div>
 		<OverviewEmptyTile
-			v-if="!courses.data?.length"
+			v-if="!cards.length"
 			icon="lucide-book-open"
 			:title="__('No courses yet')"
 			:description="__('Learners see the courses you add here, in this order.')"
@@ -21,7 +21,7 @@
 		</OverviewEmptyTile>
 		<div v-else class="rounded-5 border border-outline-gray-2 p-2">
 			<router-link
-				v-for="course in courses.data"
+				v-for="course in cards"
 				:key="course.name"
 				:to="{ name: 'CourseDetail', params: { courseName: course.name } }"
 				class="group/row flex items-center gap-3 rounded-3 px-2 py-2 hover:bg-surface-gray-1"
@@ -129,6 +129,9 @@ const props = defineProps<{
 	category?: string | null
 }>()
 
+/** A new batch's courses, kept here until the batch is first saved. */
+const draft = defineModel<string[]>('draft')
+
 const pickerOpen = ref<boolean>(false)
 const user = inject<{ data?: Parameters<typeof seesOnboarding>[0] }>('$user')
 const { updateOnboardingStep } = useOnboarding('learning')
@@ -149,13 +152,37 @@ watch(
 	{ immediate: true }
 )
 
+const picker = useCoursePickerItems(
+	() => selectedCourses.value,
+	() => props.category
+)
+
+// A draft lists its courses from the picker's rows: they have no batch yet.
+if (draft.value) picker.load()
+
+const cards = computed<BatchCourseCard[]>(() => {
+	if (!draft.value) return courses.data || []
+	return draft.value
+		.map((name) => picker.byName.value[name])
+		.filter(Boolean)
+		.map(
+			(course) =>
+				// Nobody has progress in a batch that does not exist yet.
+				({
+					...course,
+					batch_course: course.name,
+					membership: null,
+				} as BatchCourseCard)
+		)
+})
+
 const courseCount = computed(() => {
-	const count = courses.data?.length ?? 0
+	const count = cards.value.length
 	return count === 1 ? __('1 course') : __('{0} courses').format(count)
 })
 
 const selectedCourses = computed<string[]>(() =>
-	(courses.data || []).map((course: BatchCourseCard) => course.name)
+	cards.value.map((course) => course.name)
 )
 
 const errorMessage = (error: { messages?: string[] }, fallback: string) =>
@@ -174,6 +201,10 @@ function insertCourse(course: string) {
 }
 
 async function addCourses(names: string[]): Promise<void> {
+	if (draft.value) {
+		draft.value = [...draft.value, ...names]
+		return
+	}
 	// One at a time: each insert appends a row to the same batch.
 	try {
 		for (const name of names) await insertCourse(name)
@@ -190,17 +221,16 @@ async function addCourses(names: string[]): Promise<void> {
 	courses.reload()
 }
 
-const picker = useCoursePickerItems(
-	() => selectedCourses.value,
-	() => props.category
-)
-
 function openPicker(): void {
 	pickerOpen.value = true
 	picker.load()
 }
 
 function removeCourse(course: BatchCourseCard): void {
+	if (draft.value) {
+		draft.value = draft.value.filter((name) => name !== course.name)
+		return
+	}
 	call('frappe.client.delete', {
 		doctype: 'Batch Course',
 		name: course.batch_course,

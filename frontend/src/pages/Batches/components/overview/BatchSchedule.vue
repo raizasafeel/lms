@@ -1,10 +1,30 @@
 <template>
-	<section v-if="classes.length">
+	<section v-if="classes.length || editable">
 		<div class="mb-4 flex items-baseline justify-between gap-4">
 			<h2 class="text-3xl-semibold text-ink-gray-9">{{ __('Schedule') }}</h2>
-			<span class="text-p-base text-ink-gray-6">{{ countLabel }}</span>
+			<span v-if="classes.length" class="text-p-base text-ink-gray-6">
+				{{ countLabel }}
+			</span>
 		</div>
+		<p
+			v-if="!classes.length"
+			class="rounded-5 border border-outline-gray-2 px-4 py-3 text-p-base text-ink-gray-7"
+		>
+			{{
+				__(
+					'No classes yet. Learners see the schedule here once you add classes.'
+				)
+			}}
+			<router-link
+				v-if="batchName"
+				:to="{ hash: '#classes' }"
+				class="font-medium text-ink-gray-9 underline-offset-2 hover:underline"
+			>
+				{{ __('Add a class') }}
+			</router-link>
+		</p>
 		<ul
+			v-else
 			class="divide-y divide-outline-gray-1 overflow-hidden rounded-5 border border-outline-gray-2"
 		>
 			<li
@@ -45,7 +65,12 @@ interface LiveClassRow {
 const SHOWN = 4
 
 /** The batch's next live classes, with a link to the Classes tab. */
-const props = defineProps<{ batchName: string }>()
+const props = defineProps<{
+	/** Unset for a batch not saved yet, which has no classes. */
+	batchName?: string
+	/** Editors see the empty schedule; learners see nothing until classes exist. */
+	editable?: boolean
+}>()
 
 const liveClasses = createListResource({
 	doctype: 'LMS Live Class',
@@ -53,7 +78,7 @@ const liveClasses = createListResource({
 	fields: ['name', 'title', 'date'],
 	orderBy: 'date asc, time asc',
 	pageLength: 500,
-	auto: true,
+	auto: Boolean(props.batchName),
 })
 
 const classes = computed<LiveClassRow[]>(() => liveClasses.data || [])
