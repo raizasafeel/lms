@@ -214,6 +214,15 @@ class TestListFilters(BaseTestUtils):
 		self.assert_lists_course(self.student.name, {"enrolled": 1, "category": self.category})
 		self.assert_lists_course(self.instructor.name, {"created": 1, "category": self.category})
 
+	def test_the_course_search_matches_word_starts_and_not_description_markup(self):
+		other = self._make_course(f"Filters Markup {frappe.generate_hash(length=6)}")
+		self.addCleanup(frappe.delete_doc, "LMS Course", other.name, force=True)
+		frappe.db.set_value("LMS Course", other.name, "description", f'<a href="/{self.hash}">x</a>')
+		self.assert_lists_course(self.student.name, {"published": 1, "title": ["like", f"%{self.hash}%"]})
+
+		inside_a_word = {"published": 1, "title": ["like", f"%{self.hash[1:]}%"]}
+		self.assertEqual(self.as_user(self.student.name, get_courses, filters=inside_a_word), [])
+
 	def test_the_course_list_filters_by_price_and_rating_and_sorts_by_a_listed_order(self):
 		other = self._make_course(f"Filters Another Course {self.hash}")
 		self.addCleanup(frappe.delete_doc, "LMS Course", other.name, force=True)

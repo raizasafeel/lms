@@ -1606,7 +1606,7 @@ def get_course_count(filters: dict = None) -> int:
 	return total
 
 
-def count_matching(doctype: str, filters: dict | list, or_filters: dict = None) -> int:
+def count_matching(doctype: str, filters: dict | list, or_filters: dict | list = None) -> int:
 	"""Return row count for filters, including OR filters."""
 	if not or_filters:
 		return frappe.db.count(doctype, filters)
@@ -1669,13 +1669,27 @@ def get_course_card_details(courses: list) -> list:
 	return courses
 
 
-def get_course_or_filters(filters: dict) -> dict:
-	or_filters = {}
-	or_filters.update({"title": filters.get("title")})
-	or_filters.update({"short_introduction": filters.get("title")})
-	or_filters.update({"description": filters.get("title")})
-	or_filters.update({"tags": filters.get("title")})
-	return or_filters
+COURSE_SEARCH_FIELDS = ("title", "short_introduction", "tags")
+
+
+def get_course_or_filters(filters: dict) -> list:
+	"""Courses with a title, introduction or tag word that starts with the search.
+
+	The description is HTML, so a substring search matched markup like `href`.
+	"""
+	term = get_search_term(filters.get("title"))
+	return [
+		[field, "like", pattern]
+		for field in COURSE_SEARCH_FIELDS
+		for pattern in (f"{term}%", f"% {term}%", f"%,{term}%")
+	]
+
+
+def get_search_term(value) -> str:
+	"""The typed text from a plain value or a `["like", "%text%"]` filter."""
+	if isinstance(value, list | tuple):
+		value = value[1]
+	return str(value).strip("%").strip()
 
 
 def update_course_filters(filters: dict) -> tuple:
@@ -1732,7 +1746,7 @@ def get_enrollment_details(courses: list) -> list:
 
 
 def get_featured_courses(
-	filters: dict, or_filters: dict, fields: list, page_length: int, order_by: str = "enrollments desc"
+	filters: dict, or_filters: list, fields: list, page_length: int, order_by: str = "enrollments desc"
 ) -> list:
 	filters.update({"featured": 1})
 	featured_courses = frappe.get_all(
