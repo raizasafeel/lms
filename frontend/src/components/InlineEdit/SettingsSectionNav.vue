@@ -11,7 +11,7 @@
 			v-for="section in sections"
 			:key="section.id"
 			type="button"
-			class="flex w-full items-center gap-2 rounded-4 px-2 py-1.5 text-start text-p-base outline-none transition-colors focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+			class="flex w-full items-center h-7 gap-2 rounded-4 px-2 text-start text-p-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-outline-gray-3"
 			:class="
 				section.id === active
 					? 'bg-surface-gray-2 text-ink-gray-9'
