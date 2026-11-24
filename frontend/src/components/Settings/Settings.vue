@@ -27,28 +27,26 @@
 				:value="item.slug"
 				class="min-w-0"
 			>
-				<SettingsCrumbScope :crumb="crumbFor(item)">
-					<SettingsFieldsPanel
-						v-if="item.page.kind === 'fields'"
-						:page="item.page"
-						:title="__(item.label)"
-						:data="sharedDocument(item.page)"
-					/>
-					<SettingsListPanel
-						v-else-if="item.page.kind === 'list'"
-						:page="item.page"
-						:title="__(item.label)"
-						:record="recordFor(item)"
-						@update:record="(record) => openRecord(item, record)"
-						@renamed="(name) => renameRecord(item, name)"
-					/>
-					<component
-						v-else
-						:is="item.page.component"
-						:label="__(item.label)"
-						v-bind="recordModel(item)"
-					/>
-				</SettingsCrumbScope>
+				<SettingsFieldsPanel
+					v-if="item.page.kind === 'fields'"
+					:page="item.page"
+					:title="__(item.label)"
+					:data="sharedDocument(item.page)"
+				/>
+				<SettingsListPanel
+					v-else-if="item.page.kind === 'list'"
+					:page="item.page"
+					:title="__(item.label)"
+					:record="recordFor(item)"
+					@update:record="(record) => openRecord(item, record)"
+					@renamed="(name) => renameRecord(item, name)"
+				/>
+				<component
+					v-else
+					:is="item.page.component"
+					:label="__(item.label)"
+					v-bind="recordModel(item)"
+				/>
 			</SettingsPanel>
 		</SettingsContent>
 		<Dialog.Close as-child>
@@ -84,7 +82,6 @@ import DiscardChangesDialog from '@/components/Settings/DiscardChangesDialog.vue
 import { confirmDiscard, installDirtyGuard } from '@/composables/useDirtyGuard'
 import SettingsFieldsPanel from '@/components/Layouts/settings/desktop/SettingsFieldsPanel.vue'
 import SettingsListPanel from '@/components/Layouts/settings/desktop/SettingsListPanel.vue'
-import SettingsCrumbScope from '@/components/Layouts/settings/desktop/SettingsCrumbScope.vue'
 import {
 	isSidebarItemVisible,
 	loadIntegrationStatus,
@@ -175,16 +172,6 @@ watch(
 	},
 	{ immediate: true }
 )
-
-const crumbFor = (item) =>
-	item.integration
-		? {
-				label: 'Integrations',
-				open: () => selectTab(itemForSlug('integrations')),
-		  }
-		: null
-
-const itemForSlug = (slug) => items.value.find((item) => item.slug === slug)
 
 const show = computed({
 	get: () => isOpen.value,
