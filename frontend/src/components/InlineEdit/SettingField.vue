@@ -1,15 +1,16 @@
 <template>
 	<SettingRow :label="label" :summary="summary">
 		<template v-if="!isLong" #control>
-			<FormControl
-				v-model="model"
-				:type="type"
-				:options="options"
-				:placeholder="placeholder"
-				:aria-label="label"
-				variant="outline"
-				class="w-60"
-			/>
+			<div class="w-60">
+				<FormControl
+					v-model="model"
+					:type="type"
+					:options="options"
+					:placeholder="placeholder"
+					:aria-label="label"
+					variant="outline"
+				/>
+			</div>
 		</template>
 		<FormControl
 			v-if="isLong"

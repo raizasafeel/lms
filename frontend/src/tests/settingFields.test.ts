@@ -90,6 +90,8 @@ describe('the shared settings fields', () => {
 		const input = short.getComponent({ name: 'FormControl' })
 		expect(input.props('variant')).toBe('outline')
 		expect(input.element.closest('.shrink-0')).not.toBeNull()
+		// frappe-ui's controls fill their parent, so the width sits on a wrapper.
+		expect(input.element.parentElement?.className).toBe('w-60')
 		const textarea = long.getComponent({ name: 'FormControl' })
 		expect(textarea.props('type')).toBe('textarea')
 		expect(textarea.element.closest('.shrink-0')).toBeNull()

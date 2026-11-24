@@ -64,7 +64,7 @@
 			</div>
 			<div class="min-w-0 flex-1 space-y-4">
 				<div
-					class="flex flex-wrap items-center gap-3 p-1"
+					class="-mx-1 flex flex-wrap items-center gap-3 p-1"
 					role="group"
 					:aria-label="__('Thumbnail colour')"
 				>
