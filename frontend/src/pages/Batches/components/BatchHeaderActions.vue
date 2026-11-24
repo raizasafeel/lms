@@ -15,26 +15,6 @@
 		icon="lucide-eye"
 		@click="emit('student-view')"
 	/>
-	<template v-if="tab === 'dashboard' && dashboardReady">
-		<HeaderButton
-			:label="__('Export analytics')"
-			icon="lucide-download"
-			variant="subtle"
-			@click="emit('export-analytics')"
-		/>
-		<HeaderButton
-			:label="__('Enroll')"
-			icon="lucide-plus"
-			variant="solid"
-			@click="openForm('NewBatchStudent')"
-		/>
-	</template>
-	<HeaderButton
-		v-if="tab === 'announcements' && !readOnlyMode && batch.data?.student_count"
-		:label="__('Make announcement')"
-		icon="lucide-send"
-		@click="openForm('NewAnnouncement')"
-	/>
 	<template v-if="isEditTab && form">
 		<Button
 			v-if="!isMobile && manage && !batch.data?.published"
@@ -50,12 +30,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import { Button, Dropdown } from 'frappe-ui'
 import BatchSaveButton from '@/pages/Batches/components/BatchSaveButton.vue'
 import HeaderButton from '@/components/HeaderButton.vue'
-import { openBatchForm } from '@/composables/useBatchForms'
-import type { BatchRouteName } from '@/composables/useBatchForms'
 import { useScreenSize } from '@/utils/composables'
 import { injectBatchForm } from '@/pages/Batches/composables/useBatchForm'
 import { injectBatchManage } from '@/pages/Batches/composables/useBatchManage'
@@ -64,25 +41,17 @@ import type { BatchDetails, Resource } from '@/types'
 const props = defineProps<{
 	tab?: string
 	batch: Resource<BatchDetails | null>
-	dashboardReady?: boolean
 }>()
 
-const emit = defineEmits<{ 'student-view': []; 'export-analytics': [] }>()
+const emit = defineEmits<{ 'student-view': [] }>()
 
-const router = useRouter()
-const route = useRoute()
 const { isMobile } = useScreenSize()
 const form = injectBatchForm()
 const manage = injectBatchManage()
-const readOnlyMode = window.read_only_mode
 
 const isEditTab = computed(() =>
 	['overview', 'settings'].includes(props.tab ?? 'overview')
 )
-
-const openForm = (name: BatchRouteName) => {
-	openBatchForm(router, name, props.batch.data?.name ?? '', route.hash)
-}
 
 const menu = computed(() => {
 	if (!manage) return []

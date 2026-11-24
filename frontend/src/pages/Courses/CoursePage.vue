@@ -74,20 +74,11 @@
 					{{ __('Student View') }}
 				</Button>
 			</template>
-			<template v-if="tab?.key === 'dashboard' && dashboardState === 'ready'">
-				<HeaderButton
-					:label="__('Export analytics')"
-					icon="lucide-download"
-					variant="subtle"
-					@click="exportAnalytics()"
-				/>
-				<HeaderButton
-					:label="__('Enroll')"
-					icon="lucide-plus"
-					variant="solid"
-					@click="openEnrollForm()"
-				/>
-			</template>
+			<DashboardTabActions
+				v-if="isMobile && hasDashboardActions(tab?.key)"
+				@export="exportAnalytics"
+				@enroll="openEnrollForm"
+			/>
 		</template>
 
 		<template #solo>
@@ -171,6 +162,11 @@
 				</Tooltip>
 			</div>
 			<CourseSaveButton v-if="isFormTab(tab?.key) && !isMobile" :form="form" />
+			<DashboardTabActions
+				v-if="!isMobile && hasDashboardActions(tab?.key)"
+				@export="exportAnalytics"
+				@enroll="openEnrollForm"
+			/>
 		</template>
 
 		<template #overlay="{ tab }">
@@ -219,8 +215,8 @@ import CourseDashboard from '@/pages/Courses/CourseDashboard.vue'
 import CourseEditor from '@/pages/Courses/CourseEditor.vue'
 import CourseForm from '@/pages/Courses/CourseForm.vue'
 import LessonHelp from '@/components/LessonHelp.vue'
-import HeaderButton from '@/components/HeaderButton.vue'
 import ExportAnalyticsDialog from '@/components/Dashboard/ExportAnalyticsDialog.vue'
+import DashboardTabActions from '@/components/Dashboard/DashboardTabActions.vue'
 import CourseHeaderActions from '@/components/Courses/CourseHeaderActions.vue'
 import CourseSaveButton from '@/components/Courses/CourseSaveButton.vue'
 import CourseStudentView from '@/components/Courses/CourseStudentView.vue'
@@ -310,6 +306,9 @@ function exportAnalytics(): void {
 	exportMounted.value = true
 	showExport.value = true
 }
+
+const hasDashboardActions = (tab?: string): boolean =>
+	tab === 'dashboard' && dashboardState.value === 'ready'
 
 const props = defineProps<{
 	courseName: string

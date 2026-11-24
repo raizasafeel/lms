@@ -38,9 +38,18 @@
 					v-if="isAdmin"
 					:tab="tab?.key"
 					:batch="batch"
-					:dashboardReady="dashboardState === 'ready'"
 					@student-view="openStudentView(tab?.key)"
-					@export-analytics="exportAnalytics"
+				/>
+				<DashboardTabActions
+					v-if="isMobile && hasDashboardActions(tab?.key)"
+					@export="exportAnalytics"
+					@enroll="openForm('NewBatchStudent')"
+				/>
+				<HeaderButton
+					v-if="isMobile && hasAnnouncementAction(tab?.key)"
+					:label="__('Make announcement')"
+					icon="lucide-send"
+					@click="openForm('NewAnnouncement')"
 				/>
 			</template>
 
@@ -53,6 +62,17 @@
 				<BatchSaveButton
 					v-if="isAdmin && isFormTab(tab?.key) && !isMobile"
 					:form="form"
+				/>
+				<DashboardTabActions
+					v-if="!isMobile && hasDashboardActions(tab?.key)"
+					@export="exportAnalytics"
+					@enroll="openForm('NewBatchStudent')"
+				/>
+				<HeaderButton
+					v-if="!isMobile && hasAnnouncementAction(tab?.key)"
+					:label="__('Make announcement')"
+					icon="lucide-send"
+					@click="openForm('NewAnnouncement')"
 				/>
 			</template>
 
@@ -82,7 +102,7 @@
 </template>
 <script setup>
 import { computed, inject, markRaw, provide, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Badge, createResource, usePageMeta } from 'frappe-ui'
 import { sessionStore } from '@/stores/session'
 import AdminBatchDashboard from '@/pages/Batches/components/AdminBatchDashboard.vue'
@@ -96,12 +116,14 @@ import BatchSaveButton from '@/pages/Batches/components/BatchSaveButton.vue'
 import StudentViewBar from '@/components/StudentViewBar.vue'
 import Discussions from '@/components/Discussions.vue'
 import ExportAnalyticsDialog from '@/components/Dashboard/ExportAnalyticsDialog.vue'
+import DashboardTabActions from '@/components/Dashboard/DashboardTabActions.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import HeaderButton from '@/components/HeaderButton.vue'
 import TabbedDetailPage from '@/components/Layouts/pages/TabbedDetailPage.vue'
 import NotFound from '@/pages/NotFound.vue'
 import { canReadDiscussions } from '@/utils/doctypePermissions'
 import { useScreenSize } from '@/utils/composables'
+import { openBatchForm } from '@/composables/useBatchForms'
 import { provideStudentView } from '@/composables/useStudentView'
 import { provideDashboardState } from '@/composables/dashboard/useDashboard'
 import {
@@ -205,6 +227,20 @@ const exportAnalytics = () => {
 	exportMounted.value = true
 	showExport.value = true
 }
+
+const router = useRouter()
+const openForm = (name) => {
+	openBatchForm(router, name, props.batchName, route.hash)
+}
+
+const hasDashboardActions = (tab) =>
+	isAdmin.value && tab === 'dashboard' && dashboardState.value === 'ready'
+
+const hasAnnouncementAction = (tab) =>
+	isAdmin.value &&
+	tab === 'announcements' &&
+	!window.read_only_mode &&
+	Boolean(batch.data?.student_count)
 
 const openStudentView = (tab) => {
 	studentMode.value = !tab || tab === 'overview' ? 'not-enrolled' : 'enrolled'
