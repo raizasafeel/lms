@@ -77,7 +77,7 @@ const descriptionId = useId()
 const VARIANT_CLASSES = {
 	inline: '-m-2 p-2',
 	row: '-mx-2 px-2',
-	compact: '-my-1 -me-2 px-2 py-1',
+	compact: 'h-7 px-2',
 }
 
 const rowAttrs = computed(

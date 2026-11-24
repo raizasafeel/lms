@@ -19,7 +19,7 @@ const { callMock, field, choices } = vi.hoisted(() => ({
 	field: (name: string) => ({
 		name,
 		props: ['modelValue', 'options', 'variant', 'placeholder'],
-		template: '<div />',
+		template: '<div><slot name="prefix" /></div>',
 	}),
 }))
 
@@ -182,23 +182,19 @@ describe('the batch facts editor', () => {
 		expect(labels({ zoom_account: 'Z1' })).toContain('Online on Zoom')
 	})
 
-	// Ghost fields draw their prefix at ps-2 and text at ps-8; every row
-	// matches that, so the time pickers' own prefixes need no offset.
-	it('puts every icon and label in the ghost field prefix columns', () => {
+	// Each icon sits in its field's prefix, so every hover box starts at the
+	// card edge and every value at the prefix text column.
+	it('draws each fact icon inside its field', () => {
 		const facts = mountFacts({ evaluation: 1, certification: 1 })
-		const icons = facts.findAll('.size-4.shrink-0')
-		expect(icons.length).toBe(6)
-		for (const icon of icons) {
-			const row = icon.element.parentElement!
-			expect([...row.classList]).toContain('gap-2')
-			// A switch fact pads its whole clickable row instead of the icon line.
-			const switchRow = row.closest('[data-testid="switch-row"]')
-			const padded = switchRow ? [...switchRow.classList] : [...row.classList]
-			expect(padded).toContain(switchRow ? 'px-2' : 'ps-2')
-			const field = icon.element.nextElementSibling
-			if (field?.tagName === 'DIV')
-				expect([...field.classList]).toContain('-ms-2')
+		for (const name of ['DateRangePicker', 'Combobox', 'FormControl']) {
+			const control = facts.findComponent({ name })
+			expect(control.find('.size-4').exists()).toBe(true)
+			expect(control.element.parentElement?.className).not.toContain('ps-2')
 		}
+		const medium = facts
+			.findAllComponents({ name: 'Select' })
+			.find((select) => select.attributes('aria-label') === 'Medium')!
+		expect(medium.find('.lucide-video').exists()).toBe(true)
 		expect(facts.findComponent(TimeRangeField).classes()).not.toContain('-ms-2')
 		expect(
 			facts.findComponent({ name: 'DatePicker' }).element.parentElement
