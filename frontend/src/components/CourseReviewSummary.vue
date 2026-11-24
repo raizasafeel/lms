@@ -18,7 +18,7 @@
 			</span>
 		</div>
 		<div
-			class="flex max-w-md flex-1 flex-col"
+			class="flex flex-1 flex-col"
 			role="group"
 			:aria-label="__('Filter reviews by stars')"
 		>
