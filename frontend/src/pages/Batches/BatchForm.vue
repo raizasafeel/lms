@@ -1,5 +1,8 @@
 <template>
-	<div v-if="doc" class="mx-auto w-full max-w-3xl space-y-10 px-5 py-8">
+	<div
+		v-if="doc"
+		class="grid w-full items-start gap-x-12 gap-y-10 px-5 py-8 lg:grid-cols-2"
+	>
 		<SettingsGroup
 			:title="__('Enrollment')"
 			:description="__('How people join this batch.')"

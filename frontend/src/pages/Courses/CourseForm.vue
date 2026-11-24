@@ -1,6 +1,9 @@
 <template>
 	<SkeletonLoader v-if="!form.resource.doc" variant="form" class="flex-1" />
-	<div v-else class="w-full space-y-10 px-5 py-8">
+	<div
+		v-else
+		class="grid w-full items-start gap-x-12 gap-y-10 px-5 py-8 lg:grid-cols-2"
+	>
 		<CoursePublishSettings />
 
 		<SettingsGroup
@@ -17,42 +20,6 @@
 				@update:tint="(value) => setField('card_gradient', value)"
 				@update:icon="(value) => setField('icon', value)"
 			/>
-		</SettingsGroup>
-
-		<SettingsGroup
-			:title="__('Search and sharing')"
-			:description="__('How the course shows up in search results.')"
-		>
-			<!-- Beside the fields on wide screens, under them below lg. -->
-			<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
-				<div class="divide-y divide-outline-gray-1">
-					<SettingField
-						v-model="form.meta.description"
-						type="textarea"
-						:label="__('Meta description')"
-						:summary="
-							__(
-								'About 150 characters. Leave empty to use the short introduction.'
-							)
-						"
-						@update:modelValue="form.markDirty()"
-					/>
-					<SettingField
-						v-model="form.meta.keywords"
-						:label="__('Meta keywords')"
-						:summary="__('Comma separated keywords for search engines.')"
-						@update:modelValue="form.markDirty()"
-					/>
-				</div>
-				<SearchPreview
-					class="self-start"
-					:url="courseUrl"
-					:title="form.resource.doc.title"
-					:description="
-						form.meta.description || form.resource.doc.short_introduction
-					"
-				/>
-			</div>
 		</SettingsGroup>
 
 		<SettingsGroup v-if="actions" :title="__('Manage')">
@@ -87,6 +54,43 @@
 				danger
 				@click="actions.deleteCourse()"
 			/>
+		</SettingsGroup>
+
+		<SettingsGroup
+			class="lg:col-span-2"
+			:title="__('Search and sharing')"
+			:description="__('How the course shows up in search results.')"
+		>
+			<!-- Beside the fields on wide screens, under them below lg. -->
+			<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
+				<div class="divide-y divide-outline-gray-1">
+					<SettingField
+						v-model="form.meta.description"
+						type="textarea"
+						:label="__('Meta description')"
+						:summary="
+							__(
+								'About 150 characters. Leave empty to use the short introduction.'
+							)
+						"
+						@update:modelValue="form.markDirty()"
+					/>
+					<SettingField
+						v-model="form.meta.keywords"
+						:label="__('Meta keywords')"
+						:summary="__('Comma separated keywords for search engines.')"
+						@update:modelValue="form.markDirty()"
+					/>
+				</div>
+				<SearchPreview
+					class="self-start"
+					:url="courseUrl"
+					:title="form.resource.doc.title"
+					:description="
+						form.meta.description || form.resource.doc.short_introduction
+					"
+				/>
+			</div>
 		</SettingsGroup>
 	</div>
 </template>
