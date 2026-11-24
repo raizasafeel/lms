@@ -148,6 +148,7 @@ lms.patches.v2_0.clean_lesson_content
 execute:from lms.patches.v2_0.reconcile_custom_docperm_permlevels import reconcile; reconcile(["LMS Live Class"])
 execute:from lms.patches.v2_0.reconcile_custom_docperm_permlevels import reconcile; reconcile(["LMS Program"])
 lms.patches.v2_0.keep_quiz_completion_on_passing
+lms.patches.v2_0.set_integration_switches
 lms.patches.v2_0.move_public_scorm_to_private
 lms.patches.v2_0.add_course_progress_member_course_index
 lms.patches.v2_0.move_instructors_and_evaluators_to_people

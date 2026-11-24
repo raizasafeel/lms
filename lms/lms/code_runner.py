@@ -35,6 +35,9 @@ def run_test_cases(language: str, code: str, test_cases: list) -> list[str]:
 	if not test_cases:
 		return []
 
+	from lms.lms.integrations import check_integration_enabled
+
+	check_integration_enabled("code_runner")
 	base_url = runner_url()
 	runtime = (language or "python").lower()
 	inputs = [case.input or "" for case in test_cases]

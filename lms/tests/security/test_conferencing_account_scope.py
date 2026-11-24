@@ -19,6 +19,10 @@ LIVE_CLASS_MODULE = "lms.lms.doctype.lms_live_class.lms_live_class"
 
 
 class TestConferencingAccountScope(BaseTestUtils):
+	def setUp(self):
+		super().setUp()
+		frappe.db.set_single_value("LMS Settings", {"enable_zoom": 1, "enable_google_meet": 1})
+
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()

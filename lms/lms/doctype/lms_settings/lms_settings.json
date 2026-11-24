@@ -18,6 +18,11 @@
 		"column_break_bjis",
 		"unsplash_access_key",
 		"livecode_url",
+		"enable_code_runner",
+		"enable_unsplash",
+		"enable_zoom",
+		"track_zoom_attendance",
+		"enable_google_meet",
 		"notifications_section",
 		"send_notification_for_published_courses",
 		"column_break_dtns",
@@ -101,6 +106,36 @@
 			"fieldname": "livecode_url",
 			"fieldtype": "Data",
 			"label": "LiveCode URL"
+		},
+		{
+			"default": "1",
+			"fieldname": "enable_code_runner",
+			"fieldtype": "Check",
+			"label": "Enable Code Runner"
+		},
+		{
+			"default": "0",
+			"fieldname": "enable_unsplash",
+			"fieldtype": "Check",
+			"label": "Enable Unsplash"
+		},
+		{
+			"default": "0",
+			"fieldname": "enable_zoom",
+			"fieldtype": "Check",
+			"label": "Enable Zoom"
+		},
+		{
+			"default": "1",
+			"fieldname": "track_zoom_attendance",
+			"fieldtype": "Check",
+			"label": "Track Zoom Attendance"
+		},
+		{
+			"default": "0",
+			"fieldname": "enable_google_meet",
+			"fieldtype": "Check",
+			"label": "Enable Google Meet"
 		},
 		{
 			"fieldname": "mentor_request_creation",

@@ -25,6 +25,10 @@ AUTHORING = ("write", "delete")
 
 
 class TestBatchAuthoringScope(BaseTestUtils):
+	def setUp(self):
+		super().setUp()
+		frappe.db.set_single_value("LMS Settings", {"enable_zoom": 1, "enable_google_meet": 1})
+
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()

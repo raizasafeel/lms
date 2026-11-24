@@ -88,6 +88,7 @@ class TestLMSLiveClass(BaseTestUtils):
 
 	def setUp(self):
 		super().setUp()
+		frappe.db.set_single_value("LMS Settings", {"enable_zoom": 1, "enable_google_meet": 1})
 		# Saving these shared docs leaves their in-memory `modified` ahead of the DB
 		# row once the savepoint rolls the write back, tripping check_if_latest on
 		# the next save. Reload so they always match the rolled-back row.

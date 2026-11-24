@@ -12,6 +12,7 @@ from frappe.utils import cint, format_date, format_time, get_datetime, now_datet
 from pypika.terms import LiteralValue
 
 from lms.lms.doctype.lms_batch.lms_batch import ZOOM_REQUEST_TIMEOUT_SECONDS, authenticate
+from lms.lms.integrations import check_conferencing_enabled, is_zoom_attendance_tracked
 from lms.lms.permissions import (
 	CONFERENCING_ACCOUNT_FIELDS,
 	authored_batch_condition,
@@ -174,6 +175,7 @@ class LMSLiveClass(Document):
 def check_class_can_use_account(doctype, account, batch):
 	"""A live class may use the batch's own account or one the user may use anyway. A
 	missing account gets the same message, so it does not reveal which accounts exist."""
+	check_conferencing_enabled(doctype)
 	if not can_use_conferencing_account(doctype, account, batch):
 		frappe.throw(
 			_(
@@ -518,6 +520,9 @@ def send_mail(live_class, student):
 
 
 def update_attendance():
+	if not is_zoom_attendance_tracked():
+		return
+
 	past_live_classes = frappe.get_all(
 		"LMS Live Class",
 		{

@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, get_url_to_list, validate_email_address, validate_url
+from frappe.utils import cint, validate_email_address, validate_url
 
 from lms.lms.doctype.course_lesson.course_lesson import COMPLETION_ITEMS
 from lms.lms.sidebar import validate_sidebar_items
@@ -41,19 +41,6 @@ class LMSSettings(Document):
 				frappe.throw(
 					_(
 						"Enter Client Id and Client Secret in Google Settings to send calendar invites for evaluations."
-					)
-				)
-
-			calendars = frappe.db.count("Google Calendar")
-			if not calendars:
-				frappe.throw(
-					_(
-						"Please add <a href='{0}'>{1}</a> for <a href='{2}'>{3}</a> to send calendar invites for evaluations."
-					).format(
-						get_url_to_list("Google Calendar"),
-						frappe.bold("Google Calendar"),
-						get_url_to_list("Course Evaluator"),
-						frappe.bold("Course Evaluator"),
 					)
 				)
 

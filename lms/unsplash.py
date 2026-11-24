@@ -25,11 +25,11 @@ def get_random(params=None):
 
 
 def make_unsplash_request(path):
-	"""Return None when the integration is unconfigured. Callers that hand the
+	"""Return None when the integration is off or unconfigured. Callers that hand the
 	result to the UI must coerce that to an empty result; an unconfigured site
 	is the default, not an error."""
 	unsplash_access_key = frappe.db.get_single_value("LMS Settings", "unsplash_access_key")
-	if not unsplash_access_key:
+	if not unsplash_access_key or not frappe.db.get_single_value("LMS Settings", "enable_unsplash"):
 		return
 
 	import requests
