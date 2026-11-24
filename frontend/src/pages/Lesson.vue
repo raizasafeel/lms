@@ -49,9 +49,7 @@
 
 		<div class="flex sm:h-[94vh]">
 			<div v-if="isPreviewLocked" class="min-w-0 flex-1 sm:border-e">
-				<div
-					class="mx-auto flex max-w-[max(40rem,calc((100dvh-15rem)*16/9))] flex-col gap-6 px-5 pt-5"
-				>
+				<div class="mx-auto flex max-w-4xl flex-col gap-6 px-5 pt-5">
 					<h1 :class="lessonHeadingClass">
 						{{ lesson.data.title }}
 					</h1>
@@ -124,10 +122,7 @@
 						'w-full md:w-3/5 mx-auto border-none !pt-10': zenModeEnabled,
 					}"
 				>
-					<!-- A 16:9 video at this width still fits under the headers. -->
-					<div
-						class="mx-auto max-w-[max(40rem,calc((100dvh-15rem)*16/9))] px-5"
-					>
+					<div class="mx-auto max-w-4xl px-5">
 						<div
 							class="flex flex-col space-y-3 md:space-y-0 @2xl:flex-row md:items-center justify-between"
 						>
@@ -1507,6 +1502,14 @@ usePageMeta(() => {
 
 .codex-editor__redactor {
 	padding-bottom: 0px !important;
+}
+
+/* Media of any shape fits the viewport under the lesson headers. */
+@media (min-width: 640px) {
+	#editor :is(img, video, .plyr__video-wrapper) {
+		max-height: calc(100dvh - 15rem);
+		object-fit: contain;
+	}
 }
 
 .codeBoxSelectItem:hover {
