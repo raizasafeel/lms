@@ -19,9 +19,6 @@
 				<Badge :theme="course.data?.published ? 'green' : 'amber'">
 					{{ course.data?.published ? __('Published') : __('Draft') }}
 				</Badge>
-				<Badge v-if="form.isDirty.value" theme="amber">
-					{{ __('Not saved') }}
-				</Badge>
 			</template>
 			<Badge v-else-if="course.data?.published" theme="green">
 				{{ __('Published') }}
@@ -39,29 +36,17 @@
 			</template>
 			<template v-if="tab?.key === 'editor' && editorSelected">
 				<Tooltip
-					v-if="courseEditorRef?.lessonHasVideo"
+					v-if="isMobile && courseEditorRef?.lessonHasVideo"
 					:text="__('Video Statistics')"
 				>
 					<Button
 						variant="ghost"
 						:label="__('Video Statistics')"
-						:class="isMobile ? '!size-9' : ''"
+						class="!size-9"
 						@click="courseEditorRef?.openVideoStats()"
 					>
 						<template #icon>
 							<span class="lucide-trending-up size-4" />
-						</template>
-					</Button>
-				</Tooltip>
-				<Tooltip v-if="!isMobile" :text="__('How to edit a lesson')">
-					<Button
-						variant="ghost"
-						class="text-p-base-medium"
-						:label="__('How to edit a lesson')"
-						@click="showLessonHelp = true"
-					>
-						<template #icon>
-							<span class="lucide-info size-4" />
 						</template>
 					</Button>
 				</Tooltip>
@@ -153,6 +138,39 @@
 		</template>
 
 		<template #overlay="{ tab }">
+			<div
+				v-if="tab?.key === 'editor' && editorSelected && !isMobile"
+				class="pointer-events-none absolute end-0 top-0 z-10 flex h-[var(--header-frame-h)] items-center px-5"
+			>
+				<div class="pointer-events-auto flex items-center gap-1">
+					<Tooltip
+						v-if="courseEditorRef?.lessonHasVideo"
+						:text="__('Video Statistics')"
+					>
+						<Button
+							variant="ghost"
+							:label="__('Video Statistics')"
+							@click="courseEditorRef?.openVideoStats()"
+						>
+							<template #icon>
+								<span class="lucide-trending-up size-4" />
+							</template>
+						</Button>
+					</Tooltip>
+					<Tooltip :text="__('How to edit a lesson')">
+						<Button
+							variant="ghost"
+							class="text-p-base-medium"
+							:label="__('How to edit a lesson')"
+							@click="showLessonHelp = true"
+						>
+							<template #icon>
+								<span class="lucide-info size-4" />
+							</template>
+						</Button>
+					</Tooltip>
+				</div>
+			</div>
 			<div
 				v-if="isFormTab(tab?.key) && !isMobile"
 				class="pointer-events-none absolute end-0 top-0 z-10 flex h-[var(--header-frame-h)] items-center px-5"
