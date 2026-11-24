@@ -1,5 +1,5 @@
 <template>
-	<div class="space-y-4 py-3">
+	<div class="py-3">
 		<div class="flex flex-col gap-5 @lg:flex-row">
 			<div class="flex shrink-0 flex-col gap-2 @lg:w-56">
 				<div
@@ -27,6 +27,11 @@
 					:tooltip="__('Pick a random colour and icon')"
 					@click="shuffle"
 				/>
+				<ImageDropzone
+					v-model:image="image"
+					stacked
+					:hint="__('750 × 422 px, JPG or PNG.')"
+				/>
 			</div>
 			<div class="min-w-0 flex-1 space-y-3">
 				<div
@@ -48,10 +53,6 @@
 				<CourseIconPicker v-model="icon" :columns="16" />
 			</div>
 		</div>
-		<ImageDropzone
-			v-model:image="image"
-			:hint="__('750 × 422 px, JPG or PNG.')"
-		/>
 	</div>
 </template>
 

@@ -1,17 +1,21 @@
 <template>
 	<div
-		class="flex items-center gap-4 rounded-6 border border-dashed p-3 transition-colors"
-		:class="
+		class="flex rounded-6 border border-dashed p-3 transition-colors"
+		:class="[
+			stacked
+				? 'flex-col items-center gap-1.5 text-center'
+				: 'items-center gap-4',
 			dragging
 				? 'border-outline-gray-4 bg-surface-gray-1'
-				: 'border-outline-gray-3'
-		"
+				: 'border-outline-gray-3',
+		]"
 		data-testid="image-dropzone"
 		@dragover.prevent="dragging = true"
 		@dragleave.prevent="dragging = false"
 		@drop.prevent="onDrop"
 	>
 		<div
+			v-if="!stacked"
 			class="grid size-14 shrink-0 place-items-center overflow-hidden rounded-4 border border-outline-gray-1 bg-surface-gray-2"
 		>
 			<img
@@ -26,6 +30,11 @@
 				aria-hidden="true"
 			/>
 		</div>
+		<span
+			v-if="stacked && !image"
+			class="lucide-image-plus size-5 text-ink-gray-6"
+			aria-hidden="true"
+		/>
 		<div class="min-w-0 flex-1">
 			<p class="text-p-base text-ink-gray-8">
 				<template v-if="uploading">{{ __('Uploading…') }}</template>
@@ -47,7 +56,14 @@
 			<p class="text-p-sm text-ink-gray-6">{{ hint }}</p>
 		</div>
 		<Button
-			v-if="image"
+			v-if="image && stacked"
+			variant="ghost"
+			size="sm"
+			:label="__('Remove image')"
+			@click="image = ''"
+		/>
+		<Button
+			v-else-if="image"
 			variant="ghost"
 			icon="lucide-x"
 			:label="__('Remove image')"
@@ -70,7 +86,11 @@ import { Button, FileUploadHandler, toast } from 'frappe-ui'
 import { safeUrl } from '@/utils/safeUrl'
 
 /** A dashed drop target for one public image, with browse and remove. */
-defineProps<{ hint: string }>()
+defineProps<{
+	hint: string
+	/** Narrow column: no thumbnail of its own, text centred under each other. */
+	stacked?: boolean
+}>()
 const image = defineModel<string | null | undefined>('image')
 
 const ACCEPT = '.jpg,.jpeg,.png'

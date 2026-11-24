@@ -20,11 +20,12 @@ vi.mock('frappe-ui', () => ({
 
 import ImageDropzone from '@/components/InlineEdit/ImageDropzone.vue'
 
-const mountZone = (image = '') => {
+const mountZone = (image = '', stacked = false) => {
 	const wrapper = mount(ImageDropzone, {
 		props: {
 			hint: '750 × 422 px',
 			image,
+			stacked,
 			'onUpdate:image': (value: string) => wrapper.setProps({ image: value }),
 		},
 		global: { mocks: { __: (text: string) => text } },
@@ -63,6 +64,14 @@ describe('the image dropzone', () => {
 	it('offers to replace or remove an image it already has', async () => {
 		const wrapper = mountZone('/files/old.png')
 		expect(wrapper.text()).toContain('Drop a new image to replace, or')
+		await wrapper.get('[aria-label="Remove image"]').trigger('click')
+		expect(wrapper.props('image')).toBe('')
+	})
+
+	it('stacks without its own thumbnail in a narrow column', async () => {
+		const wrapper = mountZone('/files/old.png', true)
+		expect(wrapper.find('img').exists()).toBe(false)
+		expect(wrapper.classes()).toContain('flex-col')
 		await wrapper.get('[aria-label="Remove image"]').trigger('click')
 		expect(wrapper.props('image')).toBe('')
 	})
