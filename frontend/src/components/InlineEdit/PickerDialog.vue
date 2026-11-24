@@ -23,14 +23,11 @@
 			</div>
 
 			<div class="-mx-2 mt-4 h-[55vh] overflow-y-auto px-2">
-				<button
+				<label
 					v-for="item in visible"
 					:key="item.value"
-					type="button"
-					class="flex w-full items-center gap-3 rounded-5 p-2 text-start outline-none hover:bg-surface-gray-2 focus-visible:ring-2 focus-visible:ring-outline-gray-3"
-					:aria-pressed="isPicked(item.value)"
+					class="flex w-full cursor-pointer items-center gap-3 rounded-5 p-2 hover:bg-surface-gray-2 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-outline-gray-3"
 					:data-testid="'pick-' + item.value"
-					@click="toggle(item.value)"
 				>
 					<span
 						class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-4"
@@ -49,7 +46,10 @@
 						/>
 					</span>
 					<span class="min-w-0 flex-1">
-						<span class="block truncate text-base-medium text-ink-gray-9">
+						<span
+							:id="titleId(item.value)"
+							class="block truncate text-base-medium text-ink-gray-9"
+						>
 							{{ item.title }}
 						</span>
 						<span
@@ -73,18 +73,14 @@
 							</span>
 						</span>
 					</span>
-					<span
-						class="flex size-5 shrink-0 items-center justify-center rounded-full border"
-						:class="
-							isPicked(item.value)
-								? 'border-transparent bg-surface-gray-7 text-ink-base'
-								: 'border-outline-gray-3'
-						"
-						aria-hidden="true"
-					>
-						<span v-if="isPicked(item.value)" class="lucide-check size-3" />
-					</span>
-				</button>
+					<Checkbox
+						size="md"
+						class="shrink-0"
+						:modelValue="isPicked(item.value)"
+						:aria-labelledby="titleId(item.value)"
+						@update:modelValue="toggle(item.value)"
+					/>
+				</label>
 				<p
 					v-if="!visible.length"
 					class="py-8 text-center text-p-sm text-ink-gray-6"
@@ -118,8 +114,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { Button, Dialog, FormControl } from 'frappe-ui'
+import { computed, ref, useId, watch } from 'vue'
+import { Button, Checkbox, Dialog, FormControl } from 'frappe-ui'
 import CategoryFilter from '@/components/Controls/CategoryFilter.vue'
 import { safeUrl } from '@/utils/safeUrl'
 
@@ -169,6 +165,9 @@ const visible = computed(() => {
 		)
 		.sort((a, b) => Number(Boolean(b.suggested)) - Number(Boolean(a.suggested)))
 })
+
+const idPrefix = useId()
+const titleId = (value: string): string => `${idPrefix}-${value}`
 
 const isPicked = (value: string): boolean => picked.value.includes(value)
 

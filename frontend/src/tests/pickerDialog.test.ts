@@ -9,6 +9,13 @@ vi.mock('frappe-ui', () => ({
 		template:
 			'<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
 	},
+	Checkbox: {
+		name: 'Checkbox',
+		props: ['modelValue', 'size'],
+		emits: ['update:modelValue'],
+		template:
+			'<input type="checkbox" :checked="modelValue" @change="$emit(\'update:modelValue\', $event.target.checked)" />',
+	},
 	Combobox: {
 		name: 'Combobox',
 		props: ['modelValue', 'options'],
@@ -88,9 +95,14 @@ describe('the picker dialog', () => {
 		const wrapper = mountDialog()
 		const add = wrapper.findAll('button').find((b) => b.text() === 'Add')!
 		expect(add.attributes('disabled')).toBeDefined()
-		await wrapper.get('[data-testid="pick-hr"]').trigger('click')
-		await wrapper.get('[data-testid="pick-mfg"]').trigger('click')
-		await wrapper.get('[data-testid="pick-mfg"]').trigger('click')
+		const pick = (value: string, checked: boolean) =>
+			wrapper.get(`[data-testid="pick-${value}"] input`).setValue(checked)
+		await pick('hr', true)
+		await pick('mfg', true)
+		await pick('mfg', false)
+		expect(
+			wrapper.get('[data-testid="pick-hr"] input').attributes('aria-labelledby')
+		).toBe(wrapper.get('[data-testid="pick-hr"] span[id]').attributes('id'))
 		expect(wrapper.text()).toContain('1 selected')
 		await add.trigger('click')
 		expect(wrapper.emitted('add')).toEqual([[['hr']]])
