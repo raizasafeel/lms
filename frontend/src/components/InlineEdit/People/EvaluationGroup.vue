@@ -4,40 +4,14 @@
 		icon="lucide-award"
 		name="evaluation"
 	>
-		<div>
-			<div class="flex items-center gap-2">
-				<SettingSwitch
-					v-model="enabled"
-					class="min-w-0 flex-1"
-					:label="__('Evaluations')"
-					:summary="summary"
-				/>
-				<Button
-					v-if="enabled"
-					variant="ghost"
-					size="sm"
-					:aria-label="
-						expanded
-							? __('Hide evaluation details')
-							: __('Show evaluation details')
-					"
-					:aria-expanded="expanded"
-					@click="expanded = !expanded"
-				>
-					<template #icon>
-						<span
-							class="lucide-chevron-down size-4 transition-transform"
-							:class="{ 'rotate-180': expanded }"
-							aria-hidden="true"
-						/>
-					</template>
-				</Button>
-			</div>
-			<div v-if="enabled && expanded" class="space-y-3 pb-3.5">
-				<div class="flex items-center justify-between gap-3">
-					<p class="text-p-sm text-ink-gray-6">
-						{{ __('Learners book a slot with whoever is free.') }}
-					</p>
+		<SettingSwitch
+			v-model="enabled"
+			:label="__('Evaluations')"
+			:summary="summary"
+		/>
+		<template v-if="enabled">
+			<SettingRow :label="__('Evaluators')" :summary="evaluatorsSummary">
+				<template #control>
 					<MultiLink
 						v-model="graders"
 						doctype="User"
@@ -48,7 +22,7 @@
 						:extraOptions="knownGraders"
 						:allowSelectAll="true"
 						variant="subtle"
-						class="w-fit shrink-0"
+						class="w-fit"
 						:aria-label="__('Add evaluator')"
 					>
 						<template #prefix>
@@ -64,7 +38,7 @@
 							<PersonOption :label="item.label" :email="String(item.value)" />
 						</template>
 					</MultiLink>
-				</div>
+				</template>
 				<ul
 					v-if="graders.length"
 					class="divide-y divide-outline-gray-1 rounded-6 border border-outline-gray-2 px-3"
@@ -93,43 +67,33 @@
 						</template>
 					</PersonRow>
 				</ul>
-				<p v-else class="text-p-sm text-ink-gray-6">
-					{{ __('Add an evaluator so learners can book a slot.') }}
-				</p>
-				<div class="grid grid-cols-2 gap-3">
-					<FormControl
-						v-model="format"
-						type="select"
-						:label="__('Format')"
-						:options="formatOptions"
-						variant="outline"
-					/>
-					<FormControl
-						v-model="duration"
-						type="select"
-						:label="__('Length')"
-						:options="durationOptions"
-						variant="outline"
-					/>
-				</div>
-				<p v-if="format === REVIEW" class="text-p-sm text-ink-gray-6">
-					{{
-						__(
-							'Reviews of submitted work are coming later. Until then learners book a live call.'
-						)
-					}}
-				</p>
-				<slot />
-			</div>
-		</div>
+			</SettingRow>
+			<SettingField
+				v-model="format"
+				type="select"
+				:label="__('Format')"
+				:summary="formatSummary"
+				:options="formatOptions"
+			/>
+			<SettingField
+				v-model="duration"
+				type="select"
+				:label="__('Length')"
+				:summary="__('How long each evaluation takes.')"
+				:options="durationOptions"
+			/>
+			<slot />
+		</template>
 		<slot name="certificate" />
 	</SettingsGroup>
 </template>
 
 <script setup lang="ts">
-import { Avatar, Button, createResource, FormControl } from 'frappe-ui'
-import { computed, ref, watch } from 'vue'
+import { Avatar, Button, createResource } from 'frappe-ui'
+import { computed, watch } from 'vue'
 import MultiLink from '@/components/Controls/MultiLink.vue'
+import SettingField from '@/components/InlineEdit/SettingField.vue'
+import SettingRow from '@/components/InlineEdit/SettingRow.vue'
 import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import SettingSwitch from '@/components/InlineEdit/SettingSwitch.vue'
 import PersonOption from '@/components/InlineEdit/People/PersonOption.vue'
@@ -156,8 +120,6 @@ const people = defineModel<Person[]>('people', { required: true })
 const enabled = defineModel<boolean>('enabled', { required: true })
 const format = defineModel<Format | undefined>('format')
 const duration = defineModel<string | undefined>('duration')
-
-const expanded = ref(true)
 
 const graders = computed<string[]>({
 	get: () => membersWith(people.value, 'Grader'),
@@ -226,15 +188,26 @@ const durationOptions = ['15', '30', '45', '60'].map((minutes) => ({
 	value: minutes,
 }))
 
-const summary = computed<string>(() => {
-	if (!enabled.value) return __('Learners get no evaluation.')
+// The rows below the switch show who and how, so the summary says only what learners do.
+const summary = computed<string>(() =>
+	enabled.value
+		? __('Learners book a slot with whoever is free.')
+		: __('Learners get no evaluation.')
+)
+
+const evaluatorsSummary = computed<string>(() => {
 	const count = graders.value.length
-	const who =
-		count === 1 ? __('1 evaluator') : __('{0} evaluators').format(count)
-	const how =
-		format.value === REVIEW
-			? __('review of submitted work')
-			: __('{0}-minute live call').format(duration.value || '30')
-	return `${who} · ${how}`
+	if (!count) return __('Add an evaluator so learners can book a slot.')
+	return count === 1
+		? __('1 evaluator, also listed as a Grader in People')
+		: __('{0} evaluators, also listed as Graders in People').format(count)
 })
+
+const formatSummary = computed<string>(() =>
+	format.value === REVIEW
+		? __(
+				'Reviews of submitted work are coming later. Until then learners book a live call.'
+		  )
+		: __('Learners meet their evaluator on a call.')
+)
 </script>

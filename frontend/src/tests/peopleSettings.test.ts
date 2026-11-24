@@ -230,17 +230,19 @@ describe('EvaluationGroup', () => {
 			'people'
 		)
 
-	it('sums up the evaluators and the call', () => {
+	it('shows its fields as plain rows under the switch, with nothing to expand', () => {
 		const { wrapper } = mountEvaluation([
 			{ member: 'eve@example.com', role: 'Grader' },
 			{ member: 'both@example.com', role: 'Grader' },
 		])
 		expect(wrapper.find('.switch').text()).toContain(
-			'2 evaluators · 30-minute live call'
-		)
-		expect(wrapper.text()).toContain(
 			'Learners book a slot with whoever is free.'
 		)
+		const text = wrapper.text()
+		expect(text).toContain('2 evaluators, also listed as Graders in People')
+		expect(text).toContain('Format')
+		expect(text).toContain('Length')
+		expect(wrapper.find('[aria-expanded]').exists()).toBe(false)
 	})
 
 	it('lists the Graders with their open slots this week', async () => {
@@ -284,12 +286,12 @@ describe('EvaluationGroup', () => {
 		expect(wrapper.text()).toContain(
 			'Reviews of submitted work are coming later.'
 		)
-		expect(wrapper.find('.switch').text()).toContain('review of submitted work')
 	})
 
 	it('hides the details while evaluations are off', () => {
 		const { wrapper } = mountEvaluation([], { enabled: false })
 		expect(wrapper.findComponent({ name: 'MultiLink' }).exists()).toBe(false)
+		expect(wrapper.text()).not.toContain('Format')
 		expect(wrapper.find('.switch').text()).toContain(
 			'Learners get no evaluation.'
 		)
