@@ -1,8 +1,5 @@
 <template>
-	<div
-		class="rounded-6 border border-outline-gray-2 px-4 py-3.5"
-		data-testid="search-preview"
-	>
+	<div data-testid="search-preview">
 		<p class="truncate text-p-sm text-ink-green-6" dir="ltr">{{ url }}</p>
 		<p class="truncate text-lg text-ink-blue-5">
 			{{ title || __('Untitled') }}

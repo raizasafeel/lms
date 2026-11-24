@@ -53,12 +53,6 @@
 		</SettingsGroup>
 
 		<SettingsGroup :title="__('Search and sharing')" icon="lucide-search">
-			<SearchPreview
-				class="mb-3"
-				:url="batchUrl"
-				:title="doc.title"
-				:description="form?.meta.description || doc.description"
-			/>
 			<SettingField
 				v-model="form!.meta.description"
 				type="textarea"
@@ -67,9 +61,16 @@
 				:placeholder="doc.description"
 			/>
 			<SettingField
+				type="textarea"
 				v-model="form!.meta.keywords"
 				:label="__('Meta keywords')"
 				:summary="__('Comma separated keywords for search engines.')"
+			/>
+			<SearchPreview
+				class="mt-4"
+				:url="batchUrl"
+				:title="doc.title"
+				:description="form?.meta.description || doc.description"
 			/>
 			<SettingImage
 				v-model="doc.meta_image"

@@ -19,14 +19,6 @@
 		</SettingsGroup>
 
 		<SettingsGroup :title="__('Search and sharing')" icon="lucide-search">
-			<SearchPreview
-				class="mb-3"
-				:url="courseUrl"
-				:title="form.resource.doc.title"
-				:description="
-					form.meta.description || form.resource.doc.short_introduction
-				"
-			/>
 			<SettingField
 				v-model="form.meta.description"
 				type="textarea"
@@ -37,10 +29,19 @@
 				@update:modelValue="form.markDirty()"
 			/>
 			<SettingField
+				type="textarea"
 				v-model="form.meta.keywords"
 				:label="__('Meta keywords')"
 				:summary="__('Comma separated keywords for search engines.')"
 				@update:modelValue="form.markDirty()"
+			/>
+			<SearchPreview
+				class="mt-4"
+				:url="courseUrl"
+				:title="form.resource.doc.title"
+				:description="
+					form.meta.description || form.resource.doc.short_introduction
+				"
 			/>
 		</SettingsGroup>
 
