@@ -1,8 +1,6 @@
 <template>
 	<SkeletonLoader v-if="!form.resource.doc" variant="form" class="flex-1" />
 	<SettingsPage v-else :openSection="openSection">
-		<CoursePublishSettings />
-
 		<SettingsGroup
 			:title="__('Thumbnail')"
 			icon="lucide-image"
@@ -17,6 +15,8 @@
 				@update:icon="(value) => setField('icon', value)"
 			/>
 		</SettingsGroup>
+
+		<CoursePublishSettings />
 
 		<SettingsGroup :title="__('Search and sharing')" icon="lucide-search">
 			<SettingField
