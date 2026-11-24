@@ -1,7 +1,7 @@
 <template>
 	<div class="flex flex-col h-full">
 		<div
-			v-if="!hideHeader || withProgress || collapsible"
+			v-if="!hideHeader || showsProgress || collapsible"
 			class="bg-surface-gray-1 px-5 py-5 border-b"
 		>
 			<div v-if="!hideHeader || collapsible" class="flex items-center gap-2">
@@ -32,7 +32,7 @@
 					{{ courseTitle }}
 				</router-link>
 			</div>
-			<template v-if="withProgress">
+			<template v-if="showsProgress">
 				<div
 					class="flex items-center gap-2 text-sm text-ink-gray-7"
 					:class="{ 'mt-4': !hideHeader }"
@@ -129,7 +129,7 @@
 										<span class="sr-only">{{ __('Locked') }}</span>
 										<span class="sr-only">{{ lockReason }}</span>
 									</template>
-									<template v-else-if="withProgress && lesson.is_complete">
+									<template v-else-if="showsProgress && lesson.is_complete">
 										<CircleCheck
 											class="size-4 stroke-1.5 shrink-0 text-ink-green-8 fill-none"
 											aria-hidden="true"
@@ -137,7 +137,7 @@
 										<span class="sr-only">{{ __('Completed') }}</span>
 									</template>
 									<Circle
-										v-else-if="withProgress"
+										v-else-if="showsProgress"
 										class="size-4 stroke-1.5 shrink-0 text-ink-gray-4"
 									/>
 								</component>
@@ -232,6 +232,13 @@ watchEffect(() => {
 // Lessons unlock in course order: one stays locked while any earlier lesson is
 // incomplete (compute_locked_lessons).
 const lockReason = __('Complete the previous lessons to unlock this one')
+
+// A not-enrolled preview has no progress, whatever the previewer completed.
+const showsProgress = computed(
+	() =>
+		props.withProgress &&
+		studentViewMode(route.query.studentView) !== 'not-enrolled'
+)
 
 const displayedProgress = computed(() => Math.ceil(props.progress || 0))
 

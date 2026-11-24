@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import StudentLessonSidebar from '@/components/StudentLessonSidebar.vue'
 import { translate } from './helpers/translate'
 
@@ -34,8 +34,13 @@ const outline = vi.hoisted(() => [
 	},
 ])
 
+const route = vi.hoisted(() => ({
+	params: {},
+	query: {} as Record<string, string>,
+}))
+
 vi.mock('vue-router', () => ({
-	useRoute: () => ({ params: {}, query: {} }),
+	useRoute: () => route,
 	useRouter: () => ({ push: vi.fn() }),
 }))
 
@@ -134,6 +139,31 @@ describe('StudentLessonSidebar without progress', () => {
 		expect(wrapper.text()).not.toContain('Completed')
 		expect(wrapper.find('[style*="width"]').exists()).toBe(false)
 		expect(wrapper.text()).toContain('Course 1')
+	})
+})
+
+describe('StudentLessonSidebar in a not-enrolled preview', () => {
+	afterEach(() => {
+		route.query = {}
+	})
+
+	it("hides the previewer's own progress and completion ticks", () => {
+		route.query = { studentView: 'not-enrolled' }
+		const wrapper = mountSidebar()
+
+		expect(wrapper.text()).not.toContain('completed')
+		expect(wrapper.text()).not.toContain('Completed')
+		expect(wrapper.find('[style*="width"]').exists()).toBe(false)
+		expect(wrapper.find('.text-ink-green-8').exists()).toBe(false)
+		expect(wrapper.findAll('li li')[2].find('.sr-only').text()).toBe('Locked')
+	})
+
+	it('keeps progress in the enrolled preview', () => {
+		route.query = { studentView: '1' }
+		const wrapper = mountSidebar()
+
+		expect(wrapper.text()).toContain('33% completed')
+		expect(wrapper.findAll('li li')[0].get('.sr-only').text()).toBe('Completed')
 	})
 })
 

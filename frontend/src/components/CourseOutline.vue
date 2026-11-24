@@ -43,6 +43,7 @@
 							:inlineSelect="inlineSelect"
 							:editorLinks="editorLinks"
 							:selectedLessonNumber="selectedLessonNumber"
+							:withProgress="getProgress"
 							@select-lesson="(payload) => emit('select-lesson', payload)"
 							@edit-chapter="openChapterForm"
 							@rename-chapter="renameChapter"
