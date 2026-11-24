@@ -15,12 +15,13 @@
 			</span>
 		</Tooltip>
 		<template #suffix>
-			<KeyboardShortcut
+			<kbd
 				v-if="link.shortcut"
-				bg
-				:combo="link.shortcut"
-				class="me-2"
-			/>
+				class="me-2 rounded-1 bg-surface-gray-2 px-1 py-0.5 font-sans text-p-sm text-ink-gray-6"
+				:aria-label="shortcutLabel"
+			>
+				{{ shortcutLabel }}
+			</kbd>
 			<span v-else-if="link.count" class="me-2 text-p-xs text-ink-gray-6">
 				{{ link.count }}
 			</span>
@@ -29,7 +30,7 @@
 	<ContactUsEmail v-if="isContactLink" v-model="showContactForm" />
 </template>
 <script setup lang="ts">
-import { KeyboardShortcut, SidebarItem, Tooltip } from 'frappe-ui'
+import { SidebarItem, Tooltip } from 'frappe-ui'
 import { inlineEndSide } from '@/utils/textDirection'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -52,6 +53,18 @@ const settingsStore = useSettings()
 const showContactForm = ref<boolean>(false)
 
 const props = defineProps<{ link: SidebarLink }>()
+
+const isMac = navigator.userAgent.includes('Mac')
+
+// A soft "Ctrl K" chip, as CRM and Helpdesk show it.
+const shortcutLabel = computed(() =>
+	(props.link.shortcut || '')
+		.split('+')
+		.map((key) =>
+			/^(mod|ctrl|cmd|meta)$/i.test(key) ? (isMac ? '⌘' : 'Ctrl') : key
+		)
+		.join(' ')
+)
 
 const icon = computed(() =>
 	typeof props.link.icon === 'string'
