@@ -152,9 +152,12 @@ describe('the batch facts editor', () => {
 		for (const name of ['DateRangePicker', 'Select']) {
 			expect(facts.findComponent({ name }).props('variant')).toBe('ghost')
 		}
-		expect(facts.findComponent({ name: 'DatePicker' }).props('variant')).toBe(
-			'ghost'
-		)
+	})
+
+	it('leaves the book-by date to batch settings', () => {
+		const facts = mountFacts({ evaluation: 1 })
+		expect(facts.findComponent({ name: 'DatePicker' }).exists()).toBe(false)
+		expect(facts.text()).not.toContain('Book by')
 	})
 
 	it('sets class times through the shared time range field', () => {
@@ -196,10 +199,6 @@ describe('the batch facts editor', () => {
 			.find((select) => select.attributes('aria-label') === 'Medium')!
 		expect(medium.find('.lucide-video').exists()).toBe(true)
 		expect(facts.findComponent(TimeRangeField).classes()).not.toContain('-ms-2')
-		expect(
-			facts.findComponent({ name: 'DatePicker' }).element.parentElement
-				?.className
-		).toContain('ps-8')
 	})
 })
 

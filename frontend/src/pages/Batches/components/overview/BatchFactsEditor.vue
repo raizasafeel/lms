@@ -86,19 +86,6 @@
 			:on="__('1-on-1 evaluation')"
 			:off="__('No evaluation')"
 		/>
-		<div v-if="doc.evaluation" class="flex items-center gap-2 ps-8">
-			<span class="shrink-0 text-p-sm text-ink-gray-6">{{
-				__('Book by')
-			}}</span>
-			<DatePicker
-				v-model="doc.evaluation_end_date"
-				variant="ghost"
-				format="D MMM YYYY"
-				:min="doc.end_date"
-				:placeholder="__('Evaluation end date')"
-				class="flex-1"
-			/>
-		</div>
 	</div>
 </template>
 
@@ -107,7 +94,6 @@ import { computed } from 'vue'
 import {
 	Combobox,
 	createResource,
-	DatePicker,
 	DateRangePicker,
 	FormControl,
 	Select,
