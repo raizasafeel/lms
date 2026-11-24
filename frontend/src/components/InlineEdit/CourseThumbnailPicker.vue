@@ -29,10 +29,13 @@
 					:tooltip="__('Pick a random colour and icon')"
 					@click="shuffle"
 				/>
-				<ImageDropzone
-					v-model:image="image"
-					stacked
-					:hint="__('750 × 422 px, JPG or PNG.')"
+				<Button
+					v-if="image"
+					class="w-full"
+					variant="ghost"
+					icon-left="lucide-trash-2"
+					:label="__('Remove image')"
+					@click="image = ''"
 				/>
 			</div>
 			<div class="min-w-0 flex-1 space-y-4">
@@ -72,7 +75,6 @@
 <script setup lang="ts">
 import { Button } from 'frappe-ui'
 import CourseIconPicker from '@/components/InlineEdit/CourseIconPicker.vue'
-import ImageDropzone from '@/components/InlineEdit/ImageDropzone.vue'
 import ImageHoverUpload from '@/components/InlineEdit/ImageHoverUpload.vue'
 import { courseColor, courseIcon, shuffleThumbnail } from '@/utils/courseIcons'
 import { COURSE_SWATCHES, courseTint } from '@/utils/courseTints'

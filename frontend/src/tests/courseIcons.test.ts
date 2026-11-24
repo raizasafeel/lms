@@ -202,10 +202,17 @@ describe('the course thumbnail picker', () => {
 		expect(wrapper.emitted('update:icon')).toEqual([['globe']])
 	})
 
-	it('takes an image from the dropzone under it', () => {
-		const wrapper = mountPicker()
-		const dropzone = wrapper.findComponent({ name: 'ImageDropzone' })
-		dropzone.vm.$emit('update:image', '/files/cover.png')
-		expect(wrapper.emitted('update:image')).toEqual([['/files/cover.png']])
+	it('removes an image so the colour and icon show again', async () => {
+		const wrapper = mountPicker({ image: '/files/cover.png' })
+		const remove = wrapper
+			.findAll('button')
+			.find((b) => b.text() === 'Remove image')
+		await remove!.trigger('click')
+		expect(wrapper.emitted('update:image')).toEqual([['']])
+		expect(
+			mountPicker()
+				.findAll('button')
+				.some((b) => b.text() === 'Remove image')
+		).toBe(false)
 	})
 })
