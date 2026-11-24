@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 import frappe
 from frappe import _
 
@@ -6,6 +8,9 @@ from lms.lms.permissions import can_author_batch, can_author_course
 # Marks the author's own enrollment, so course counts and dashboards that count
 # Students leave it out.
 STAFF_MEMBER_TYPE = "Staff"
+
+# `?studentView=1` and `?studentView=not-enrolled` in the page URL.
+MODES = ("enrolled", "not-enrolled")
 
 SUBMISSIONS = {
 	"LMS Quiz": ("LMS Quiz Submission", "quiz"),
@@ -39,15 +44,50 @@ def reset_own_progress(doctype: str, name: str) -> None:
 	delete_submissions(get_batch_assessments(name))
 
 
-def check_can_preview(doctype: str, name: str) -> None:
+@contextmanager
+def answer_as_student(doctype: str, name: str, mode: str | None):
+	"""Inside, reads of this course or batch (and a batch's courses) are answered as for
+	a plain LMS Student: no author bypass, and in "not-enrolled" mode no enrollment or
+	progress. It only ever removes access. Ignored unless the caller authors `name`."""
+	if mode not in MODES or frappe.flags.student_view or not can_preview(doctype, name):
+		yield
+		return
+
+	targets = {(doctype, name)}
+	if doctype == "LMS Batch":
+		targets |= {("LMS Course", course) for course in get_batch_courses(name)}
+	frappe.flags.student_view = frappe._dict(
+		user=frappe.session.user, targets=targets, enrolled=mode == "enrolled"
+	)
+	try:
+		yield
+	finally:
+		frappe.flags.student_view = None
+
+
+def is_viewing_as_student(doctype: str, name: str) -> bool:
+	view = frappe.flags.student_view
+	return bool(view) and view.user == frappe.session.user and (doctype, name) in view.targets
+
+
+def hides_enrollment(doctype: str, name: str) -> bool:
+	"""A not-enrolled student view: the caller's own enrollment and progress do not exist."""
+	return is_viewing_as_student(doctype, name) and not frappe.flags.student_view.enrolled
+
+
+def can_preview(doctype: str, name: str) -> bool:
 	if doctype == "LMS Course":
-		allowed = can_author_course(name)
-	elif doctype == "LMS Batch":
-		allowed = can_author_batch(name)
-	else:
+		return can_author_course(name)
+	if doctype == "LMS Batch":
+		return can_author_batch(name)
+	return False
+
+
+def check_can_preview(doctype: str, name: str) -> None:
+	if doctype not in ("LMS Course", "LMS Batch"):
 		frappe.throw(_("Student view is only available for courses and batches."))
 
-	if not allowed:
+	if not can_preview(doctype, name):
 		frappe.throw(
 			_("Only instructors of this {0} can use student view.").format(_(doctype)), frappe.PermissionError
 		)

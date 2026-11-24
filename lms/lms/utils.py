@@ -227,6 +227,8 @@ def create_user(
 def get_membership(course: str, member: str = None):
 	if not member:
 		member = frappe.session.user
+	if hides_own_enrollment(course, member):
+		return False
 
 	filters = {"member": member, "course": course}
 
@@ -521,6 +523,8 @@ def get_lesson_url(course: str, lesson_number: str):
 def get_progress(course: str, lesson: str, member: str = None):
 	if not member:
 		member = frappe.session.user
+	if hides_own_enrollment(course, member):
+		return None
 
 	return frappe.db.exists(
 		"LMS Course Progress",
@@ -1813,7 +1817,15 @@ def get_course_fields():
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
 @rate_limit(limit=500, seconds=60 * 60)
 @guest_access_required(dict)
-def get_course_details(course: str):
+def get_course_details(course: str, student_view: str | None = None):
+	"""`student_view` ("enrolled" or "not-enrolled") answers an author as a plain student would be."""
+	from lms.lms.student_view import answer_as_student
+
+	with answer_as_student("LMS Course", course, student_view):
+		return build_course_details(course)
+
+
+def build_course_details(course: str) -> dict:
 	is_course_published = frappe.db.get_value("LMS Course", course, "published")
 	membership = get_membership(course)
 	if not is_course_published and not can_modify_course(course) and not membership:
@@ -1894,12 +1906,18 @@ def get_categorized_courses(courses: list) -> dict:
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
 @guest_access_required(list)
-def get_course_outline(course: str, progress: bool = False) -> list:
-	"""Returns the course outline."""
+def get_course_outline(course: str, progress: bool = False, student_view: str | None = None) -> list:
+	"""Returns the course outline. See get_course_details for `student_view`."""
+	from lms.lms.student_view import answer_as_student
 
 	if not isinstance(course, str):
 		frappe.throw(_("Course must be a string."))
 
+	with answer_as_student("LMS Course", course, student_view):
+		return build_course_outline(course, progress)
+
+
+def build_course_outline(course: str, progress: bool) -> list:
 	if not can_view_course(course):
 		return []
 
@@ -1910,7 +1928,7 @@ def get_course_outline(course: str, progress: bool = False) -> list:
 	# get_outline_chapter reads through frappe.qb, which consults no permission layer at
 	# all — not the DocPerm rows, not the permlevel — and this endpoint answers guests.
 	# can_modify_course is the predicate the only reader's own save is refused on.
-	if any(c.is_scorm_package and c.scorm_package for c in chapters) and not can_modify_course(course):
+	if any(c.is_scorm_package and c.scorm_package for c in chapters) and not views_as_author(course):
 		for chapter in chapters:
 			chapter.scorm_package = None
 
@@ -1999,7 +2017,7 @@ def get_scorm_files(chapters: list) -> dict:
 
 
 def get_completed_lessons(course: str, lesson_rows: list) -> set:
-	if frappe.session.user == "Guest" or not lesson_rows:
+	if frappe.session.user == "Guest" or not lesson_rows or hides_own_enrollment(course):
 		return set()
 	return set(
 		frappe.get_all(
@@ -2161,7 +2179,15 @@ def _gate_redirect(course: str) -> dict:
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
 @rate_limit(limit=500, seconds=60 * 60)
 @guest_access_required(dict)
-def get_lesson(course: str, chapter: int, lesson: int) -> dict:
+def get_lesson(course: str, chapter: int, lesson: int, student_view: str | None = None) -> dict:
+	"""See get_course_details for `student_view`."""
+	from lms.lms.student_view import answer_as_student
+
+	with answer_as_student("LMS Course", course, student_view):
+		return build_lesson(course, chapter, lesson)
+
+
+def build_lesson(course: str, chapter: int, lesson: int) -> dict:
 	# Local import: permissions imports from utils at module load.
 	from lms.lms.permissions import can_access_course
 
@@ -2282,7 +2308,7 @@ def get_lesson(course: str, chapter: int, lesson: int) -> dict:
 	lesson_details.course_title = course_info.title
 	lesson_details.paid_certificate = course_info.paid_certificate
 	lesson_details.disable_self_learning = course_info.disable_self_learning
-	lesson_details.videos = get_video_details(lesson_name)
+	lesson_details.videos = get_video_details(lesson_name, course)
 
 	# Rewrite for EVERYONE, not just guests: native /private/files/ needs a Course
 	# Lesson read role-perm that students/guests lack, so all private media is routed
@@ -2293,7 +2319,9 @@ def get_lesson(course: str, chapter: int, lesson: int) -> dict:
 	return lesson_details
 
 
-def get_video_details(lesson_name: str) -> list:
+def get_video_details(lesson_name: str, course: str) -> list:
+	if hides_own_enrollment(course):
+		return []
 	return frappe.get_all(
 		"LMS Video Watch Duration",
 		{"lesson": lesson_name, "member": frappe.session.user},
@@ -2345,8 +2373,17 @@ def can_view_batch(batch: str) -> bool:
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
 @rate_limit(limit=500, seconds=60 * 60)
 @guest_access_required(dict)
-def get_batch_details(batch: str):
+def get_batch_details(batch: str, student_view: str | None = None):
+	"""See get_course_details for `student_view`."""
+	from lms.lms.student_view import answer_as_student
+
+	with answer_as_student("LMS Batch", batch, student_view):
+		return build_batch_details(batch)
+
+
+def build_batch_details(batch: str) -> dict:
 	from lms.lms.permissions import can_instruct_batch, evaluates_batch
+	from lms.lms.student_view import hides_enrollment, is_viewing_as_student
 
 	if not can_view_batch(batch):
 		return {}
@@ -2355,9 +2392,10 @@ def get_batch_details(batch: str):
 	# can_modify_batch only recognises the Course Instructor tag; can_manage, like
 	# can_author_batch, also recognises a Batch Course evaluator tag, which a Course
 	# Creator may hold instead. Only instructors schedule live classes.
-	instructs = can_instruct_batch(batch)
-	can_manage = instructs or evaluates_batch(batch)
-	is_student_enrolled = frappe.session.user in batch_students
+	as_staff = not is_viewing_as_student("LMS Batch", batch)
+	instructs = as_staff and can_instruct_batch(batch)
+	can_manage = instructs or (as_staff and evaluates_batch(batch))
+	is_student_enrolled = frappe.session.user in batch_students and not hides_enrollment("LMS Batch", batch)
 
 	batch_details = frappe.db.get_value(
 		"LMS Batch",
@@ -2481,7 +2519,7 @@ def get_country_code():
 	return
 
 
-def can_view_quiz_answers(quiz: str, show_answers=None) -> bool:
+def can_view_quiz_answers(quiz: str, show_answers=None, student_view: bool = False) -> bool:
 	"""Whether the caller is entitled to a quiz's answer-key material.
 
 	An explanation is written per option and authors normally write one only on
@@ -2492,7 +2530,7 @@ def can_view_quiz_answers(quiz: str, show_answers=None) -> bool:
 	right after `check_answer` and never refetches, so withholding them there
 	would silently kill the feedback the setting exists for.
 	"""
-	if PRIVILEGED_ROLES & set(frappe.get_roles()):
+	if not student_view and PRIVILEGED_ROLES & set(frappe.get_roles()):
 		return True
 
 	if show_answers:
@@ -2502,7 +2540,7 @@ def can_view_quiz_answers(quiz: str, show_answers=None) -> bool:
 
 
 @frappe.whitelist()
-def get_quiz_with_questions(quiz: str) -> dict:
+def get_quiz_with_questions(quiz: str, student_view: str | None = None) -> dict:
 	"""Return the quiz doc plus every question's details in a single round trip.
 
 	When scheduling blocks the quiz for a non-privileged user, question content
@@ -2516,6 +2554,7 @@ def get_quiz_with_questions(quiz: str) -> dict:
 	)
 	from lms.lms.permissions import can_access_quiz
 	from lms.lms.schedule_utils import enrich_schedule_payload
+	from lms.lms.student_view import MODES
 
 	if not isinstance(quiz, str):
 		frappe.throw(_("Quiz must be a string."))
@@ -2529,7 +2568,9 @@ def get_quiz_with_questions(quiz: str) -> dict:
 	quiz_doc = enrich_schedule_payload(frappe.get_doc("LMS Quiz", quiz).as_dict())
 	reason = quiz_doc.get("schedule_block_reason")
 
-	privileged = bool(PRIVILEGED_ROLES & set(frappe.get_roles()))
+	# Student view only drops the privileged-role bypasses, so it needs no author check.
+	student_view = student_view in MODES
+	privileged = not student_view and bool(PRIVILEGED_ROLES & set(frappe.get_roles()))
 	withhold_questions = bool(reason) and not privileged
 
 	questions_by_name = {}
@@ -2549,7 +2590,7 @@ def get_quiz_with_questions(quiz: str) -> dict:
 				"multiple",
 				*QUESTION_OPTION_FIELDS,
 			]
-			if can_view_quiz_answers(quiz, quiz_doc.get("show_answers")):
+			if can_view_quiz_answers(quiz, quiz_doc.get("show_answers"), student_view):
 				fields += QUESTION_EXPLANATION_FIELDS
 			# nosemgrep: lms-unjustified-ignore-permissions - access gated by can_access_quiz above
 			rows = frappe.get_all(
@@ -2607,15 +2648,23 @@ def get_assignment(name: str) -> dict:
 @frappe.whitelist(allow_guest=True)
 @rate_limit(limit=500, seconds=60 * 60)
 @guest_access_required(list)
-def get_batch_courses(batch: str) -> list:
+def get_batch_courses(batch: str, student_view: str | None = None) -> list:
+	"""See get_course_details for `student_view`."""
+	from lms.lms.student_view import answer_as_student
+
 	if not can_view_batch(batch):
 		return []
 
+	with answer_as_student("LMS Batch", batch, student_view):
+		return build_batch_courses(batch)
+
+
+def build_batch_courses(batch: str) -> list:
 	courses = []
 	course_list = frappe.get_all("Batch Course", {"parent": batch}, ["name", "course"])
 
 	for course in course_list:
-		details = get_course_details(course.course)
+		details = build_course_details(course.course)
 		if details.get("name"):
 			details.batch_course = course.name
 			courses.append(details)
@@ -4223,6 +4272,20 @@ def can_modify_course(course: str) -> bool:
 	if not (has_moderator_role() or is_instructor):
 		return False
 	return True
+
+
+def views_as_author(course: str) -> bool:
+	"""can_modify_course, except where student view answers the course as a student."""
+	from lms.lms.student_view import is_viewing_as_student
+
+	return can_modify_course(course) and not is_viewing_as_student("LMS Course", course)
+
+
+def hides_own_enrollment(course: str, member: str | None = None) -> bool:
+	"""A not-enrolled student view hides the caller's own enrollment and progress."""
+	from lms.lms.student_view import hides_enrollment
+
+	return (member or frappe.session.user) == frappe.session.user and hides_enrollment("LMS Course", course)
 
 
 def can_modify_batch(batch: str) -> bool:
