@@ -14,6 +14,11 @@ vi.mock('frappe-ui', () => ({
 		template:
 			'<div><slot :openFileSelector="() => {}" :uploading="false" /></div>',
 	},
+	Tooltip: {
+		props: ['text'],
+		template: '<span :data-tooltip="text"><slot /></span>',
+	},
+	FileUploadHandler: class {},
 	UploadError: class extends Error {},
 	toast: { error: vi.fn() },
 	FormControl: {
@@ -200,6 +205,44 @@ describe('the course thumbnail picker', () => {
 		await wrapper.get('[aria-label="globe"]').trigger('click')
 		expect(wrapper.emitted('update:tint')).toEqual([['Teal']])
 		expect(wrapper.emitted('update:icon')).toEqual([['globe']])
+	})
+
+	it('marks the picked colour with a dot inside it', () => {
+		const wrapper = mountPicker()
+		const dot = (color: string) =>
+			wrapper.get(`[aria-label="${color} thumbnail"]`).find('span').exists()
+		expect(dot('red')).toBe(true)
+		expect(dot('teal')).toBe(false)
+	})
+
+	it('explains the colour and icon fallback inside the preview, once there is an image', () => {
+		expect(mountPicker().find('[data-testid="thumbnail-info"]').exists()).toBe(
+			false
+		)
+		const info = mountPicker({ image: '/files/cover.png' }).get(
+			'[data-testid="thumbnail-info"]'
+		)
+		expect(info.element.parentElement?.dataset.tooltip).toContain(
+			'the card shows the colour and icon'
+		)
+	})
+
+	it('puts the upload first under the preview and Shuffle by the colours', () => {
+		const wrapper = mountPicker()
+		const upload = wrapper.get('[data-testid="upload-image"]')
+		expect(upload.text()).toBe('Upload image')
+		expect(upload.element.previousElementSibling?.textContent).not.toBe(
+			'Shuffle'
+		)
+		const shuffle = wrapper
+			.findAll('button')
+			.find((b) => b.text() === 'Shuffle')
+		expect(shuffle!.element.closest('[role="group"]')).not.toBeNull()
+		expect(
+			mountPicker({ image: '/files/cover.png' })
+				.get('[data-testid="upload-image"]')
+				.text()
+		).toBe('Replace image')
 	})
 
 	it('removes an image so the colour and icon show again', async () => {
