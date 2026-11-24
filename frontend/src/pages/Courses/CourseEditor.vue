@@ -6,13 +6,13 @@
 		<div class="relative flex flex-col overflow-hidden">
 			<Button
 				v-if="!isMobile && outlineVisible && !chaptersOpen"
-				variant="outline"
+				variant="subtle"
 				class="absolute end-5 top-4 z-10"
 				data-testid="show-chapters"
 				@click="openChaptersPanel()"
 			>
 				<template #prefix>
-					<span class="lucide-panel-right size-4" />
+					<span class="lucide-panel-right-open size-4" />
 				</template>
 				{{ __('Chapters') }}
 			</Button>

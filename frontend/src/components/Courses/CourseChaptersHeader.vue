@@ -3,7 +3,25 @@
 		<div
 			class="flex min-w-0 items-center gap-2 text-p-base-medium text-ink-gray-9"
 		>
-			<span class="lucide-panel-right size-4 shrink-0 text-ink-gray-6" />
+			<Button
+				v-if="collapsible"
+				variant="ghost"
+				size="sm"
+				class="-ms-1.5"
+				data-testid="hide-chapters"
+				:label="__('Hide chapters')"
+				:tooltip="__('Hide chapters')"
+				@click="emit('hide')"
+			>
+				<template #icon>
+					<span class="lucide-panel-right-close size-4 text-ink-gray-6" />
+				</template>
+			</Button>
+			<span
+				v-else
+				class="lucide-panel-right size-4 shrink-0 text-ink-gray-6"
+				aria-hidden="true"
+			/>
 			{{ __('Chapters') }}
 			<span
 				v-if="count"
@@ -13,42 +31,28 @@
 				{{ count }}
 			</span>
 		</div>
-		<div class="flex items-center gap-1">
+		<div class="flex items-center">
 			<Button
-				v-if="collapsible"
-				variant="ghost"
-				data-testid="hide-chapters"
-				:label="__('Hide chapters')"
-				:tooltip="__('Hide chapters')"
-				@click="emit('hide')"
+				data-testid="add-chapter"
+				class="!rounded-e-none"
+				@click="emit('add-chapter')"
 			>
-				<template #icon>
-					<span class="lucide-panel-right-close size-4" />
+				<template #prefix>
+					<span class="lucide-plus size-4" />
 				</template>
+				{{ __('Add') }}
 			</Button>
-			<div class="flex items-center">
+			<Dropdown align="end" :options="addOptions">
 				<Button
-					data-testid="add-chapter"
-					class="!rounded-e-none"
-					@click="emit('add-chapter')"
+					data-testid="add-options"
+					class="!rounded-s-none border-s border-outline-gray-2"
+					:label="__('More ways to add')"
 				>
-					<template #prefix>
-						<span class="lucide-plus size-4" />
+					<template #icon>
+						<span class="lucide-chevron-down size-4" />
 					</template>
-					{{ __('Add') }}
 				</Button>
-				<Dropdown align="end" :options="addOptions">
-					<Button
-						data-testid="add-options"
-						class="!rounded-s-none border-s border-outline-gray-2"
-						:label="__('More ways to add')"
-					>
-						<template #icon>
-							<span class="lucide-chevron-down size-4" />
-						</template>
-					</Button>
-				</Dropdown>
-			</div>
+			</Dropdown>
 		</div>
 	</div>
 </template>

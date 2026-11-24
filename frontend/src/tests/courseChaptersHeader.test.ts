@@ -13,9 +13,9 @@ import CourseChaptersHeader from '@/components/Courses/CourseChaptersHeader.vue'
 
 vi.stubGlobal('__', (text: string) => text)
 
-const mountHeader = (count?: number) =>
+const mountHeader = (count?: number, collapsible = false) =>
 	mount(CourseChaptersHeader, {
-		props: { count },
+		props: { count, collapsible },
 		global: { mocks: { __: (text: string) => text } },
 	})
 
@@ -25,6 +25,18 @@ const option = (wrapper: ReturnType<typeof mountHeader>, label: string) =>
 		.find((button) => button.text() === label)!
 
 describe('CourseChaptersHeader', () => {
+	it('folds the panel from its icon when collapsible, else draws a plain icon', async () => {
+		const collapsible = mountHeader(8, true)
+		const hide = collapsible.find('[data-testid="hide-chapters"]')
+		expect(hide.find('.lucide-panel-right-close').exists()).toBe(true)
+		await hide.trigger('click')
+		expect(collapsible.emitted('hide')).toHaveLength(1)
+
+		const fixed = mountHeader(8)
+		expect(fixed.find('[data-testid="hide-chapters"]').exists()).toBe(false)
+		expect(fixed.find('.lucide-panel-right').exists()).toBe(true)
+	})
+
 	it('shows the chapter count', () => {
 		expect(mountHeader(8).find('[data-testid="chapters-count"]').text()).toBe(
 			'8'
