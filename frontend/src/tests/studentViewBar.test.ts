@@ -97,6 +97,24 @@ describe('StudentViewBar', () => {
 		expect(wrapper.text()).not.toContain('Reset progress')
 	})
 
+	it('collapses reset and exit to icon buttons on phones', async () => {
+		const width = window.innerWidth
+		window.innerWidth = 400
+		wrapper = mountBar('enrolled')
+		await flushPromises()
+		window.innerWidth = width
+
+		for (const [label, icon] of [
+			['Exit student view', '.lucide-x'],
+			['Reset progress', '.lucide-rotate-ccw'],
+		]) {
+			const button = wrapper.find(`button[aria-label="${label}"]`)
+			expect(button.text()).toBe('')
+			expect(button.find(icon).exists()).toBe(true)
+			expect(button.classes()).toContain('w-7')
+		}
+	})
+
 	it('enrolls the instructor when they switch to enrolled', async () => {
 		wrapper = mountBar()
 		await tab('Enrolled').trigger('click')

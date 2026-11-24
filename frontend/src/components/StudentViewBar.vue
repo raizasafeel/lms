@@ -19,25 +19,21 @@
 				variant="ghost"
 				:loading="reset.loading"
 				:aria-label="__('Reset progress')"
-				class="max-sm:w-7 max-sm:px-0"
+				:icon="isMobile ? 'lucide-rotate-ccw' : undefined"
+				:icon-left="isMobile ? undefined : 'lucide-rotate-ccw'"
 				@click="showReset = true"
 			>
-				<template #prefix>
-					<span class="lucide-rotate-ccw size-4" />
-				</template>
-				<span class="hidden sm:inline">{{ __('Reset progress') }}</span>
+				{{ __('Reset progress') }}
 			</Button>
 			<TabButtons v-model="mode" :options="modes" />
 			<Button
 				variant="outline"
 				:aria-label="__('Exit student view')"
-				class="max-sm:w-7 max-sm:px-0"
+				:icon="isMobile ? 'lucide-x' : undefined"
+				:icon-left="isMobile ? undefined : 'lucide-x'"
 				@click="emit('exit')"
 			>
-				<template #prefix>
-					<span class="lucide-x size-4" />
-				</template>
-				<span class="hidden sm:inline">{{ __('Exit') }}</span>
+				{{ __('Exit') }}
 			</Button>
 		</div>
 	</div>
@@ -60,6 +56,7 @@
 import { computed, ref, watch } from 'vue'
 import { Button, createResource, Dialog, TabButtons, toast } from 'frappe-ui'
 import type { Resource } from '@/types'
+import { useScreenSize } from '@/utils/composables'
 import { resourceErrorMessage, submitResource } from '@/utils/resource'
 
 type StudentMode = 'not-enrolled' | 'enrolled'
@@ -76,6 +73,7 @@ const emit = defineEmits<{ exit: []; change: [] }>()
 const mode = defineModel<StudentMode>({ required: true })
 
 const showReset = ref(false)
+const { isMobile } = useScreenSize()
 
 const modes = [
 	{
