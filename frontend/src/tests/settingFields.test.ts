@@ -141,6 +141,16 @@ describe('the search preview', () => {
 		expect(wrapper.find('[data-testid="search-preview"]').exists()).toBe(true)
 	})
 
+	it('shows the shared image as a thumbnail only when there is one', () => {
+		const withImage = mount(SearchPreview, {
+			props: { url: 'x', image: '/files/cover.png' },
+			global,
+		})
+		expect(withImage.get('img').attributes('src')).toBe('/files/cover.png')
+		const without = mount(SearchPreview, { props: { url: 'x' }, global })
+		expect(without.find('img').exists()).toBe(false)
+	})
+
 	it('asks for a description while there is none', () => {
 		const wrapper = mount(SearchPreview, { props: { url: 'x' }, global })
 		expect(wrapper.text()).toContain('Add a description to show here.')

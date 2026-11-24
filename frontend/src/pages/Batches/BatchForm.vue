@@ -66,11 +66,17 @@
 				:label="__('Meta keywords')"
 				:summary="__('Comma separated keywords for search engines.')"
 			/>
-			<SettingRow :label="__('Meta preview')">
+			<SettingRow
+				:label="__('Meta preview')"
+				:summary="
+					__('Edit the meta description and meta image to change this.')
+				"
+			>
 				<SearchPreview
 					:url="batchUrl"
 					:title="doc.title"
 					:description="form?.meta.description || doc.description"
+					:image="doc.meta_image"
 				/>
 			</SettingRow>
 			<SettingImage

@@ -35,13 +35,19 @@
 				:summary="__('Comma separated keywords for search engines.')"
 				@update:modelValue="form.markDirty()"
 			/>
-			<SettingRow :label="__('Meta preview')">
+			<SettingRow
+				:label="__('Meta preview')"
+				:summary="
+					__('Edit the meta description and course thumbnail to change this.')
+				"
+			>
 				<SearchPreview
 					:url="courseUrl"
 					:title="form.resource.doc.title"
 					:description="
 						form.meta.description || form.resource.doc.short_introduction
 					"
+					:image="form.resource.doc.image"
 				/>
 			</SettingRow>
 		</SettingsGroup>
