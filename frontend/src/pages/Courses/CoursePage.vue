@@ -88,28 +88,20 @@
 					{{ __('Student View') }}
 				</Button>
 			</template>
-			<Button
-				v-if="tab?.key === 'dashboard' && course.data && isMobile"
-				variant="outline"
-				class="!size-9"
-				:label="__('Enroll')"
-				:tooltip="__('Enroll')"
-				@click="openEnrollForm()"
-			>
-				<template #icon>
-					<span class="lucide-plus size-4" />
-				</template>
-			</Button>
-			<Button
-				v-else-if="tab?.key === 'dashboard' && course.data"
-				variant="outline"
-				@click="openEnrollForm()"
-			>
-				<template #prefix>
-					<span class="lucide-plus size-4" />
-				</template>
-				{{ __('Enroll') }}
-			</Button>
+			<template v-if="tab?.key === 'dashboard' && dashboardState === 'ready'">
+				<HeaderButton
+					:label="__('Export analytics')"
+					icon="lucide-download"
+					variant="subtle"
+					@click="exportAnalytics()"
+				/>
+				<HeaderButton
+					:label="__('Enroll')"
+					icon="lucide-plus"
+					variant="solid"
+					@click="openEnrollForm()"
+				/>
+			</template>
 		</template>
 
 		<template #solo>
@@ -130,7 +122,7 @@
 					@click="courseEditorRef?.goPrev()"
 				>
 					<template #icon>
-						<span class="lucide-chevron-left size-4" />
+						<span class="lucide-chevron-left size-4 rtl:rotate-180" />
 					</template>
 				</Button>
 				<div
@@ -149,7 +141,7 @@
 					@click="courseEditorRef?.goNext()"
 				>
 					<template #icon>
-						<span class="lucide-chevron-right size-4" />
+						<span class="lucide-chevron-right size-4 rtl:rotate-180" />
 					</template>
 				</Button>
 			</div>
@@ -186,6 +178,12 @@
 		</template>
 	</TabbedDetailPage>
 	<LessonHelp v-model="showLessonHelp" />
+	<ExportAnalyticsDialog
+		v-if="exportMounted"
+		v-model:open="showExport"
+		kind="course"
+		:name="courseName"
+	/>
 </template>
 <script setup lang="ts">
 import { computed, inject, markRaw, provide, ref, watch } from 'vue'
@@ -203,10 +201,13 @@ import CourseDashboard from '@/pages/Courses/CourseDashboard.vue'
 import CourseEditor from '@/pages/Courses/CourseEditor.vue'
 import CourseForm from '@/pages/Courses/CourseForm.vue'
 import LessonHelp from '@/components/LessonHelp.vue'
+import HeaderButton from '@/components/HeaderButton.vue'
+import ExportAnalyticsDialog from '@/components/Dashboard/ExportAnalyticsDialog.vue'
 import CourseHeaderActions from '@/components/Courses/CourseHeaderActions.vue'
 import CourseSaveButton from '@/components/Courses/CourseSaveButton.vue'
 import CourseStudentView from '@/components/Courses/CourseStudentView.vue'
 import { openFormRoute } from '@/composables/useFormRoute'
+import { provideDashboardState } from '@/composables/dashboard/useDashboard'
 import { useCourseForm } from '@/composables/useCourseForm'
 import {
 	COURSE_ACTIONS,
@@ -226,6 +227,8 @@ const router: Router = useRouter()
 const route = useRoute()
 const user = inject<SessionUser>('$user')!
 const { isMobile } = useScreenSize()
+
+const dashboardState = provideDashboardState()
 
 interface EditorSelection {
 	chapterNumber: string
@@ -279,6 +282,15 @@ function openEnrollForm() {
 		hash: route.hash,
 		query: { ...route.query },
 	})
+}
+
+const showExport = ref(false)
+// Mounted on first use: most visits to the dashboard never export.
+const exportMounted = ref(false)
+
+function exportAnalytics(): void {
+	exportMounted.value = true
+	showExport.value = true
 }
 
 const props = defineProps<{
@@ -379,6 +391,10 @@ const breadcrumbs = computed(() => {
 	}
 	return crumbs
 })
+
+// CourseDetail hands this to the enrol form in its <router-view>, so enrolling
+// refreshes the dashboard's Enrolled stat; key-less, the form cannot reach it.
+defineExpose({ reloadCourse: () => course.reload() })
 
 usePageMeta(() => {
 	return {

@@ -34,7 +34,7 @@ function roundedCount(count: number): string {
 }
 
 function plural(count: number, one: string, many: string): string {
-	return `${count} ${count === 1 ? one : many}`
+	return count === 1 ? one : many.format(count)
 }
 
 const facts = computed<Fact[]>(() => {
@@ -54,13 +54,13 @@ const facts = computed<Fact[]>(() => {
 	if (props.lessons) {
 		list.push({
 			icon: 'lucide-book-open',
-			label: plural(props.lessons, __('lesson'), __('lessons')),
+			label: plural(props.lessons, __('1 lesson'), __('{0} lessons')),
 		})
 	}
 	if (props.quizzes) {
 		list.push({
 			icon: 'lucide-circle-help',
-			label: plural(props.quizzes, __('quiz'), __('quizzes')),
+			label: plural(props.quizzes, __('1 quiz'), __('{0} quizzes')),
 		})
 	}
 	if (props.certificate) {

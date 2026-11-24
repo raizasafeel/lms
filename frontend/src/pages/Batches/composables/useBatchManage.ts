@@ -13,7 +13,7 @@ type DialogFn = (options: {
 		label: string
 		theme?: string
 		variant?: string
-		onClick: (context: { close: () => void }) => void
+		onClick: (context: { close: () => void }) => void | Promise<unknown>
 	}[]
 }) => void
 
@@ -58,8 +58,10 @@ export function useBatchManage(
 		},
 	})
 
-	function trashBatch(close: () => void): void {
-		call('lms.lms.api.delete_batch', { batch: batch.data?.name }).then(() => {
+	function trashBatch(close: () => void): Promise<void> {
+		return call('lms.lms.api.delete_batch', {
+			batch: batch.data?.name,
+		}).then(() => {
 			toast.success(__('Batch deleted successfully'))
 			close()
 			router.push({ name: 'Batches' })
@@ -85,7 +87,9 @@ export function useBatchManage(
 
 	const manage: BatchManage = {
 		publishing: () => Boolean(publishToggle.loading),
-		togglePublish: () => publishToggle.submit().catch(() => {}),
+		togglePublish: () => {
+			if (!publishToggle.loading) publishToggle.submit().catch(() => {})
+		},
 		deleteBatch,
 		generateCertificates: () =>
 			openBatchForm(

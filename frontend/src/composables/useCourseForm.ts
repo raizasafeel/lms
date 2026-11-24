@@ -114,6 +114,7 @@ export function useCourseForm(
 	}
 
 	function submitCourse(): void {
+		if (resource.setValue.loading) return
 		const missing = missingFields.value
 		if (missing.length) {
 			showRequired.value = true

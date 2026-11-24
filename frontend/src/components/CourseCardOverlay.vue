@@ -71,10 +71,8 @@
 						{{ __('Buy this course') }}
 					</span>
 				</Button>
-				<Badge
+				<Alert
 					v-else-if="course.data?.disable_self_learning && actsAsLearner"
-					theme="blue"
-					size="lg"
 					class="mb-4"
 					:icon="false"
 					:description="
@@ -83,6 +81,7 @@
 				/>
 				<Button
 					v-else-if="actsAsLearner"
+					:loading="enrolling"
 					@click="preview ? emit('enroll') : enrollStudent()"
 					variant="solid"
 					class="w-full mb-8"
@@ -97,6 +96,7 @@
 				</Button>
 				<Button
 					v-if="canGetCertificate && !preview"
+					:loading="certificate.loading"
 					@click="fetchCertificate()"
 					variant="subtle"
 					class="w-full mt-2"
@@ -128,6 +128,7 @@ import CertificationLinks from '@/components/CertificationLinks.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import VideoPreview from '@/components/VideoPreview.vue'
 import CourseIncludes from '@/components/Courses/CourseIncludes.vue'
+import { redirectToLogin } from '@/utils/login'
 import type { CourseDetails, Resource, SessionUser } from '@/types'
 import { isInstructorOf } from '@/utils/instructors'
 

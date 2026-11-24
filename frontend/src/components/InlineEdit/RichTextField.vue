@@ -4,6 +4,7 @@
 		:ariaLabelledby="ariaLabelledby"
 		:placeholder="placeholder"
 		:toolbar="TOOLBAR"
+		:uploadArgs="{ private: false }"
 		menuOnFocus
 		roomy
 		variant="inline"
@@ -34,7 +35,10 @@ import {
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import { missingRing } from '@/components/InlineEdit/fieldClasses'
 
-/** A long-form body that shows its box and toolbar only while editing. */
+/**
+ * A long-form body that shows its box and toolbar only while editing.
+ * Course and batch bodies are shown to guests, so images upload public.
+ */
 defineProps<{
 	modelValue?: string | null
 	placeholder: string

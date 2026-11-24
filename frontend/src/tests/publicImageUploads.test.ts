@@ -299,6 +299,10 @@ const MANIFEST: Record<string, Privacy[]> = {
 	'components/InlineEdit/CourseThumbnailPicker.vue': ['public'],
 	// A batch's share image; shown on link previews, so it must be public.
 	'components/InlineEdit/SettingImage.vue': ['public'],
+	// The course and batch "About" bodies are shown wherever the course or
+	// batch is, Guest included; a private image in them was a 403 for everyone
+	// but its uploader (#3213).
+	'components/InlineEdit/RichTextField.vue': ['public'],
 	// Deliberately not readable by other users.
 	'components/Assignment.vue': ['private', 'private', 'private'],
 	'components/Modals/JobApplicationModal.vue': ['private'],
@@ -335,8 +339,6 @@ const MANIFEST: Record<string, Privacy[]> = {
 	// Moved out of AnnouncementForm.vue when it adopted FormLayout: the
 	// `<RichTextEditor>` tag now lives in this reusable field adapter instead.
 	'components/FormLayout/RichTextEditorField.vue': ['undeclared'],
-	// The course and batch "About" bodies.
-	'components/InlineEdit/RichTextField.vue': ['undeclared'],
 	'pages/Forms/EmailTemplateForm.vue': ['undeclared'],
 	'pages/JobApplications.vue': ['undeclared'],
 	'pages/Forms/JobForm.vue': ['undeclared'],

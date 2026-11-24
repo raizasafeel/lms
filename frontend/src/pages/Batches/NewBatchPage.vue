@@ -69,14 +69,9 @@ const canCreate = computed<boolean>(() => {
 
 const form = useBatchDraft(onCreated)
 
-function onCreated(name: string, courses: string[]): void {
+function onCreated(name: string): void {
 	created = true
-	if (seesOnboarding(user.data)) {
-		updateOnboardingStep('create_first_batch', true, false, () => {
-			localStorage.setItem('firstBatch', name)
-		})
-		if (courses.length) updateOnboardingStep('add_batch_course')
-	}
+	if (seesOnboarding(user.data)) updateOnboardingStep('create_first_batch')
 	router.replace({
 		name: 'BatchDetail',
 		params: { batchName: name },

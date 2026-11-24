@@ -15,30 +15,26 @@
 		icon="lucide-eye"
 		@click="emit('student-view')"
 	/>
-	<HeaderButton
-		v-if="tab === 'dashboard'"
-		:label="__('Enroll')"
-		icon="lucide-plus"
-		@click="openForm('NewBatchStudent')"
-	/>
-	<template v-if="tab === 'announcements' && !readOnlyMode">
-		<Tooltip
-			v-if="!batch.data?.student_count"
-			:text="__('Add students to the batch to make an announcement')"
-		>
-			<HeaderButton
-				:label="__('Make announcement')"
-				icon="lucide-send"
-				disabled
-			/>
-		</Tooltip>
+	<template v-if="tab === 'dashboard' && dashboardReady">
 		<HeaderButton
-			v-else
-			:label="__('Make announcement')"
-			icon="lucide-send"
-			@click="openForm('NewAnnouncement')"
+			:label="__('Export analytics')"
+			icon="lucide-download"
+			variant="subtle"
+			@click="emit('export-analytics')"
+		/>
+		<HeaderButton
+			:label="__('Enroll')"
+			icon="lucide-plus"
+			variant="solid"
+			@click="openForm('NewBatchStudent')"
 		/>
 	</template>
+	<HeaderButton
+		v-if="tab === 'announcements' && !readOnlyMode && batch.data?.student_count"
+		:label="__('Make announcement')"
+		icon="lucide-send"
+		@click="openForm('NewAnnouncement')"
+	/>
 	<template v-if="isEditTab && form">
 		<Button
 			v-if="!isMobile && manage && !batch.data?.published"
@@ -55,7 +51,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Button, Dropdown, Tooltip } from 'frappe-ui'
+import { Button, Dropdown } from 'frappe-ui'
 import BatchSaveButton from '@/pages/Batches/components/BatchSaveButton.vue'
 import HeaderButton from '@/components/HeaderButton.vue'
 import { openBatchForm } from '@/composables/useBatchForms'
@@ -68,9 +64,10 @@ import type { BatchDetails, Resource } from '@/types'
 const props = defineProps<{
 	tab?: string
 	batch: Resource<BatchDetails | null>
+	dashboardReady?: boolean
 }>()
 
-const emit = defineEmits<{ 'student-view': [] }>()
+const emit = defineEmits<{ 'student-view': []; 'export-analytics': [] }>()
 
 const router = useRouter()
 const route = useRoute()
@@ -90,7 +87,7 @@ const openForm = (name: BatchRouteName) => {
 const menu = computed(() => {
 	if (!manage) return []
 	const options = []
-	if (props.batch.data?.certification) {
+	if (props.batch.data?.certification && props.batch.data?.student_count) {
 		options.push({
 			label: __('Generate certificates'),
 			icon: 'lucide-award',

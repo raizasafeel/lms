@@ -48,7 +48,7 @@
 			</li>
 			<li v-if="batch.start_time" class="flex items-center gap-2">
 				<span class="lucide-clock size-4 text-ink-gray-5" aria-hidden="true" />
-				<span dir="ltr">
+				<span dir="auto">
 					{{ formatTime(batch.start_time) }} – {{ formatTime(batch.end_time) }}
 				</span>
 			</li>
@@ -64,6 +64,39 @@
 				{{ __('Certificate') }}
 			</li>
 		</ul>
+
+		<Tooltip v-if="batch.progress != null" :disabled="!breakdown.length">
+			<div
+				class="relative z-10 mt-4 flex flex-col gap-1.5 rounded-4 outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-5"
+				:tabindex="breakdown.length ? 0 : undefined"
+			>
+				<div class="flex items-center justify-between text-p-sm">
+					<span class="text-ink-gray-7">{{ __('Progress') }}</span>
+					<span class="font-medium tabular-nums text-ink-gray-9">
+						{{ percent(batch.progress) }}
+					</span>
+				</div>
+				<ProgressBar
+					:progress="batch.progress"
+					:label="__('Batch progress')"
+					:tooltip="false"
+				/>
+			</div>
+			<template #content>
+				<div class="flex flex-col gap-1 py-0.5">
+					<div
+						v-for="(part, index) in breakdown"
+						:key="index"
+						class="flex items-center gap-4"
+					>
+						<span class="max-w-[200px] truncate">{{ part.title }}</span>
+						<span class="ms-auto w-9 shrink-0 text-end tabular-nums">
+							{{ percent(part.progress) }}
+						</span>
+					</div>
+				</div>
+			</template>
+		</Tooltip>
 
 		<div class="mt-auto flex items-center gap-2 pt-4">
 			<Badge v-if="status" :theme="status.theme" :label="status.label" />
@@ -82,7 +115,7 @@
 </template>
 <script setup>
 import { computed } from 'vue'
-import { Badge } from 'frappe-ui'
+import { Badge, Tooltip } from 'frappe-ui'
 import { formatTime, getFormattedDateRange } from '@/utils'
 import { formatTimezone, nextOccurrence } from '@/utils/timezone'
 import CardLink from '@/components/CardLink.vue'
@@ -99,6 +132,10 @@ const props = defineProps({
 		default: null,
 	},
 })
+
+const breakdown = computed(() => props.batch.progress_breakdown || [])
+
+const percent = (value) => `${Math.round(value)}%`
 
 const instructors = computed(() => (props.batch.instructors || []).slice(0, 3))
 

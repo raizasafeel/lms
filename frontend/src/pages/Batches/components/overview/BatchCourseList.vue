@@ -97,14 +97,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Button, call, createResource, toast } from 'frappe-ui'
-import { useOnboarding } from '@framework/ui/components/Onboarding/index'
 import { useCoursePickerItems } from '@/composables/useCoursePickerItems'
 import PickerDialog from '@/components/InlineEdit/PickerDialog.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import OverviewEmptyTile from '@/pages/Batches/components/overview/OverviewEmptyTile.vue'
-import { seesOnboarding } from '@/utils/onboarding'
 import { courseIcon } from '@/utils/courseIcons'
 import { courseTint } from '@/utils/courseTints'
 import { safeUrl } from '@/utils/safeUrl'
@@ -133,8 +131,6 @@ const props = defineProps<{
 const draft = defineModel<string[]>('draft')
 
 const pickerOpen = ref<boolean>(false)
-const user = inject<{ data?: Parameters<typeof seesOnboarding>[0] }>('$user')
-const { updateOnboardingStep } = useOnboarding('learning')
 
 const courses = createResource({
 	url: 'lms.lms.utils.get_batch_courses',
@@ -208,7 +204,6 @@ async function addCourses(names: string[]): Promise<void> {
 	// One at a time: each insert appends a row to the same batch.
 	try {
 		for (const name of names) await insertCourse(name)
-		if (seesOnboarding(user?.data)) updateOnboardingStep('add_batch_course')
 	} catch (error) {
 		toast.error(
 			errorMessage(

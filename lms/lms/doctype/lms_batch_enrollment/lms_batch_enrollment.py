@@ -30,7 +30,7 @@ class LMSBatchEnrollment(Document):
 		# An instructor walking through their own batch needs no welcome or invites.
 		if self.flags.student_view:
 			return
-		send_confirmation_email(self)
+		self.send_confirmation_email_or_log()
 		from lms.lms.doctype.lms_live_class.lms_live_class import add_learner_to_live_classes
 
 		add_learner_to_live_classes(self.batch)

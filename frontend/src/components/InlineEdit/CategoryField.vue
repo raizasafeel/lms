@@ -5,7 +5,7 @@
 		:placeholder="__('Add category')"
 		:aria-label="__('Category')"
 		:inlineCreate="true"
-		inlineCreatePlaceholder="Category name"
+		:inlineCreatePlaceholder="__('Category name')"
 		:onCreate="onCreate"
 		variant="ghost"
 		trigger="button"

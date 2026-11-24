@@ -187,6 +187,6 @@ describe('a new batch before its first save', () => {
 		form.submitBatch()
 		await flushPromises()
 		expect(call.mock.calls[0][1].doc.courses).toEqual([{ course: 'course-a' }])
-		expect(onCreated).toHaveBeenCalledWith('cohort-1', ['course-a'])
+		expect(onCreated).toHaveBeenCalledWith('cohort-1')
 	})
 })

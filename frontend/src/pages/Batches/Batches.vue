@@ -187,13 +187,16 @@ const mediumOptions = [
 	{ label: __('Online'), value: 'Online' },
 	{ label: __('In person'), value: 'Offline' },
 ]
-const is_student = computed(() => user.data?.is_student)
 const isAdmin = computed(() =>
 	['is_moderator', 'is_instructor', 'is_evaluator'].some(
 		(role) => user.data?.[role]
 	)
 )
-const currentTab = ref(isAdmin.value ? 'upcoming' : 'all')
+// A signed-in learner most often comes back for a batch they are in, and a
+// batch that has started is no longer under Upcoming.
+const currentTab = ref(
+	isAdmin.value ? 'upcoming' : user.data ? 'enrolled' : 'upcoming'
+)
 const orderBy = ref('start_date')
 const readOnlyMode = window.read_only_mode
 const router = useRouter()
@@ -463,7 +466,7 @@ const batchTabs = computed(() => {
 	return tabs
 })
 
-// Roles can land after setup, leaving staff on `all`, which they have no tab for.
+// Roles can land after setup, leaving staff on `enrolled`, which they have no tab for.
 watch(batchTabs, (tabs) => {
 	if (!tabs.some((tab) => tab.value === currentTab.value)) {
 		currentTab.value = tabs[0].value
@@ -499,11 +502,11 @@ const emptyState = computed(() => {
 					'Published batches that start later show up here, so you can open sign-ups early.'
 				),
 			}
-		case 'archived':
+		case 'completed':
 			return {
-				title: __('No archived batches'),
+				title: __('No completed batches'),
 				description: __(
-					'Batches move here once they start, so you can look back at each group.'
+					'Batches move here once they end, so you can look back at each group.'
 				),
 			}
 		case 'unpublished':
@@ -520,7 +523,7 @@ const emptyState = computed(() => {
 
 function newBatchFromEmptyState() {
 	setFormSource('empty_state')
-	openFormRoute(router, { name: 'NewBatch' })
+	router.push({ name: 'NewBatch' })
 }
 
 const openBatchImport = () =>

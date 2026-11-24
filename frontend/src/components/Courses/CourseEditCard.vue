@@ -69,7 +69,7 @@
 				label: __('Get the Payments app'),
 				variant: 'solid',
 				onClick: ({ close }: { close: () => void }) => {
-					openExternal('https://frappecloud.com/marketplace/apps/payments')
+					openPaymentsApp()
 					close()
 				},
 			},
@@ -98,6 +98,8 @@ import { useSettings } from '@/stores/settings'
 import type { CourseDetails, CourseFormContext, Resource } from '@/types'
 import type { LMSCourse } from '@/types/lms/LMSCourse'
 import { openExternal } from '@/utils/openExternal'
+import { hasCloudSettings } from '@/composables/cloudSettings'
+import { openSettings } from '@/utils'
 
 /** The enrol card as instructors edit it: learners see the same card. */
 defineProps<{ course: Resource<CourseDetails | null> }>()
@@ -135,5 +137,10 @@ function setPaidCourse(paid: boolean): void {
 	// The paid-certificate flow applies only to free courses.
 	if (paid) doc.value.paid_certificate = 0
 	markDirty()
+}
+
+function openPaymentsApp(): void {
+	if (hasCloudSettings()) openSettings('cloud-marketplace')
+	else openExternal('https://frappecloud.com/marketplace/apps/payments')
 }
 </script>

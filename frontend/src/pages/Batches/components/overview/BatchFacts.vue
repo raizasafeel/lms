@@ -38,7 +38,7 @@ const schedule = (batch: Record<string, any>): Fact[] => [
 	{
 		icon: 'lucide-clock',
 		text: `${formatTime(batch.start_time)} – ${formatTime(batch.end_time)}`,
-		dir: 'ltr',
+		dir: 'auto',
 	},
 	{
 		icon: 'lucide-globe',

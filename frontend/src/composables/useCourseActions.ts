@@ -1,18 +1,20 @@
 import { createResource, toast } from 'frappe-ui'
 import type { FrappeResourceError } from 'frappe-ui'
-import { getCurrentInstance } from 'vue'
+import { getCurrentInstance, inject } from 'vue'
 import type { InjectionKey } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTelemetry } from '@framework/ui/telemetry/index'
+import { useOnboarding } from '@framework/ui/components/Onboarding/index'
 import { exportCourseAsZip } from '@/utils/exportCourse'
 import { resourceErrorMessage } from '@/utils/resource'
-import type { CourseDetails, Resource } from '@/types'
+import { seesOnboarding } from '@/utils/onboarding'
+import type { CourseDetails, Resource, SessionUser } from '@/types'
 
 interface DialogAction {
 	label: string
 	theme?: string
 	variant?: string
-	onClick: (context: { close: () => void }) => void
+	onClick: (context: { close: () => void }) => void | Promise<unknown>
 }
 type DialogFn = (options: {
 	title: string
@@ -40,6 +42,8 @@ export function useCourseActions(
 ): CourseActions {
 	const router = useRouter()
 	const { capture } = useTelemetry()
+	const onboarding = useOnboarding('learning')
+	const user = inject<SessionUser>('$user')!
 	const { $dialog } = getCurrentInstance()!.appContext.config
 		.globalProperties as { $dialog: DialogFn }
 
@@ -56,6 +60,8 @@ export function useCourseActions(
 			capture(published ? 'course_published' : 'course_unpublished', {
 				course: course.data?.name,
 			})
+			if (published && seesOnboarding(user.data))
+				onboarding?.updateOnboardingStep('publish_first_course')
 			toast.success(
 				published ? __('Course published') : __('Course unpublished')
 			)
@@ -91,8 +97,7 @@ export function useCourseActions(
 					theme: 'red',
 					variant: 'solid',
 					onClick({ close }) {
-						remove.submit()
-						close()
+						return remove.submit().finally(close)
 					},
 				},
 			],
@@ -101,7 +106,9 @@ export function useCourseActions(
 
 	return {
 		publish,
-		togglePublish: () => publish.submit(),
+		togglePublish: () => {
+			if (!publish.loading) publish.submit()
+		},
 		exportCourse: () => exportCourseAsZip(course.data?.name),
 		deleteCourse,
 	}

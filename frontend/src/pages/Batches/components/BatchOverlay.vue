@@ -21,9 +21,9 @@
 					v-if="batch.data.seat_count && batch.data.seats_left > 0"
 					theme="green"
 					:label="
-						batch.data.seats_left +
-						' ' +
-						(batch.data.seats_left > 1 ? __('Seats Left') : __('Seat Left'))
+						batch.data.seats_left > 1
+							? __('{0} seats left').format(batch.data.seats_left)
+							: __('1 seat left')
 					"
 				/>
 				<Badge
@@ -58,6 +58,7 @@
 					"
 					variant="solid"
 					class="w-full"
+					:loading="enroll.loading"
 					@click="enrollInBatch()"
 				>
 					<template #prefix>
@@ -98,6 +99,7 @@
 import { inject, computed } from 'vue'
 import { Badge, Button, createResource, toast } from 'frappe-ui'
 import { formatNumberIntoCurrency } from '@/utils'
+import { redirectToLogin } from '@/utils/login'
 import VideoPreview from '@/components/VideoPreview.vue'
 import BatchFacts from '@/pages/Batches/components/overview/BatchFacts.vue'
 import { useStudentView } from '@/composables/useStudentView'
@@ -137,6 +139,7 @@ const enroll = createResource({
 })
 
 const enrollInBatch = () => {
+	if (enroll.loading) return
 	if (preview.value) {
 		preview.value.enroll()
 		return

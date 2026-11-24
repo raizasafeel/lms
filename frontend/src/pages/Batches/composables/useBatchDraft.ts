@@ -63,9 +63,7 @@ export function batchInsertDoc(
  * A batch that exists only on the page until its first save. It offers the
  * same form the batch overview edits, so the overview renders it unchanged.
  */
-export function useBatchDraft(
-	onCreated: (name: string, courses: string[]) => void
-): BatchDraft {
+export function useBatchDraft(onCreated: (name: string) => void): BatchDraft {
 	const doc = reactive(blankBatch()) as LMSBatch
 	const instructors = ref<string[]>([])
 	const meta = reactive<BatchMeta>({ description: '', keywords: '' })
@@ -97,7 +95,7 @@ export function useBatchDraft(
 				],
 			})
 		}
-		onCreated(batch.name, courses.value)
+		onCreated(batch.name)
 	}
 
 	function submitBatch(): void {
@@ -129,6 +127,7 @@ export function useBatchDraft(
 		),
 		previewRequired: rings.previewRequired,
 		submitBatch,
+		isSaving: computed(() => saving.value),
 		draft: { courses, assessments },
 	}
 	provide(BATCH_FORM, form)

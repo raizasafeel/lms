@@ -7,7 +7,7 @@
 		:has-next-page="courses.hasNextPage"
 		v-model:page-length="pageLength"
 		grid-class="grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]"
-		empty-name="Courses"
+		:empty-name="__('Courses')"
 		empty-icon="lucide-book-open"
 		:empty-title="emptyState?.title"
 		:empty-description="emptyState?.description"
@@ -571,7 +571,7 @@ const emptyState = computed(() => {
 
 function newCourseFromEmptyState() {
 	setFormSource('empty_state')
-	openFormRoute(router, { name: 'NewCourse' })
+	router.push({ name: 'NewCourse' })
 }
 
 const importMenu = computed(() => [

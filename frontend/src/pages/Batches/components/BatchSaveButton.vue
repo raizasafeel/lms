@@ -7,7 +7,11 @@
 		@focusout="form.previewRequired(false)"
 	>
 		<ShortcutTooltip v-if="canSave" :label="__('Save')">
-			<Button variant="solid" @click="form.submitBatch()">
+			<Button
+				variant="solid"
+				:loading="form.isSaving.value"
+				@click="form.submitBatch()"
+			>
 				{{ __('Save') }}
 			</Button>
 		</ShortcutTooltip>

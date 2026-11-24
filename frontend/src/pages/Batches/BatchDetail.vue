@@ -37,7 +37,9 @@
 					v-if="isAdmin"
 					:tab="tab?.key"
 					:batch="batch"
+					:dashboardReady="dashboardState === 'ready'"
 					@student-view="openStudentView(tab?.key)"
+					@export-analytics="exportAnalytics"
 				/>
 			</template>
 
@@ -63,6 +65,7 @@
 						doctype="LMS Batch"
 						:docname="batch.data.name"
 						:title="__('Discussions')"
+						heading-size="lg"
 						:key="batch.data.name"
 						:singleThread="true"
 						:scrollToBottom="false"
@@ -71,6 +74,12 @@
 			</template>
 		</TabbedDetailPage>
 	</div>
+	<ExportAnalyticsDialog
+		v-if="exportMounted"
+		v-model:open="showExport"
+		kind="batch"
+		:name="batchName"
+	/>
 
 	<router-view />
 </template>
@@ -89,12 +98,14 @@ import BatchHeaderActions from '@/pages/Batches/components/BatchHeaderActions.vu
 import BatchSaveButton from '@/pages/Batches/components/BatchSaveButton.vue'
 import StudentViewBar from '@/components/StudentViewBar.vue'
 import Discussions from '@/components/Discussions.vue'
+import ExportAnalyticsDialog from '@/components/Dashboard/ExportAnalyticsDialog.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import TabbedDetailPage from '@/components/Layouts/pages/TabbedDetailPage.vue'
 import NotFound from '@/pages/NotFound.vue'
 import { canReadDiscussions } from '@/utils/doctypePermissions'
 import { useScreenSize } from '@/utils/composables'
 import { provideStudentView } from '@/composables/useStudentView'
+import { provideDashboardState } from '@/composables/dashboard/useDashboard'
 import {
 	useKeyboardShortcuts,
 	saveShortcut,
@@ -184,6 +195,15 @@ useKeyboardShortcuts({
 		isAdmin.value && ['', '#overview', '#settings'].includes(route.hash),
 	shortcuts: [saveShortcut(() => form.submitBatch())],
 })
+
+const showExport = ref(false)
+// Mounted on first use: most visits to the dashboard never export.
+const exportMounted = ref(false)
+
+const exportAnalytics = () => {
+	exportMounted.value = true
+	showExport.value = true
+}
 
 const openStudentView = (tab) => {
 	studentMode.value = !tab || tab === 'overview' ? 'not-enrolled' : 'enrolled'

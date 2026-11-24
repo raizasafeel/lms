@@ -1,7 +1,9 @@
 import frappe
 
+from lms.lms.certificate_verification import get_print_format
 from lms.lms.doctype.lms_certificate.lms_certificate import get_default_certificate_template
 from lms.lms.test_helpers import BaseTestUtils
+from lms.www import certificate as certificate_page
 
 
 class TestCertificatePdfUrl(BaseTestUtils):
@@ -45,7 +47,4 @@ class TestCertificatePdfUrl(BaseTestUtils):
 	def test_a_certificate_without_a_template_uses_the_default_one(self):
 		self.certificate.db_set("template", "")
 
-		params = self._redirect_params()
-
-		self.assertEqual(params["format"], get_default_certificate_template())
-		self.assertEqual(params["name"], self.certificate.name)
+		self.assertEqual(get_print_format(self.certificate), get_default_certificate_template())

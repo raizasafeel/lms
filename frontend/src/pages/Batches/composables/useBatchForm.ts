@@ -55,6 +55,7 @@ export interface BatchForm {
 	saveTooltip: ComputedRef<string>
 	previewRequired: (on: boolean) => void
 	submitBatch: () => void
+	isSaving: ComputedRef<boolean>
 	/** Set only before a new batch's first save: what to create with it. */
 	draft?: {
 		courses: Ref<string[]>
@@ -240,8 +241,12 @@ export function useBatchForm(
 
 	watch([currentState, isMetaDirty], () => isDirty.value && autoSave())
 
+	const isSaving = computed<boolean>(() =>
+		Boolean(resource.value.setValue.loading)
+	)
+
 	function submitBatch(): void {
-		if (checkRequired()) updateBatch()
+		if (!isSaving.value && checkRequired()) updateBatch()
 	}
 
 	function payload(): Record<string, unknown> {
@@ -280,6 +285,7 @@ export function useBatchForm(
 		saveTooltip,
 		previewRequired,
 		submitBatch,
+		isSaving,
 	}
 	provide(BATCH_FORM, form)
 	return form

@@ -6,6 +6,7 @@ vi.mock('frappe-ui', () => ({
 	Button: { template: '<button><slot /></button>' },
 	Dialog: { template: '<div />' },
 }))
+vi.mock('@/utils', () => ({ openSettings: vi.fn() }))
 vi.mock('@/stores/settings', () => ({
 	useSettings: () => ({ settings: { data: null } }),
 }))

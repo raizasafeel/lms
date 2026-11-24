@@ -30,39 +30,50 @@
 				<span class="lucide-tag size-4" />
 				<span>{{ course.category }}</span>
 			</router-link>
-			<template v-if="Number(course.rating) > 0">
-				<span class="lucide-dot size-5" />
-				<div class="flex items-center gap-1">
-					<LucideStar class="size-4 text-transparent fill-ink-amber-7" />
-					<span class="font-medium text-ink-gray-9">
-						{{ formatRating(course.rating) }}
-					</span>
-					<span v-if="course.rating_count">
-						({{ formatAmount(course.rating_count) }})
-					</span>
-				</div>
-			</template>
-			<template v-if="course.enrollments">
-				<span class="lucide-dot size-5" />
-				<div class="flex items-center gap-1.5">
-					<span class="lucide-users-round size-4" />
-					<span>
-						{{ formatAmount(course.enrollments) }} {{ __('Students') }}
-					</span>
-				</div>
-			</template>
-			<span
-				v-if="doc || course.instructors?.length"
-				class="lucide-dot size-5"
-			/>
-			<InstructorsField
-				v-if="doc && form"
-				v-model="form.instructors.value"
-				memberRole="course_creator"
-				:missing="isMissing?.('instructors')"
-				@update:modelValue="markDirty?.()"
-			/>
+			<div v-if="hasRating" class="flex items-center gap-1">
+				<span
+					v-if="hasCategory"
+					aria-hidden="true"
+					class="lucide-dot size-5 shrink-0 me-2"
+				/>
+				<LucideStar class="size-4 text-transparent fill-ink-amber-7" />
+				<span class="font-medium text-ink-gray-9">
+					{{ formatRating(course.rating) }}
+				</span>
+				<span v-if="course.rating_count">
+					({{ formatAmount(course.rating_count) }})
+				</span>
+			</div>
+			<div v-if="course.enrollments" class="flex items-center gap-1.5">
+				<span
+					v-if="hasCategory || hasRating"
+					aria-hidden="true"
+					class="lucide-dot size-5 shrink-0"
+				/>
+				<span class="lucide-users-round size-4" />
+				<span>
+					{{ __('{0} students').format(formatAmount(course.enrollments)) }}
+				</span>
+			</div>
+			<div v-if="doc && form" class="flex items-center gap-3">
+				<span
+					v-if="hasCategory || hasRating || course.enrollments"
+					aria-hidden="true"
+					class="lucide-dot size-5 shrink-0"
+				/>
+				<InstructorsField
+					v-model="form.instructors.value"
+					memberRole="course_creator"
+					:missing="isMissing?.('instructors')"
+					@update:modelValue="markDirty?.()"
+				/>
+			</div>
 			<div v-else-if="course.instructors?.length" class="flex items-center">
+				<span
+					v-if="hasCategory || hasRating || course.enrollments"
+					aria-hidden="true"
+					class="lucide-dot size-5 shrink-0 me-3"
+				/>
 				<span
 					class="h-6 me-1"
 					:class="{ 'avatar-group overlap': course.instructors.length > 1 }"
@@ -130,4 +141,8 @@ const isMissing = form?.isMissing
 const intro = useTemplateRef<{ focus: () => void }>('introField')
 
 const doc = computed(() => (props.editable ? form?.resource.doc : null))
+const hasCategory = computed<boolean>(() =>
+	Boolean(doc.value || props.course.category)
+)
+const hasRating = computed<boolean>(() => Number(props.course.rating) > 0)
 </script>
