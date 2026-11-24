@@ -21,7 +21,7 @@
 			data-testid="settings-sections"
 		>
 			<SettingsSectionNav
-				class="sticky top-[calc(var(--header-frame-h)+1.25rem)] w-64"
+				class="sticky top-[calc(var(--sticky-stack-h)+1.25rem)] w-64"
 				:sections="sections"
 				:active="active"
 				@select="goTo"

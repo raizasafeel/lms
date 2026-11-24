@@ -33,10 +33,13 @@ svg.lucide {
    scroll containers below clear exactly the header (WCAG 2.4.11). */
 :root {
 	--header-frame-h: calc(2.625rem + 1px);
-	/* Everything pinned at the top: the student view bar (measured while
-	   shown) above the page header. */
+	/* Everything pinned at the top: the student view bar and a detail page's
+	   tab row, each measured while shown, around the page header. */
 	--student-view-bar-h: 0px;
-	--sticky-stack-h: calc(var(--student-view-bar-h) + var(--header-frame-h));
+	--detail-tabs-h: 0px;
+	--sticky-stack-h: calc(
+		var(--student-view-bar-h) + var(--header-frame-h) + var(--detail-tabs-h)
+	);
 }
 
 .header-frame {

@@ -73,7 +73,7 @@ describe('the shared header frame', () => {
 		}
 
 		// The stack sums the header with whatever else is pinned above it, so
-		// the padding clears the student view bar too.
+		// the padding clears the student view bar and the tab row too.
 		const stackValue = (): string | undefined => {
 			const css = readFileSync(resolve(ROOT, 'src/index.css'), 'utf8')
 			let value: string | undefined
@@ -86,6 +86,8 @@ describe('the shared header frame', () => {
 		it('takes its value from the single source', () => {
 			expect(declaredOnce()).toBe(1)
 			expect(stackValue()).toContain('var(--header-frame-h)')
+			expect(stackValue()).toContain('var(--student-view-bar-h)')
+			expect(stackValue()).toContain('var(--detail-tabs-h)')
 			const decl = paddingRule()?.nodes.find(
 				(node): node is postcss.Declaration =>
 					node.type === 'decl' && node.prop === 'scroll-padding-block-start'

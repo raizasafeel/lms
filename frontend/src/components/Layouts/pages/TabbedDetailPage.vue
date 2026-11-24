@@ -22,9 +22,18 @@
 		</div>
 		<div
 			v-else
+			ref="tabsBox"
 			class="relative flex flex-1 flex-col"
 			:class="{ 'min-h-0': !flowsWithPage }"
 		>
+			<!-- Page actions that sit at the end of the tab row and stick with it. -->
+			<div class="tab-row-pinned z-20 h-0">
+				<div
+					class="pointer-events-none absolute end-0 top-0 flex h-[var(--header-frame-h)] items-center gap-1 px-5 [&>*]:pointer-events-auto"
+				>
+					<slot name="tab-row-end" :tab="activeTab" />
+				</div>
+			</div>
 			<Tabs
 				v-model="activeKey"
 				:tabs="shorthandTabs"
@@ -84,6 +93,7 @@ import { computed, onMounted, ref, shallowReactive, watch } from 'vue'
 import { Tabs } from 'frappe-ui'
 import type { TabItem, TabValue } from 'frappe-ui'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
+import { useStickyStackHeight } from '@/composables/useStickyStackHeight'
 import { useScreenSize } from '@/utils/composables'
 import { useRoute, useRouter } from 'vue-router'
 import type { Breadcrumb } from '@/types'
@@ -105,6 +115,7 @@ defineSlots<{
 	status?: () => any
 	solo?: () => any
 	overlay?: (props: { tab?: DetailTab }) => any
+	'tab-row-end'?: (props: { tab?: DetailTab }) => any
 	[body: `tab-body-${string}`]: (props: { tab: DetailTab; doc: unknown }) => any
 }>()
 
@@ -113,6 +124,14 @@ const router = useRouter()
 const { isMobile } = useScreenSize()
 
 const instances = shallowReactive<Record<string, unknown>>({})
+
+const tabsBox = ref<HTMLElement | null>(null)
+useStickyStackHeight(
+	computed(
+		() => tabsBox.value?.querySelector<HTMLElement>('[role="tablist"]') ?? null
+	),
+	'--detail-tabs-h'
+)
 
 const visibleTabs = computed<DetailTab[]>(() =>
 	props.tabs.filter((tab) => tab.when ?? true)
@@ -211,11 +230,19 @@ defineExpose({
 
 <style scoped>
 /* Same box as the `.header-frame` above: one height token, one inset.
-   frappe-ui sizes only the pills. */
+   frappe-ui sizes only the pills. It sticks right under the page header. */
+:deep([role='tablist']),
+.tab-row-pinned {
+	position: sticky;
+	top: calc(var(--student-view-bar-h) + var(--header-frame-h));
+}
+
 :deep([role='tablist']) {
+	z-index: 10;
 	flex-shrink: 0;
 	height: var(--header-frame-h);
 	padding-inline: 1.25rem;
+	background-color: var(--surface-base);
 }
 
 .detail-tabs {

@@ -49,15 +49,11 @@
 				<SkeletonLoader v-else variant="course-page" />
 			</template>
 
-			<template #overlay="{ tab }">
-				<div
+			<template #tab-row-end="{ tab }">
+				<BatchSaveButton
 					v-if="isAdmin && isFormTab(tab?.key) && !isMobile"
-					class="pointer-events-none absolute end-0 top-0 z-10 flex h-[var(--header-frame-h)] items-center px-5"
-				>
-					<div class="pointer-events-auto">
-						<BatchSaveButton :form="form" />
-					</div>
-				</div>
+					:form="form"
+				/>
 			</template>
 
 			<template #tab-body-discussions>

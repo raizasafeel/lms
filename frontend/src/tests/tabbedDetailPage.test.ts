@@ -354,4 +354,24 @@ describe('TabbedDetailPage actions', () => {
 
 		expect(seen.key).toBe('editor')
 	})
+
+	// The tab row sticks under the header; its actions stick with it.
+	it('pins tab-row actions to the tab row and adds the row to the sticky stack', async () => {
+		const { wrapper } = await mountPage({
+			tabs: tabs(),
+			slots: {
+				'tab-row-end': (props: { tab?: Tab }) =>
+					h('button', { 'data-testid': 'row-action' }, props.tab?.key),
+			},
+		})
+		const root = document.documentElement.style
+
+		const pinned = wrapper.find('.tab-row-pinned')
+		expect(pinned.find('[data-testid="row-action"]').text()).toBe('overview')
+		expect(pinned.element.nextElementSibling).toBe(shell(wrapper).element)
+		expect(root.getPropertyValue('--detail-tabs-h')).toMatch(/px$/)
+
+		wrapper.unmount()
+		expect(root.getPropertyValue('--detail-tabs-h')).toBe('')
+	})
 })
