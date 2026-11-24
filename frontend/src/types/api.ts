@@ -89,6 +89,8 @@ export interface BatchDetails extends Omit<LMSBatch, 'instructors'> {
 	/** A listed instructor of this batch, or a Moderator: the server refuses
 	 * instructor-list changes from anyone else, a tagged evaluator included. */
 	can_change_instructors?: boolean
+	/** Set once a batch with late enrolment has started: the last day to enroll. */
+	enrollment_closes_on?: string
 }
 
 export interface CourseReviewInfo {

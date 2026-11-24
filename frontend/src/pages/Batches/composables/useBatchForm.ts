@@ -27,6 +27,7 @@ const CHECKBOXES = [
 	'published',
 	'paid_batch',
 	'allow_self_enrollment',
+	'allow_late_enrollment',
 	'certification',
 	'evaluation',
 ] as const

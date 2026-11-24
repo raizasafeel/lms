@@ -3,7 +3,7 @@
 
 import base64
 import json
-from datetime import timedelta
+from datetime import date, timedelta
 
 import frappe
 import requests
@@ -64,6 +64,7 @@ class LMSBatch(Document):
 		self.validate_duplicate_assessments()
 		self.validate_timetable()
 		self.validate_evaluation_end_date()
+		self.validate_late_enrollment()
 		self.validate_conferencing_provider()
 
 	def on_update(self):
@@ -223,6 +224,16 @@ class LMSBatch(Document):
 	def validate_evaluation_end_date(self):
 		if self.evaluation_end_date and getdate(self.evaluation_end_date) < getdate(self.end_date):
 			frappe.throw(_("Evaluation end date cannot be less than the batch end date."))
+
+	def validate_late_enrollment(self):
+		if not self.allow_late_enrollment:
+			self.last_enrollment_date = None
+			return
+		if not self.last_enrollment_date:
+			frappe.throw(_("Set the last enrolment date to allow enrolment after the batch starts."))
+		last = getdate(self.last_enrollment_date)
+		if last < getdate(self.start_date) or last > getdate(self.end_date):
+			frappe.throw(_("The last enrolment date must fall between the batch's start and end dates."))
 
 	def validate_seats_left(self):
 		if cint(self.seat_count) < 0:
@@ -584,6 +595,28 @@ def authenticate(zoom_account):
 
 
 @frappe.whitelist()
+def get_enrollment_close_date(batch: str | dict) -> date | None:
+	"""The last day, in the site's timezone, a learner can enroll: the start date, or
+	the last enrolment date when late enrolment is on. `batch` is a name or a row
+	carrying start_date, allow_late_enrollment and last_enrollment_date."""
+	if isinstance(batch, str):
+		batch = frappe.db.get_value(
+			"LMS Batch", batch, ["start_date", "allow_late_enrollment", "last_enrollment_date"], as_dict=True
+		)
+	if not batch or not batch.get("start_date"):
+		return None
+	if batch.get("allow_late_enrollment") and batch.get("last_enrollment_date"):
+		return getdate(batch.get("last_enrollment_date"))
+	return getdate(batch.get("start_date"))
+
+
+def is_enrollment_open(batch: str | dict) -> bool:
+	"""Enrolment stays open through the close date, compared as site dates, the way the
+	start date always has been. Seats are checked separately."""
+	close_date = get_enrollment_close_date(batch)
+	return bool(close_date) and getdate() <= close_date
+
+
 def get_batch_timetable(batch: str):
 	roles = frappe.get_roles()
 	is_batch_student = frappe.db.exists(

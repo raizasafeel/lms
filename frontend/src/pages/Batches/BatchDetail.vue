@@ -28,7 +28,12 @@
 				<Badge :theme="batch.data?.published ? 'green' : 'amber'">
 					{{ batch.data?.published ? __('Published') : __('Draft') }}
 				</Badge>
-				<Badge v-if="batch.data?.accept_enrollments" theme="blue">
+				<Badge
+					v-if="
+						batch.data?.accept_enrollments && !batch.data?.enrollment_closes_on
+					"
+					theme="blue"
+				>
 					{{ __('Upcoming') }}
 				</Badge>
 			</template>

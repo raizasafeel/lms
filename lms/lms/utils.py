@@ -2417,6 +2417,8 @@ def build_batch_details(batch: str) -> dict:
 			"paid_batch",
 			"evaluation_end_date",
 			"allow_self_enrollment",
+			"allow_late_enrollment",
+			"last_enrollment_date",
 			"certification",
 			"evaluation",
 			"timezone",
@@ -2446,6 +2448,7 @@ def build_batch_details(batch: str) -> dict:
 		and get_time(batch_details.start_time) > get_time(nowtime())
 	):
 		batch_details.accept_enrollments = True
+	set_late_enrollment(batch_details)
 
 	batch_details.courses = frappe.get_all(
 		"Batch Course", filters={"parent": batch}, fields=["course", "title", "evaluator"]
@@ -2460,7 +2463,9 @@ def build_batch_details(batch: str) -> dict:
 	batch_details.is_student = is_student_enrolled
 	batch_details.student_count = len(batch_students)
 
-	if batch_details.paid_batch and batch_details.start_date >= getdate():
+	if batch_details.paid_batch and (
+		batch_details.start_date >= getdate() or batch_details.accept_enrollments
+	):
 		batch_details.amount, batch_details.currency = check_multicurrency(
 			batch_details.amount, batch_details.currency, None, batch_details.amount_usd
 		)
@@ -2470,6 +2475,17 @@ def build_batch_details(batch: str) -> dict:
 		batch_details.seats_left = batch_details.seat_count - len(batch_students)
 
 	return batch_details
+
+
+def set_late_enrollment(batch) -> None:
+	"""A started batch with late enrolment still open takes learners, and says until when."""
+	from lms.lms.doctype.lms_batch.lms_batch import get_enrollment_close_date, is_enrollment_open
+
+	started = getdate(batch.start_date) < getdate() or bool(batch.start_time and has_started_today(batch))
+	if not (started and batch.allow_late_enrollment and is_enrollment_open(batch)):
+		return
+	batch.accept_enrollments = True
+	batch.enrollment_closes_on = get_enrollment_close_date(batch)
 
 
 def categorize_batches(batches: list) -> dict:
@@ -4000,6 +4016,8 @@ def get_batches(
 			"category",
 			"certification",
 			"medium",
+			"allow_late_enrollment",
+			"last_enrollment_date",
 		],
 		order_by=order_by,
 		start=start,
@@ -4134,7 +4152,8 @@ def get_batch_card_details(batches: list) -> list:
 		if batch.seat_count:
 			batch.seats_left = batch.seat_count - students_count
 
-		if batch.paid_batch and batch.start_date >= getdate():
+		set_late_enrollment(batch)
+		if batch.paid_batch and (batch.start_date >= getdate() or batch.get("enrollment_closes_on")):
 			batch.amount, batch.currency = check_multicurrency(
 				batch.amount, batch.currency, None, batch.amount_usd
 			)

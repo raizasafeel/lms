@@ -73,6 +73,12 @@
 			<p v-else-if="hasSeatsLeft" class="text-center text-p-sm text-ink-gray-6">
 				{{ __('Contact the Administrator to enroll for this batch') }}
 			</p>
+			<p
+				v-if="closesLabel && batch.data.accept_enrollments && hasSeatsLeft"
+				class="mt-2 text-center text-p-sm text-ink-gray-6"
+			>
+				{{ closesLabel }}
+			</p>
 		</div>
 		<Button v-else-if="isStudent" variant="subtle" class="w-full" disabled>
 			<template #prefix>
@@ -95,6 +101,7 @@ import { Badge, Button, createResource, toast } from 'frappe-ui'
 import { formatNumberIntoCurrency } from '@/utils'
 import { redirectToLogin } from '@/utils/login'
 import VideoPreview from '@/components/VideoPreview.vue'
+import { enrollmentClosesLabel } from '@/utils/batchEnrollment'
 import BatchFacts from '@/pages/Batches/components/overview/BatchFacts.vue'
 import { useStudentView } from '@/composables/useStudentView'
 import { injectBatchPreview } from '@/pages/Batches/composables/batchStudentView'
@@ -112,6 +119,10 @@ const props = defineProps({
 })
 
 /** Set while an instructor previews: enrolling only switches the preview. */
+const closesLabel = computed(() =>
+	enrollmentClosesLabel(props.batch.data?.enrollment_closes_on)
+)
+
 const preview = computed(() => (isStudentView.value ? batchPreview : null))
 
 const billingRoute = computed(() => ({

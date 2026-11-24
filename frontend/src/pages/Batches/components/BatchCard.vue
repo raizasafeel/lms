@@ -56,6 +56,13 @@
 				<span class="lucide-globe size-4 text-ink-gray-5" aria-hidden="true" />
 				{{ timezone }}
 			</li>
+			<li v-if="closesLabel" class="flex items-center gap-2">
+				<span
+					class="lucide-calendar-clock size-4 text-ink-gray-5"
+					aria-hidden="true"
+				/>
+				{{ closesLabel }}
+			</li>
 			<li v-if="batch.certification" class="flex items-center gap-2">
 				<span
 					class="lucide-circle-check size-4 text-ink-gray-5"
@@ -121,6 +128,7 @@ import { formatTimezone, nextOccurrence } from '@/utils/timezone'
 import CardLink from '@/components/CardLink.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
+import { enrollmentClosesLabel } from '@/utils/batchEnrollment'
 
 const props = defineProps({
 	batch: {
@@ -132,6 +140,10 @@ const props = defineProps({
 		default: null,
 	},
 })
+
+const closesLabel = computed(() =>
+	enrollmentClosesLabel(props.batch.enrollment_closes_on)
+)
 
 const breakdown = computed(() => props.batch.progress_breakdown || [])
 

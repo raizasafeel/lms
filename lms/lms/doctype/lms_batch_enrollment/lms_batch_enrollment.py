@@ -10,6 +10,7 @@ from frappe.model.document import Document
 from frappe.query_builder import Bracket
 from pypika.terms import LiteralValue
 
+from lms.lms.doctype.lms_batch.lms_batch import is_enrollment_open
 from lms.lms.doctype.lms_enrollment.lms_enrollment import (
 	AlreadyEnrolledError,
 	save_unless_enrolled,
@@ -62,6 +63,7 @@ class LMSBatchEnrollment(Document):
 		self.validate_duplicate_members()
 		self.validate_payment()
 		self.validate_self_enrollment()
+		self.validate_enrollment_window()
 		self.validate_course_enrollment()
 
 	def validate_owner(self):
@@ -111,6 +113,17 @@ class LMSBatchEnrollment(Document):
 		if self.owner != self.member or can_author_batch(self.batch):
 			return
 		frappe.throw(_("Enrollment in this batch is restricted. Please contact the Administrator."))
+
+	def validate_enrollment_window(self):
+		"""A learner enrolls themselves only until the batch's enrolment close date.
+		Staff enrolling someone, student view and a verified payment are not held to it:
+		the payment was checked against the window before it was taken."""
+		if not self.is_new() or self.owner != self.member or self.flags.via_payment:
+			return
+		if self.flags.student_view or can_author_batch(self.batch):
+			return
+		if not is_enrollment_open(self.batch):
+			frappe.throw(_("Enrollment for this batch is closed."))
 
 	def can_skip_payment(self):
 		"""Only a site admin or Moderator enrolls themselves without paying. The

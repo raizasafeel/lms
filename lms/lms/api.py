@@ -70,6 +70,7 @@ from lms.lms.course_import_export import (
 	validate_archive,
 )
 from lms.lms.doctype.course_lesson.course_lesson import save_progress
+from lms.lms.doctype.lms_batch.lms_batch import is_enrollment_open
 from lms.lms.doctype.lms_certificate.lms_certificate import (
 	evaluates_certificate,
 	get_certificate_template,
@@ -357,10 +358,9 @@ def verify_billing_access(doctype, name, billing_type):
 			access = False
 			message = _("Batch is sold out.")
 
-		start_date = frappe.get_cached_value("LMS Batch", name, "start_date")
-		if start_date and date_diff(start_date, now()) < 0:
+		if not is_enrollment_open(name):
 			access = False
-			message = _("Batch has already started.")
+			message = _("Enrollment for this batch is closed.")
 
 	elif access and billing_type == "certificate":
 		purchased_certificate = frappe.db.exists(

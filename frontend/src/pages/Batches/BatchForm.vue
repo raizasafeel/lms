@@ -12,6 +12,35 @@
 						: __('Learners are asked to contact you, and you enroll them.')
 				"
 			/>
+			<SettingSwitch
+				v-model="doc.allow_late_enrollment"
+				:label="__('Allow enrolment after the batch starts')"
+				:summary="
+					doc.allow_late_enrollment
+						? __('Learners can enroll until the last enrolment date.')
+						: __('Enrolment closes when the batch starts.')
+				"
+			/>
+			<SettingRow
+				v-if="doc.allow_late_enrollment"
+				:label="__('Last enrolment date')"
+				:summary="
+					__('Between the start and end dates, in the site\'s timezone.')
+				"
+			>
+				<template #control>
+					<DatePicker
+						v-model="doc.last_enrollment_date"
+						variant="outline"
+						format="D MMM YYYY"
+						:min="doc.start_date"
+						:max="doc.end_date"
+						:placeholder="__('Last enrolment date')"
+						:aria-label="__('Last enrolment date')"
+						class="w-60"
+					/>
+				</template>
+			</SettingRow>
 			<SettingLink
 				v-model="doc.confirmation_email_template"
 				:label="__('Confirmation email')"
