@@ -4,12 +4,12 @@
 			v-if="!hideHeader || withProgress || collapsible"
 			class="bg-surface-gray-1 px-5 py-5 border-b"
 		>
-			<div v-if="!hideHeader || collapsible" class="flex items-center gap-1.5">
+			<div v-if="!hideHeader || collapsible" class="flex items-center gap-2">
 				<Button
 					v-if="collapsible"
 					variant="ghost"
 					size="sm"
-					class="-ms-1.5 shrink-0"
+					class="-mx-1.5 shrink-0"
 					data-testid="hide-chapters"
 					:label="__('Hide chapters')"
 					:tooltip="__('Hide chapters')"

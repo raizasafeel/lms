@@ -7,7 +7,7 @@
 				v-if="collapsible"
 				variant="ghost"
 				size="sm"
-				class="-ms-1.5"
+				class="-mx-1.5"
 				data-testid="hide-chapters"
 				:label="__('Hide chapters')"
 				:tooltip="__('Hide chapters')"
