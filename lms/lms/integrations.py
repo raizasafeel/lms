@@ -11,6 +11,7 @@ SETTINGS_FLAGS = {
 	"zoom_attendance": "track_zoom_attendance",
 	"code_runner": "enable_code_runner",
 	"unsplash": "enable_unsplash",
+	"flow": "enable_flow",
 }
 
 LABELS = {
@@ -19,6 +20,7 @@ LABELS = {
 	"zoom": "Zoom",
 	"code_runner": "Code runner",
 	"unsplash": "Unsplash",
+	"flow": "Flow",
 }
 
 CONFERENCING_INTEGRATIONS = {
@@ -79,7 +81,7 @@ def get_integration_status() -> dict:
 			"has_key": bool(settings.unsplash_access_key),
 		},
 		"raven": get_raven_status(apps),
-		"frappe_meet": {"installed": "meet" in apps},
+		"flow": get_flow_status(settings),
 	}
 
 
@@ -109,6 +111,21 @@ def get_calendar_counts() -> dict:
 		.run(pluck=True)
 	)
 	return {"calendars": len(calendars), "need_access": len(calendars) - len(set(authorized))}
+
+
+def get_flow_status(settings) -> dict:
+	"""LMS's switches, and whether Flow has an AI service to chat with."""
+	if not frappe.db.exists("DocType", "Flow Session"):
+		return {"installed": False, "enabled": False, "hide_for_learners": False, "ready": False}
+
+	from frappe.flow.lib.model import is_enabled
+
+	return {
+		"installed": True,
+		"enabled": bool(settings.enable_flow),
+		"hide_for_learners": bool(settings.hide_flow_for_learners),
+		"ready": is_enabled(),
+	}
 
 
 def get_raven_status(apps: list[str]) -> dict:

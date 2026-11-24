@@ -154,7 +154,11 @@ has_permission = {
 	"LMS Quiz Submission": "lms.lms.permissions.assessment_submission_has_permission",
 	"LMS Assignment Submission": "lms.lms.permissions.assessment_submission_has_permission",
 	"LMS Programming Exercise Submission": "lms.lms.permissions.assessment_submission_has_permission",
+	"Flow Session": "lms.lms.flow.flow_session_has_permission",
 }
+
+# Runs after Frappe's own, which adds Flow's launcher to the page.
+after_request = ["lms.lms.flow.remove_launcher"]
 
 # DocType Class
 # ---------------

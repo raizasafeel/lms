@@ -10,6 +10,7 @@ def execute():
 		"enable_google_meet": frappe.db.exists("LMS Google Meet Settings"),
 		"enable_code_runner": True,
 		"enable_unsplash": unsplash_key,
+		"enable_flow": True,
 	}
 	for field, enabled in switches.items():
 		frappe.db.set_single_value("LMS Settings", field, 1 if enabled else 0)

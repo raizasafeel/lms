@@ -23,6 +23,8 @@
 		"enable_zoom",
 		"track_zoom_attendance",
 		"enable_google_meet",
+		"enable_flow",
+		"hide_flow_for_learners",
 		"notifications_section",
 		"send_notification_for_published_courses",
 		"column_break_dtns",
@@ -136,6 +138,19 @@
 			"fieldname": "enable_google_meet",
 			"fieldtype": "Check",
 			"label": "Enable Google Meet"
+		},
+		{
+			"default": "1",
+			"fieldname": "enable_flow",
+			"fieldtype": "Check",
+			"label": "Enable Flow"
+		},
+		{
+			"default": "0",
+			"description": "Learners with no staff role in the LMS don't get Flow.",
+			"fieldname": "hide_flow_for_learners",
+			"fieldtype": "Check",
+			"label": "Hide Flow for Learners"
 		},
 		{
 			"fieldname": "mentor_request_creation",

@@ -158,8 +158,15 @@ def get_cloud_settings_context() -> dict:
 
 
 def can_use_flow() -> bool:
-	"""Matches the check Frappe's Flow launcher makes before adding its panel to the page."""
-	return bool(frappe.db.exists("DocType", "Flow Session")) and frappe.has_permission("Flow Session", "read")
+	"""Matches the check Frappe's Flow launcher makes before adding its panel to the page,
+	and LMS's own, which takes the panel back off."""
+	from lms.lms.flow import is_flow_offered
+
+	return (
+		bool(frappe.db.exists("DocType", "Flow Session"))
+		and frappe.has_permission("Flow Session", "read")
+		and is_flow_offered()
+	)
 
 
 PERMISSION_DOCTYPES = (
