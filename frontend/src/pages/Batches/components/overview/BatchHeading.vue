@@ -37,13 +37,20 @@
 					class="h-6 me-1"
 					:class="{ 'avatar-group overlap': batch.instructors.length > 1 }"
 				>
-					<UserAvatar
+					<template
 						v-for="instructor in batch.instructors"
 						:key="instructor.username"
-						:user="instructor"
-					/>
+					>
+						<InstructorHoverCard
+							v-if="batch.instructors.length > 3"
+							:instructor="instructor"
+						>
+							<UserAvatar :user="instructor" />
+						</InstructorHoverCard>
+						<UserAvatar v-else :user="instructor" />
+					</template>
 				</span>
-				<CourseInstructors :instructors="batch.instructors" />
+				<CourseInstructors :instructors="batch.instructors" hoverCards />
 			</div>
 			<template v-if="batch.student_count">
 				<span class="lucide-dot size-5" />
@@ -76,6 +83,7 @@
 <script setup lang="ts">
 import { useTemplateRef } from 'vue'
 import CourseInstructors from '@/components/CourseInstructors.vue'
+import InstructorHoverCard from '@/components/InstructorHoverCard.vue'
 import CategoryField from '@/components/InlineEdit/CategoryField.vue'
 import InlineText from '@/components/InlineEdit/InlineText.vue'
 import InstructorsField from '@/components/InlineEdit/InstructorsField.vue'

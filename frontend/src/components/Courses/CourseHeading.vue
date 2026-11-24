@@ -77,13 +77,20 @@
 					class="h-6 me-1"
 					:class="{ 'avatar-group overlap': course.instructors.length > 1 }"
 				>
-					<UserAvatar
+					<template
 						v-for="instructor in course.instructors"
 						:key="instructor.username"
-						:user="instructor"
-					/>
+					>
+						<InstructorHoverCard
+							v-if="course.instructors.length > 3"
+							:instructor="instructor"
+						>
+							<UserAvatar :user="instructor" />
+						</InstructorHoverCard>
+						<UserAvatar v-else :user="instructor" />
+					</template>
 				</span>
-				<CourseInstructors :instructors="course.instructors" />
+				<CourseInstructors :instructors="course.instructors" hoverCards />
 			</div>
 		</div>
 
@@ -124,6 +131,7 @@ import { Badge } from 'frappe-ui'
 import { computed, inject, useTemplateRef } from 'vue'
 import { formatAmount, formatRating } from '@/utils/'
 import CourseInstructors from '@/components/CourseInstructors.vue'
+import InstructorHoverCard from '@/components/InstructorHoverCard.vue'
 import CourseTagsField from '@/components/Courses/CourseTagsField.vue'
 import CategoryField from '@/components/InlineEdit/CategoryField.vue'
 import InlineText from '@/components/InlineEdit/InlineText.vue'
