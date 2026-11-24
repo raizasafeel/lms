@@ -185,7 +185,10 @@ describe('the course thumbnail picker', () => {
 	it('shuffles both the colour and the icon', async () => {
 		vi.spyOn(Math, 'random').mockReturnValue(0)
 		const wrapper = mountPicker({ tint: 'Blue', icon: 'rocket' })
-		await wrapper.get('button').trigger('click')
+		const shuffle = wrapper
+			.findAll('button')
+			.find((b) => b.text() === 'Shuffle')
+		await shuffle!.trigger('click')
 		expect(wrapper.emitted('update:tint')).toEqual([['Red']])
 		expect(wrapper.emitted('update:icon')).toEqual([['boxes']])
 		vi.restoreAllMocks()

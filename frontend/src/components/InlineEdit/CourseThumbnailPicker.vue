@@ -2,24 +2,26 @@
 	<div class="py-3">
 		<div class="flex flex-col gap-5 @lg:flex-row">
 			<div class="flex shrink-0 flex-col gap-2 @lg:w-56">
-				<div
-					class="grid aspect-video w-full place-items-center overflow-hidden rounded-4 border border-outline-gray-1"
-					:class="image ? 'bg-surface-gray-2' : courseTint(tint)"
-					data-testid="thumbnail-preview"
-				>
-					<img
-						v-if="image"
-						:src="safeUrl(image)"
-						alt=""
-						class="size-full object-cover"
-					/>
-					<span
-						v-else
-						class="size-10 stroke-[1.5]"
-						:class="courseIcon(icon)"
-						aria-hidden="true"
-					/>
-				</div>
+				<ImageHoverUpload v-model:image="image" class="rounded-4">
+					<div
+						class="grid aspect-video w-full place-items-center overflow-hidden rounded-4 border border-outline-gray-1"
+						:class="image ? 'bg-surface-gray-2' : courseTint(tint)"
+						data-testid="thumbnail-preview"
+					>
+						<img
+							v-if="image"
+							:src="safeUrl(image)"
+							alt=""
+							class="size-full object-cover"
+						/>
+						<span
+							v-else
+							class="size-10 stroke-[1.5]"
+							:class="courseIcon(icon)"
+							aria-hidden="true"
+						/>
+					</div>
+				</ImageHoverUpload>
 				<Button
 					class="w-full"
 					icon-left="lucide-shuffle"
@@ -71,6 +73,7 @@
 import { Button } from 'frappe-ui'
 import CourseIconPicker from '@/components/InlineEdit/CourseIconPicker.vue'
 import ImageDropzone from '@/components/InlineEdit/ImageDropzone.vue'
+import ImageHoverUpload from '@/components/InlineEdit/ImageHoverUpload.vue'
 import { courseColor, courseIcon, shuffleThumbnail } from '@/utils/courseIcons'
 import { COURSE_SWATCHES, courseTint } from '@/utils/courseTints'
 import { safeUrl } from '@/utils/safeUrl'

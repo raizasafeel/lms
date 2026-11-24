@@ -102,7 +102,8 @@
 
 <script setup lang="ts">
 import { ref, useTemplateRef } from 'vue'
-import { Button, FileUploadHandler, toast } from 'frappe-ui'
+import { Button } from 'frappe-ui'
+import { IMAGE_ACCEPT, useImageUpload } from '@/composables/useImageUpload'
 import { safeUrl } from '@/utils/safeUrl'
 
 /**
@@ -117,39 +118,13 @@ defineProps<{
 }>()
 const image = defineModel<string | null | undefined>('image')
 
-const ACCEPT = '.jpg,.jpeg,.png'
+const ACCEPT = IMAGE_ACCEPT
 const input = useTemplateRef<HTMLInputElement>('input')
 const dragging = ref<boolean>(false)
-const uploading = ref<boolean>(false)
-
-const isImage = (file: File): boolean =>
-	/\.(jpe?g|png)$/i.test(file.name) || /^image\/(jpeg|png)$/.test(file.type)
-
-async function upload(file: File | undefined): Promise<void> {
-	if (!file) return
-	if (!isImage(file)) {
-		toast.error(__('Pick a JPG or PNG image.'))
-		return
-	}
-	uploading.value = true
-	try {
-		const saved = await new FileUploadHandler().upload(file, { private: false })
-		image.value = saved.file_url
-	} catch {
-		toast.error(__('Error uploading file'))
-	} finally {
-		uploading.value = false
-	}
-}
+const { uploading, onDrop: upload, onPick } = useImageUpload(image)
 
 function onDrop(event: DragEvent): void {
 	dragging.value = false
-	upload(event.dataTransfer?.files?.[0])
-}
-
-function onPick(event: Event): void {
-	const target = event.target as HTMLInputElement
-	upload(target.files?.[0])
-	target.value = ''
+	upload(event)
 }
 </script>
