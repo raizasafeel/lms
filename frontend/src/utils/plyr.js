@@ -2,6 +2,8 @@ import Plyr from 'plyr'
 import 'plyr/dist/plyr.css'
 import { guardPlayerSkips } from '@/utils/videoSkipGuard'
 
+const PLAYER_READY_TIMEOUT = 8000
+
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export const enablePlyr = async () => {
@@ -58,9 +60,13 @@ const setupPlyrForVideo = (video, players) => {
 		speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] },
 	})
 
-	player.on('ready', () =>
+	const showPlayer = () => {
+		clearTimeout(fallback)
 		embed?.classList.remove('embed-tool--player-loading')
-	)
+	}
+	// Don't hide the player for good if `ready` never fires.
+	const fallback = setTimeout(showPlayer, PLAYER_READY_TIMEOUT)
+	player.on('ready', showPlayer)
 	guardPlayerSkips(player)
 	keepFocusInPlayer(player)
 	video.plyrInstance = player

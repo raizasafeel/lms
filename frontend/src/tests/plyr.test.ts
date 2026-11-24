@@ -144,6 +144,17 @@ describe('enablePlyr embed loading state', () => {
 		player.emit('ready')
 		expect(embed.classList).not.toContain('embed-tool--player-loading')
 	})
+
+	it('shows the player after 8s even if ready never fires', async () => {
+		document.body.innerHTML = `<div class="embed-tool embed-tool--player-loading">
+			<div class="video-player" src="dQw4w9WgXcQ"></div></div>`
+		const embed = document.querySelector('.embed-tool')!
+		await runPlyr()
+		await vi.advanceTimersByTimeAsync(7999)
+		expect(embed.classList).toContain('embed-tool--player-loading')
+		await vi.advanceTimersByTimeAsync(1)
+		expect(embed.classList).not.toContain('embed-tool--player-loading')
+	})
 })
 
 describe('enablePlyr prevent_skipping_videos', () => {
