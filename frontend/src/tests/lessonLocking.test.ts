@@ -711,3 +711,26 @@ describe('Lesson.vue lesson heading on mobile', () => {
 		expect(await headingAt(1500, { no_preview: 1 })).not.toContain('sr-only')
 	})
 })
+
+describe('Lesson.vue mobile Chapters button', () => {
+	it('fills the scroll area so the button rests above the tab bar on a short lesson', async () => {
+		vi.stubGlobal('innerWidth', 410)
+		try {
+			wrapper = await mountLesson()
+			findResource('lms.lms.utils.get_lesson').data = { ...baseLesson }
+			await flushPromises()
+			const floating = wrapper
+				.findAll('button')
+				.find((button) => button.text() === 'Chapters')!.element.parentElement!
+			expect([...floating.classList]).toEqual(
+				expect.arrayContaining(['sticky', 'bottom-4', 'mt-auto'])
+			)
+			expect([...floating.parentElement!.classList]).toEqual(
+				expect.arrayContaining(['flex', 'grow', 'flex-col'])
+			)
+		} finally {
+			vi.unstubAllGlobals()
+			vi.stubGlobal('__', translateStub)
+		}
+	})
+})

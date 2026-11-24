@@ -1,5 +1,5 @@
 <template>
-	<div v-if="lesson.data" class="">
+	<div v-if="lesson.data" :class="{ 'flex grow flex-col': isMobile }">
 		<StudentViewBar
 			v-if="isStudentView"
 			v-model="studentMode"
@@ -334,7 +334,7 @@
 
 		<div
 			v-if="isMobile"
-			class="pointer-events-none sticky bottom-4 z-10 flex justify-end px-4"
+			class="pointer-events-none sticky bottom-4 z-10 mt-auto flex justify-end px-4 pt-4"
 		>
 			<Button
 				variant="outline"
