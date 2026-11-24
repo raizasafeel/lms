@@ -38,13 +38,18 @@ describe('CourseCard', () => {
 		expect(thumbnail.find('img').exists()).toBe(false)
 	})
 
-	it('shows the course icon on the tint, or an open book', () => {
+	it('shows any lucide icon on the tint, or an open book', () => {
 		expect(
 			mountCard({ icon: 'rocket' }).find('.h-40 .lucide-rocket').exists()
 		).toBe(true)
+		expect(
+			mountCard({ icon: 'telescope' }).find('.h-40 .lucide-telescope').exists()
+		).toBe(true)
 		expect(mountCard({}).find('.h-40 .lucide-book-open').exists()).toBe(true)
 		expect(
-			mountCard({ icon: 'unknown' }).find('.h-40 .lucide-book-open').exists()
+			mountCard({ icon: 'Not an icon' })
+				.find('.h-40 .lucide-book-open')
+				.exists()
 		).toBe(true)
 	})
 

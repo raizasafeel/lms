@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { flushPromises } from '@vue/test-utils'
 
 vi.mock('frappe-ui', () => ({
 	Button: {
@@ -17,36 +16,74 @@ vi.mock('frappe-ui', () => ({
 	},
 	UploadError: class extends Error {},
 	toast: { error: vi.fn() },
+	FormControl: {
+		name: 'FormControl',
+		props: ['modelValue'],
+		emits: ['update:modelValue'],
+		template:
+			'<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+	},
 }))
 
 import CourseIconPicker from '@/components/InlineEdit/CourseIconPicker.vue'
 import CourseThumbnailPicker from '@/components/InlineEdit/CourseThumbnailPicker.vue'
-import { COURSE_ICONS, courseIcon, shuffleThumbnail } from '@/utils/courseIcons'
-
-declare const process: { cwd(): string }
+import {
+	COURSE_ICONS,
+	courseIcon,
+	isIconName,
+	shuffleThumbnail,
+} from '@/utils/courseIcons'
+import {
+	defineIconClass,
+	iconDataUri,
+	loadIconNodes,
+	loadIconTags,
+} from '@/utils/lucideIconStyles'
 
 const options = { global: { mocks: { __: globalThis.__ } } }
 
 describe('course icons', () => {
-	it('match the icons the LMS Course controller allows, in order', () => {
-		const controller = readFileSync(
-			resolve(process.cwd(), '../lms/lms/doctype/lms_course/lms_course.py'),
-			'utf8'
-		)
-		const tuple = controller.match(/COURSE_ICONS = \(([\s\S]*?)\)/)![1]
-		const pythonIcons = [...tuple.matchAll(/"([^"]+)"/g)].map((m) => m[1])
-		expect(pythonIcons).toEqual(COURSE_ICONS)
-		expect(COURSE_ICONS).toHaveLength(18)
+	it('accepts lucide-shaped names only, as the LMS Course controller does', () => {
+		for (const name of ['rocket', 'dice-6', 'chart-no-axes-column'])
+			expect(isIconName(name)).toBe(true)
+		for (const name of [
+			'Rocket',
+			'a b',
+			'rocket-',
+			'-a',
+			'a--b',
+			'a'.repeat(65),
+		])
+			expect(isIconName(name)).toBe(false)
 	})
 
 	it('falls back to the open book for an empty or unknown icon', () => {
 		expect(courseIcon('rocket')).toBe('lucide-rocket')
 		expect(courseIcon('')).toBe('lucide-book-open')
 		expect(courseIcon(null)).toBe('lucide-book-open')
-		expect(courseIcon('not-an-icon')).toBe('lucide-book-open')
+		expect(courseIcon('<svg>')).toBe('lucide-book-open')
 	})
 
-	it('shuffles to a stored colour and an allowed icon, never the same pair', () => {
+	it('defines the class for any lucide icon at runtime', async () => {
+		expect(courseIcon('telescope')).toBe('lucide-telescope')
+		await defineIconClass('telescope')
+		await defineIconClass('not-a-lucide-icon')
+		const rules = [...document.querySelectorAll('style[data-lucide-icons]')]
+			.flatMap((style) => [...(style as HTMLStyleElement).sheet!.cssRules])
+			.map((rule) => rule.cssText)
+		expect(rules).toHaveLength(2)
+		expect(rules[0]).toContain('.lucide-telescope')
+		expect(rules[1]).toContain('.lucide-not-a-lucide-icon')
+	})
+
+	it('draws an icon at the 1.5 stroke of the build-time classes', async () => {
+		const nodes = await loadIconNodes()
+		const svg = decodeURIComponent(iconDataUri(nodes['book-open']))
+		expect(svg).toContain('stroke-width="1.5"')
+		expect(svg).toContain('<path d="M12 5v16"/>')
+	})
+
+	it('shuffles to a stored colour and a curated icon, never the same pair', () => {
 		const random = vi.spyOn(Math, 'random')
 		for (const value of [0, 0.5, 0.999]) {
 			random.mockReturnValue(value)
@@ -60,32 +97,75 @@ describe('course icons', () => {
 })
 
 describe('the course icon picker', () => {
+	const mountIconPicker = async (props: Record<string, unknown> = {}) => {
+		const wrapper = mount(CourseIconPicker, { props, ...options })
+		await loadIconTags()
+		await flushPromises()
+		return wrapper
+	}
+	const labels = (wrapper: ReturnType<typeof mount>) =>
+		wrapper.findAll('button').map((button) => button.attributes('aria-label'))
+
+	it('lists the curated icons first, then a page of the rest', async () => {
+		const wrapper = await mountIconPicker({ modelValue: 'rocket' })
+		expect(labels(wrapper).slice(0, COURSE_ICONS.length)).toEqual(
+			COURSE_ICONS.map((name) => name.replace(/-/g, ' '))
+		)
+		expect(labels(wrapper)).toHaveLength(108)
+	})
+
 	it('marks the current icon and emits the one clicked', async () => {
-		const wrapper = mount(CourseIconPicker, {
-			props: { modelValue: 'rocket' },
-			...options,
-		})
-		expect(wrapper.findAll('button')).toHaveLength(18)
-		expect(
-			wrapper.get('[aria-label="rocket"]').attributes('aria-pressed')
-		).toBe('true')
+		const wrapper = await mountIconPicker({ modelValue: 'rocket' })
+		const rocket = wrapper.get('[aria-label="rocket"]')
+		expect(rocket.attributes('aria-pressed')).toBe('true')
+		expect(rocket.attributes('tabindex')).toBe('0')
 		await wrapper.get('[aria-label="chart line"]').trigger('click')
 		expect(wrapper.emitted('update:modelValue')).toEqual([['chart-line']])
 	})
 
-	it('reads an empty icon as the open book', () => {
-		const wrapper = mount(CourseIconPicker, options)
+	it('shows an icon outside the curated set first', async () => {
+		const wrapper = await mountIconPicker({ modelValue: 'telescope' })
+		expect(labels(wrapper)[0]).toBe('telescope')
+		expect(
+			wrapper.get('[aria-label="telescope"]').attributes('aria-pressed')
+		).toBe('true')
+	})
+
+	it('searches every lucide icon by name and keyword', async () => {
+		const wrapper = await mountIconPicker()
+		await wrapper.get('input').setValue('piggy')
+		expect(labels(wrapper)).toContain('piggy bank')
+		await wrapper.get('input').setValue('savings')
+		expect(labels(wrapper)).toContain('piggy bank')
+		await wrapper.get('input').setValue('zzzz')
+		expect(wrapper.findAll('button')).toHaveLength(0)
+		expect(wrapper.text()).toContain('No icons match')
+	})
+
+	it('moves focus with the arrow keys', async () => {
+		const wrapper = await mountIconPicker({ columns: 12 })
+		document.body.append(wrapper.element)
+		const buttons = wrapper.findAll('button')
+		;(buttons[0].element as HTMLElement).focus()
+		await buttons[0].trigger('keydown', { key: 'ArrowRight' })
+		expect(document.activeElement).toBe(buttons[1].element)
+		await buttons[1].trigger('keydown', { key: 'ArrowDown' })
+		expect(document.activeElement).toBe(buttons[13].element)
+		await buttons[13].trigger('keydown', { key: 'Home' })
+		expect(document.activeElement).toBe(buttons[0].element)
+		wrapper.unmount()
+	})
+
+	it('reads an empty icon as the open book', async () => {
+		const wrapper = await mountIconPicker()
 		expect(
 			wrapper.get('[aria-label="book open"]').attributes('aria-pressed')
 		).toBe('true')
 	})
 
-	it('lays out nine columns when asked', () => {
-		const wrapper = mount(CourseIconPicker, {
-			props: { columns: 9 },
-			...options,
-		})
-		expect(wrapper.classes()).toContain('grid-cols-9')
+	it('lays out twelve columns when asked', async () => {
+		const wrapper = await mountIconPicker({ columns: 12 })
+		expect(wrapper.get('[role="group"]').classes()).toContain('grid-cols-12')
 	})
 })
 

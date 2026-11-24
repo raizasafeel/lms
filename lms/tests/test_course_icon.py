@@ -3,13 +3,12 @@
 
 import frappe
 
-from lms.lms.doctype.lms_course.lms_course import COURSE_ICONS
 from lms.lms.test_helpers import BaseTestUtils
 from lms.lms.utils import get_course_details
 
 
 class TestCourseIcon(BaseTestUtils):
-	"""A course thumbnail icon is one of the allowed lucide names, or empty."""
+	"""A course thumbnail icon is any plausible lucide name, or empty."""
 
 	def setUp(self):
 		super().setUp()
@@ -20,10 +19,17 @@ class TestCourseIcon(BaseTestUtils):
 		self.course.save()
 		self.assertEqual(frappe.db.get_value("LMS Course", self.course.name, "icon"), "rocket")
 
-	def test_rejects_an_unknown_icon(self):
-		self.course.icon = "lucide-rocket"
-		with self.assertRaises(frappe.ValidationError):
+	def test_saves_any_lucide_name(self):
+		for name in ("chart-no-axes-column", "dice-6", "rocket"):
+			self.course.icon = name
 			self.course.save()
+			self.assertEqual(frappe.db.get_value("LMS Course", self.course.name, "icon"), name)
+
+	def test_rejects_what_is_not_an_icon_name(self):
+		for value in ("Rocket", "lucide rocket", "rocket-", "-rocket", "a--b", "<svg>", "a" * 65):
+			self.course.icon = value
+			with self.assertRaises(frappe.ValidationError, msg=value):
+				self.course.save()
 
 	def test_trims_and_allows_empty(self):
 		self.course.icon = "  globe "
@@ -34,6 +40,6 @@ class TestCourseIcon(BaseTestUtils):
 		self.assertEqual(self.course.icon, "")
 
 	def test_course_details_carry_the_icon(self):
-		self.course.icon = COURSE_ICONS[0]
+		self.course.icon = "telescope"
 		self.course.save()
-		self.assertEqual(get_course_details(self.course.name).icon, COURSE_ICONS[0])
+		self.assertEqual(get_course_details(self.course.name).icon, "telescope")

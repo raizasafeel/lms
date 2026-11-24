@@ -1,6 +1,6 @@
 <template>
 	<div class="flex flex-col gap-5 py-3 @lg:flex-row">
-		<div class="flex shrink-0 flex-col gap-2 @lg:w-40">
+		<div class="flex shrink-0 flex-col gap-2 @lg:w-56">
 			<div
 				class="grid aspect-video w-full place-items-center overflow-hidden rounded-4 border border-outline-gray-1"
 				:class="image ? 'bg-surface-gray-2' : courseTint(tint)"
@@ -26,6 +26,33 @@
 				:tooltip="__('Pick a random colour and icon')"
 				@click="shuffle"
 			/>
+			<FileUploader
+				:fileTypes="['.jpg,.jpeg,.png']"
+				:private="false"
+				@success="(file: { file_url: string }) => (image = file.file_url)"
+				@failure="onUploadFailure"
+			>
+				<template #default="{ openFileSelector, uploading }">
+					<Button
+						class="w-full"
+						variant="ghost"
+						icon-left="lucide-upload"
+						:loading="uploading"
+						:label="image ? __('Change image') : __('Upload an image instead')"
+						@click="openFileSelector"
+					/>
+				</template>
+			</FileUploader>
+			<Button
+				v-if="image"
+				class="w-full"
+				variant="ghost"
+				:label="__('Remove image')"
+				@click="image = ''"
+			/>
+			<span class="text-center text-p-xs text-ink-gray-6">
+				{{ __('750 × 422, JPG or PNG') }}
+			</span>
 		</div>
 		<div class="min-w-0 max-w-xl flex-1 space-y-3">
 			<div
@@ -44,36 +71,7 @@
 					@click="tint = courseColor(color)"
 				/>
 			</div>
-			<CourseIconPicker v-model="icon" :columns="9" />
-			<div class="flex flex-wrap items-center gap-2">
-				<FileUploader
-					:fileTypes="['.jpg,.jpeg,.png']"
-					:private="false"
-					@success="(file: { file_url: string }) => (image = file.file_url)"
-					@failure="onUploadFailure"
-				>
-					<template #default="{ openFileSelector, uploading }">
-						<Button
-							variant="ghost"
-							icon-left="lucide-upload"
-							:loading="uploading"
-							:label="
-								image ? __('Change image') : __('Upload an image instead')
-							"
-							@click="openFileSelector"
-						/>
-					</template>
-				</FileUploader>
-				<Button
-					v-if="image"
-					variant="ghost"
-					:label="__('Remove image')"
-					@click="image = ''"
-				/>
-				<span class="text-p-xs text-ink-gray-6">
-					{{ __('750 × 422, JPG or PNG') }}
-				</span>
-			</div>
+			<CourseIconPicker v-model="icon" :columns="12" />
 		</div>
 	</div>
 </template>
