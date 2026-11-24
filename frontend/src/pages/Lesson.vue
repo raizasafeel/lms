@@ -4,18 +4,21 @@
 			<template #actions>
 				<CertificationLinks :courseName="courseName" />
 				<HeaderButton
-					v-if="canEditLesson"
+					v-if="canEditLesson && !isStudentView"
 					:label="__('Editor View')"
 					icon="lucide-pencil"
-					:route="{
-						name: 'CourseDetail',
-						params: { courseName: courseName },
-						hash: '#editor',
-						query: { editLesson: `${chapterNumber}-${lessonNumber}` },
-					}"
+					:route="editorRoute"
 				/>
 			</template>
 		</PageHeader>
+		<StudentViewBar
+			v-if="isStudentView"
+			v-model="studentMode"
+			doctype="LMS Course"
+			:name="courseName"
+			@exit="router.push(editorRoute)"
+			@change="lesson.reload()"
+		/>
 
 		<div
 			v-if="isMobile && lessonTotal"
@@ -424,6 +427,7 @@ import { useFoldablePanel } from '@/composables/useFoldablePanel'
 import LockedLessonNotice from '@/components/LockedLessonNotice.vue'
 import LessonNavButtons from '@/components/LessonNavButtons.vue'
 import StudentLessonSidebar from '@/components/StudentLessonSidebar.vue'
+import StudentViewBar from '@/components/StudentViewBar.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
 import HeaderButton from '@/components/HeaderButton.vue'
@@ -439,7 +443,12 @@ import {
 	canReadDiscussions,
 	hasDoctypePermission,
 } from '@/utils/doctypePermissions'
-import { provideStudentView } from '@/composables/useStudentView'
+import {
+	provideStudentView,
+	studentViewMode,
+	studentViewQuery,
+	type StudentViewMode,
+} from '@/composables/useStudentView'
 import type { UserResource } from '@/composables/useStudentView'
 import type { Note, Notes as NotesResource, SessionUser } from '@/types'
 import { isInstructorOf } from '@/utils/instructors'
@@ -514,10 +523,15 @@ const route = useRoute()
 const realUser = inject<UserResource & SessionUser>('$user')!
 // A component's own provide() is invisible to its own inject(), so read the
 // handles provideStudentView returns rather than calling useStudentView().
-const { isStudentView, mockedUser } = provideStudentView(
-	realUser,
-	() => route.query.studentView === '1'
+const { isStudentView, mockedUser } = provideStudentView(realUser, () =>
+	Boolean(studentViewMode(route.query.studentView))
 )
+
+const studentMode = computed<StudentViewMode>({
+	get: () => studentViewMode(route.query.studentView) ?? 'enrolled',
+	set: (mode) =>
+		router.replace({ query: { ...route.query, ...studentViewQuery(mode) } }),
+})
 // Shadows every user.data read below and in every child, so the page renders
 // exactly what a student sees.
 const user = mockedUser
@@ -834,7 +848,7 @@ const breadcrumbs = computed(() => {
 				chapterNumber: props.chapterNumber,
 				lessonNumber: props.lessonNumber,
 			},
-			query: studentViewQuery.value,
+			query: previewQuery.value,
 		},
 	})
 	return crumbs
@@ -906,7 +920,7 @@ const goToLessonNumber = (
 			chapterNumber,
 			lessonNumber,
 		},
-		query: studentViewQuery.value,
+		query: previewQuery.value,
 	}
 	if (replace) router.replace(target)
 	else router.push(target)
@@ -945,7 +959,7 @@ const switchLesson = (direction: 'prev' | 'next'): void => {
 			chapterNumber,
 			lessonNumber,
 		},
-		query: studentViewQuery.value,
+		query: previewQuery.value,
 	})
 }
 
@@ -1305,8 +1319,16 @@ const isAdmin = computed(() => {
 // Student view is a mode, not a destination: every hop that stays on a lesson
 // has to carry the flag, or Prev / Next / the sidebar silently drops the
 // moderator back into their own identity mid-course.
-const studentViewQuery = computed(() =>
-	isStudentView.value ? { studentView: 1 } : undefined
+// The way back to this lesson in the course editor.
+const editorRoute = computed<RouteLocationRaw>(() => ({
+	name: 'CourseDetail',
+	params: { courseName: props.courseName },
+	hash: '#editor',
+	query: { editLesson: `${props.chapterNumber}-${props.lessonNumber}` },
+}))
+
+const previewQuery = computed(() =>
+	studentViewQuery(studentViewMode(route.query.studentView))
 )
 
 // Reads the real user, not the student-view shadow, so the way back to the

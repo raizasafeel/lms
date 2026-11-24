@@ -100,3 +100,19 @@ export function useStudentView(): Ref<boolean> | ComputedRef<boolean> {
 		computed(() => false)
 	)
 }
+
+export type StudentViewMode = 'not-enrolled' | 'enrolled'
+
+/** `?studentView=1` previews as an enrolled learner, `=not-enrolled` as a visitor; anything else is no preview. */
+export function studentViewMode(value: unknown): StudentViewMode | null {
+	if (String(value) === '1') return 'enrolled'
+	return value === 'not-enrolled' ? 'not-enrolled' : null
+}
+
+/** The query that keeps a preview mode across lesson hops. */
+export function studentViewQuery(
+	mode: StudentViewMode | null
+): { studentView: 1 | 'not-enrolled' } | undefined {
+	if (!mode) return undefined
+	return { studentView: mode === 'enrolled' ? 1 : 'not-enrolled' }
+}

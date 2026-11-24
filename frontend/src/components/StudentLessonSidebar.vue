@@ -92,7 +92,7 @@
 														chapterNumber: lesson.number.split('-')[0],
 														lessonNumber: lesson.number.split('-')[1],
 													},
-													query: studentViewQuery,
+													query: previewQuery,
 											  }
 									"
 									class="flex w-full items-center gap-3 rounded-4 ps-9 pe-3 py-2 text-start text-sm leading-5 text-ink-gray-8 hover:bg-surface-gray-2"
@@ -148,6 +148,7 @@
 import { computed, watch, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { Button, createResource, Tooltip } from 'frappe-ui'
+import { studentViewMode, studentViewQuery } from '@/composables/useStudentView'
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/vue'
 import {
 	ChevronDown,
@@ -180,8 +181,8 @@ const emit = defineEmits(['select-lesson', 'hide'])
 // Keep ?studentView=1 across lesson hops, or a moderator previewing the course
 // silently reverts to their own identity on the first sidebar click.
 const route = useRoute()
-const studentViewQuery = computed(() =>
-	route.query.studentView === '1' ? { studentView: 1 } : undefined
+const previewQuery = computed(() =>
+	studentViewQuery(studentViewMode(route.query.studentView))
 )
 
 const outline = createResource({
