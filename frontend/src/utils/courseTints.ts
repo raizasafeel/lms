@@ -14,20 +14,20 @@ export const COURSE_TINTS: Record<string, string> = {
 	gray: 'bg-surface-gray-2 text-ink-gray-6',
 }
 
-// Solid swatches for the colour picker, one per tint.
+// Swatches for the colour picker, one per tint, a step stronger than it.
 export const COURSE_SWATCHES: Record<string, string> = {
-	red: 'bg-surface-red-5',
-	blue: 'bg-surface-blue-5',
-	green: 'bg-surface-green-5',
-	amber: 'bg-surface-amber-5',
-	cyan: 'bg-surface-cyan-5',
-	orange: 'bg-surface-orange-5',
-	pink: 'bg-surface-pink-5',
-	purple: 'bg-surface-purple-5',
-	teal: 'bg-surface-teal-5',
-	violet: 'bg-surface-violet-5',
-	yellow: 'bg-surface-yellow-5',
-	gray: 'bg-surface-gray-5',
+	red: 'bg-surface-red-3',
+	blue: 'bg-surface-blue-3',
+	green: 'bg-surface-green-3',
+	amber: 'bg-surface-amber-3',
+	cyan: 'bg-surface-cyan-3',
+	orange: 'bg-surface-orange-3',
+	pink: 'bg-surface-pink-3',
+	purple: 'bg-surface-purple-3',
+	teal: 'bg-surface-teal-3',
+	violet: 'bg-surface-violet-3',
+	yellow: 'bg-surface-yellow-3',
+	gray: 'bg-surface-gray-3',
 }
 
 export function courseTint(color?: string | null): string {

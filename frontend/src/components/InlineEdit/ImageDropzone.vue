@@ -1,5 +1,32 @@
 <template>
 	<div
+		v-if="stacked && image"
+		class="grid grid-cols-2 gap-2"
+		data-testid="image-dropzone"
+		@dragover.prevent
+		@drop.prevent="onDrop"
+	>
+		<Button
+			icon-left="lucide-upload"
+			:label="__('Replace')"
+			:loading="uploading"
+			@click="input?.click()"
+		/>
+		<Button
+			icon-left="lucide-trash-2"
+			:label="__('Remove')"
+			@click="image = ''"
+		/>
+		<input
+			ref="input"
+			type="file"
+			:accept="ACCEPT"
+			class="hidden"
+			@change="onPick"
+		/>
+	</div>
+	<div
+		v-else
 		class="flex rounded-6 border border-dashed p-3 transition-colors"
 		:class="[
 			stacked
@@ -31,7 +58,7 @@
 			/>
 		</div>
 		<span
-			v-if="stacked && !image"
+			v-if="stacked"
 			class="lucide-image-plus size-5 text-ink-gray-6"
 			aria-hidden="true"
 		/>
@@ -56,14 +83,7 @@
 			<p class="text-p-sm text-ink-gray-6">{{ hint }}</p>
 		</div>
 		<Button
-			v-if="image && stacked"
-			variant="ghost"
-			size="sm"
-			:label="__('Remove image')"
-			@click="image = ''"
-		/>
-		<Button
-			v-else-if="image"
+			v-if="image"
 			variant="ghost"
 			icon="lucide-x"
 			:label="__('Remove image')"
@@ -85,7 +105,11 @@ import { ref, useTemplateRef } from 'vue'
 import { Button, FileUploadHandler, toast } from 'frappe-ui'
 import { safeUrl } from '@/utils/safeUrl'
 
-/** A dashed drop target for one public image, with browse and remove. */
+/**
+ * A dashed drop target for one public image, with browse and remove. Stacked
+ * with an image set, the preview above shows it: just Replace and Remove,
+ * still taking a dropped file.
+ */
 defineProps<{
 	hint: string
 	/** Narrow column: no thumbnail of its own, text centred under each other. */

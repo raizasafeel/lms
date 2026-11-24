@@ -24,18 +24,24 @@
 					v-for="name in visible"
 					:key="name"
 					type="button"
-					class="flex h-9 items-center justify-center rounded-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
-					:class="
+					class="flex items-center justify-center rounded-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+					:class="[
+						large ? 'h-12' : 'h-9',
 						isPicked(name)
-							? 'bg-surface-gray-3 text-ink-gray-9'
-							: 'text-ink-gray-6 hover:bg-surface-gray-2 hover:text-ink-gray-8'
-					"
+							? tint
+								? courseTint(tint)
+								: 'bg-surface-gray-3 text-ink-gray-9'
+							: 'text-ink-gray-7 hover:bg-surface-gray-2 hover:text-ink-gray-9',
+					]"
 					:tabindex="name === focusable ? 0 : -1"
 					:aria-label="name.replace(/-/g, ' ')"
 					:aria-pressed="isPicked(name)"
 					@click="icon = name"
 				>
-					<span :class="[courseIcon(name), 'size-4']" aria-hidden="true" />
+					<span
+						:class="[courseIcon(name), large ? 'size-5' : 'size-4']"
+						aria-hidden="true"
+					/>
 				</button>
 			</div>
 			<p
@@ -54,6 +60,7 @@ import { computed, onMounted, ref, shallowRef, watch } from 'vue'
 import { FormControl } from 'frappe-ui'
 import { useIntersectionObserver } from '@vueuse/core'
 import { COURSE_ICONS, courseIcon } from '@/utils/courseIcons'
+import { courseTint } from '@/utils/courseTints'
 import { loadIconTags } from '@/utils/lucideIconStyles'
 
 /** Any lucide icon for a course thumbnail: curated first, searchable by name or keyword. */
@@ -63,9 +70,18 @@ const GRID_COLUMNS = {
 	16: 'grid-cols-[repeat(16,minmax(0,1fr))]',
 } as const
 
-const props = withDefaults(defineProps<{ columns?: 6 | 12 | 16 }>(), {
-	columns: 6,
-})
+const props = withDefaults(
+	defineProps<{
+		columns?: 6 | 12 | 16
+		/** Bigger cells and icons, for a roomy page rather than a popover. */
+		large?: boolean
+		/** The picked icon takes this course colour. */
+		tint?: string | null
+	}>(),
+	{
+		columns: 6,
+	}
+)
 
 const icon = defineModel<string | null | undefined>()
 

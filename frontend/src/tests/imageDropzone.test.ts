@@ -68,11 +68,19 @@ describe('the image dropzone', () => {
 		expect(wrapper.props('image')).toBe('')
 	})
 
-	it('stacks without its own thumbnail in a narrow column', async () => {
+	it('stacks as a dropzone in a narrow column until an image is set', () => {
+		const empty = mountZone('', true)
+		expect(empty.find('img').exists()).toBe(false)
+		expect(empty.classes()).toContain('flex-col')
+	})
+
+	it('offers Replace and Remove once a stacked one has an image', async () => {
 		const wrapper = mountZone('/files/old.png', true)
-		expect(wrapper.find('img').exists()).toBe(false)
-		expect(wrapper.classes()).toContain('flex-col')
-		await wrapper.get('[aria-label="Remove image"]').trigger('click')
+		const labels = wrapper
+			.findAll('button')
+			.map((b) => b.attributes('aria-label'))
+		expect(labels).toEqual(['Replace', 'Remove'])
+		await wrapper.findAll('button')[1].trigger('click')
 		expect(wrapper.props('image')).toBe('')
 	})
 })

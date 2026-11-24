@@ -33,9 +33,20 @@
 					:hint="__('750 × 422 px, JPG or PNG.')"
 				/>
 			</div>
-			<div class="min-w-0 flex-1 space-y-3">
+			<div class="min-w-0 flex-1 space-y-4">
+				<p
+					v-if="image"
+					class="flex items-center gap-2 text-p-base text-ink-gray-7"
+				>
+					<span class="lucide-info size-4 shrink-0" aria-hidden="true" />
+					{{
+						__(
+							"The colour and icon show if the image is removed or doesn't load."
+						)
+					}}
+				</p>
 				<div
-					class="flex flex-wrap items-center gap-2 p-1"
+					class="flex flex-wrap items-center gap-3 p-1"
 					role="group"
 					:aria-label="__('Thumbnail colour')"
 				>
@@ -43,14 +54,14 @@
 						v-for="(swatch, color) in COURSE_SWATCHES"
 						:key="color"
 						type="button"
-						class="size-6 rounded-full"
+						class="size-9 rounded-full ring-offset-2 transition-shadow"
 						:class="[swatch, isPicked(color) && 'ring-2 ring-outline-gray-5']"
 						:aria-label="__('{0} thumbnail').format(color)"
 						:aria-pressed="isPicked(color)"
 						@click="tint = courseColor(color)"
 					/>
 				</div>
-				<CourseIconPicker v-model="icon" :columns="16" />
+				<CourseIconPicker v-model="icon" :columns="16" large :tint="tint" />
 			</div>
 		</div>
 	</div>
