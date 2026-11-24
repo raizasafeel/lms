@@ -7,6 +7,8 @@ from lms.lms.api import get_user_info
 from lms.lms.test_helpers import BaseTestUtils
 
 PILOT_CONF = {"pilot_endpoint": "https://pilot.example.test", "pilot_auth_token": "token"}
+# Sites provisioned by pilot carry real credentials, so the off cases clear them.
+NO_PILOT_CONF = {"pilot_endpoint": None, "pilot_auth_token": None}
 
 
 class TestCloudSettingsContext(BaseTestUtils):
@@ -16,7 +18,8 @@ class TestCloudSettingsContext(BaseTestUtils):
 
 	def test_disabled_without_pilot_config(self):
 		frappe.set_user("Administrator")
-		self.assertEqual(get_user_info()["cloud_settings"], {"enabled": False})
+		with patch.dict(frappe.local.conf, NO_PILOT_CONF):
+			self.assertEqual(get_user_info()["cloud_settings"], {"enabled": False})
 
 	def test_enabled_for_system_manager_on_pilot_site(self):
 		frappe.set_user("Administrator")
@@ -45,7 +48,7 @@ class TestCloudSettingsContext(BaseTestUtils):
 	def test_disabled_on_v1_frappe_cloud_site(self):
 		frappe.set_user("Administrator")
 		with (
-			patch.dict(frappe.local.conf, {"fc_communication_secret": "secret"}),
+			patch.dict(frappe.local.conf, {**NO_PILOT_CONF, "fc_communication_secret": "secret"}),
 			patch("lms.lms.api.current_site_info", return_value={}),
 		):
 			user = get_user_info()
