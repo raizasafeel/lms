@@ -18,19 +18,21 @@
 				v-if="mode === 'enrolled'"
 				variant="ghost"
 				:loading="reset.loading"
+				:aria-label="__('Reset progress')"
+				class="max-sm:w-7 max-sm:px-0"
 				@click="showReset = true"
 			>
 				<template #prefix>
 					<span class="lucide-rotate-ccw size-4" />
 				</template>
-				{{ __('Reset progress') }}
+				<span class="hidden sm:inline">{{ __('Reset progress') }}</span>
 			</Button>
 			<TabButtons v-model="mode" :options="modes" />
-			<Button variant="outline" @click="emit('exit')">
+			<Button variant="outline" :aria-label="__('Exit')" @click="emit('exit')">
 				<template #prefix>
 					<span class="lucide-x size-4" />
 				</template>
-				{{ __('Exit') }}
+				<span class="hidden sm:inline">{{ __('Exit') }}</span>
 			</Button>
 		</div>
 	</div>
