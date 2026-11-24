@@ -1,14 +1,30 @@
 <template>
 	<div class="flex flex-col h-full">
 		<div
-			v-if="!hideHeader || withProgress"
+			v-if="!hideHeader || withProgress || collapsible"
 			class="bg-surface-gray-1 px-5 py-5 border-b"
 		>
-			<div
-				v-if="!hideHeader"
-				class="text-lg-semibold text-ink-gray-9 leading-snug"
-			>
-				{{ courseTitle }}
+			<div v-if="!hideHeader || collapsible" class="flex items-start gap-1.5">
+				<Button
+					v-if="collapsible"
+					variant="ghost"
+					size="sm"
+					class="-ms-1.5 shrink-0"
+					data-testid="hide-chapters"
+					:label="__('Hide chapters')"
+					:tooltip="__('Hide chapters')"
+					@click="emit('hide')"
+				>
+					<template #icon>
+						<span class="lucide-panel-right-close size-4 text-ink-gray-6" />
+					</template>
+				</Button>
+				<div
+					v-if="!hideHeader"
+					class="min-w-0 text-lg-semibold text-ink-gray-9 leading-snug"
+				>
+					{{ courseTitle }}
+				</div>
 			</div>
 			<template v-if="withProgress">
 				<div
@@ -131,7 +147,7 @@
 <script setup>
 import { computed, watch, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
-import { createResource, Tooltip } from 'frappe-ui'
+import { Button, createResource, Tooltip } from 'frappe-ui'
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/vue'
 import {
 	ChevronDown,
@@ -155,9 +171,11 @@ const props = defineProps({
 	inlineSelect: { type: Boolean, default: false },
 	withProgress: { type: Boolean, default: true },
 	hideHeader: { type: Boolean, default: false },
+	// Shows a button that folds the panel away; the page owns the fold.
+	collapsible: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['select-lesson'])
+const emit = defineEmits(['select-lesson', 'hide'])
 
 // Keep ?studentView=1 across lesson hops, or a moderator previewing the course
 // silently reverts to their own identity on the first sidebar click.

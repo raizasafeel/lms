@@ -45,17 +45,19 @@ vi.mock('frappe-ui', () => ({
 		props: ['text'],
 		template: '<span :data-tooltip="text"><slot /></span>',
 	},
+	Button: { template: '<button><slot name="icon" /><slot /></button>' },
 }))
 
 vi.stubGlobal('__', translate)
 
-const mountSidebar = () =>
+const mountSidebar = (extra: Record<string, unknown> = {}) =>
 	mount(StudentLessonSidebar, {
 		props: {
 			courseName: 'COURSE-1',
 			courseTitle: 'Course 1',
 			progress: 33,
 			selectedLessonNumber: '1-2',
+			...extra,
 		},
 		global: {
 			mocks: { __: translate },
@@ -131,6 +133,18 @@ describe('StudentLessonSidebar without progress', () => {
 
 		expect(wrapper.text()).not.toContain('Completed')
 		expect(wrapper.find('[style*="width"]').exists()).toBe(false)
+		expect(wrapper.text()).toContain('Course 1')
+	})
+})
+
+describe('folding the student chapters panel', () => {
+	it('offers a fold button only when the page lets it fold', async () => {
+		expect(mountSidebar().find('[data-testid="hide-chapters"]').exists()).toBe(
+			false
+		)
+		const wrapper = mountSidebar({ collapsible: true })
+		await wrapper.get('[data-testid="hide-chapters"]').trigger('click')
+		expect(wrapper.emitted('hide')).toHaveLength(1)
 		expect(wrapper.text()).toContain('Course 1')
 	})
 })

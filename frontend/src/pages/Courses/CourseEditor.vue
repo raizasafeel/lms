@@ -137,7 +137,7 @@ import { useScreenSize } from '@/utils/composables'
 import CourseOutline from '@/components/CourseOutline.vue'
 import CourseEditorEmptyState from '@/components/CourseEditorEmptyState.vue'
 import CourseChaptersHeader from '@/components/Courses/CourseChaptersHeader.vue'
-import { useFlowDocked } from '@/composables/useFlowDocked'
+import { useFoldablePanel } from '@/composables/useFoldablePanel'
 import ScormUploadDialog from '@/components/Modals/ScormUploadDialog.vue'
 import { openFormRoute } from '@/composables/useFormRoute'
 import { setFormSource } from '@/composables/formTracking'
@@ -476,33 +476,12 @@ function openVideoStats() {
 // stays while the outline loads, so a course with chapters doesn't flash.
 const outlineVisible = computed(() => !outline.data || outline.data.length > 0)
 
-// The chapters panel folds away by hand, and on its own while Flow is docked;
-// it comes back when Flow closes unless it was folded by hand.
-const chaptersOpen = ref(true)
-let closedForFlow = false
-const flowDocked = useFlowDocked()
+const {
+	isOpen: chaptersOpen,
+	fold: foldChaptersPanel,
+	open: openChaptersPanel,
+} = useFoldablePanel()
 const panelAvailable = computed(() => !isMobile.value && outlineVisible.value)
-
-function foldChaptersPanel() {
-	chaptersOpen.value = false
-	closedForFlow = false
-}
-
-function openChaptersPanel() {
-	chaptersOpen.value = true
-	closedForFlow = false
-}
-
-watch(
-	flowDocked,
-	(isDocked) => {
-		if (isDocked && chaptersOpen.value) {
-			chaptersOpen.value = false
-			closedForFlow = true
-		} else if (!isDocked && closedForFlow) openChaptersPanel()
-	},
-	{ immediate: true }
-)
 
 // Opened from here rather than through the outline: on a phone the outline
 // lives in the chapters sheet, which isn't mounted while it is closed. The

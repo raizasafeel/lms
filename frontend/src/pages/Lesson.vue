@@ -50,8 +50,8 @@
 			</Button>
 		</div>
 
-		<div class="grid @2xl:grid-cols-[70%,30%] sm:h-[94vh]">
-			<div v-if="lesson.data.no_preview" class="sm:border-e">
+		<div class="flex sm:h-[94vh]">
+			<div v-if="lesson.data.no_preview" class="min-w-0 flex-1 sm:border-e">
 				<div class="shadow rounded-5 w-3/4 mt-10 mx-auto text-center p-4">
 					<div class="flex items-center justify-center mt-4 gap-x-2">
 						<span class="lucide-lock-keyhole size-4 text-ink-gray-5" />
@@ -93,7 +93,7 @@
 					</Button>
 				</div>
 			</div>
-			<div v-else-if="lesson.data.locked" class="sm:border-e">
+			<div v-else-if="lesson.data.locked" class="min-w-0 flex-1 sm:border-e">
 				<LockedLessonNotice
 					:redirect="!!lesson.data.redirect_to"
 					:notFound="!!lesson.data.not_found"
@@ -103,7 +103,7 @@
 			<div
 				v-else
 				ref="lessonContainer"
-				class="bg-surface-base min-w-0"
+				class="bg-surface-base min-w-0 flex-1"
 				:class="{
 					'overflow-y-auto': zenModeEnabled,
 				}"
@@ -160,6 +160,17 @@
 									:courseName="courseName"
 									@switch="switchLesson"
 								/>
+								<Button
+									v-if="!chaptersOpen"
+									variant="subtle"
+									data-testid="show-chapters"
+									@click="openChapters()"
+								>
+									<template #prefix>
+										<span class="lucide-panel-right-open size-4" />
+									</template>
+									{{ __('Chapters') }}
+								</Button>
 							</div>
 
 							<div
@@ -299,8 +310,18 @@
 					</div>
 				</div>
 			</div>
-			<aside v-if="!isMobile" class="sticky top-10 h-[94vh]">
+			<!-- Slides like the app sidebar; folded, it is inert. -->
+			<aside
+				v-if="!isMobile"
+				class="sticky top-10 hidden h-[94vh] shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out @2xl:block"
+				:class="chaptersOpen ? 'w-[30%]' : 'w-0'"
+				:inert="!chaptersOpen || undefined"
+				data-testid="chapters-panel"
+			>
 				<StudentLessonSidebar
+					class="min-w-72"
+					collapsible
+					@hide="foldChapters()"
 					:courseName="courseName"
 					:courseTitle="lesson.data.course_title"
 					:progress="lessonProgress"
@@ -399,6 +420,7 @@ import ProgressBar from '@/components/ProgressBar.vue'
 import Discussions from '@/components/Discussions.vue'
 import CertificationLinks from '@/components/CertificationLinks.vue'
 import CourseOutline from '@/components/CourseOutline.vue'
+import { useFoldablePanel } from '@/composables/useFoldablePanel'
 import LockedLessonNotice from '@/components/LockedLessonNotice.vue'
 import LessonNavButtons from '@/components/LessonNavButtons.vue'
 import StudentLessonSidebar from '@/components/StudentLessonSidebar.vue'
@@ -540,6 +562,11 @@ const completedLesson = ref<string | null>(null)
 const settingsStore = useSettings()
 const { isMobile } = useScreenSize()
 const showChapters = ref(false)
+const {
+	isOpen: chaptersOpen,
+	fold: foldChapters,
+	open: openChapters,
+} = useFoldablePanel()
 let timerInterval: ReturnType<typeof setInterval> | undefined
 
 const props = defineProps<{
