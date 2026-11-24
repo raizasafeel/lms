@@ -85,9 +85,7 @@ function onCreated(name: string): void {
 	})
 }
 
-const title = computed<string>(
-	() => form.resource.doc?.title?.trim() || __('Untitled course')
-)
+const title = computed<string>(() => form.resource.doc?.title?.trim() || '')
 
 const course = reactive({
 	data: computed(
@@ -103,7 +101,9 @@ const course = reactive({
 
 const breadcrumbs = computed(() => [
 	{ label: __('Courses'), route: { name: 'Courses' } },
-	{ label: title.value, route: { name: 'NewCourse' } },
+	...(title.value
+		? [{ label: title.value, route: { name: 'NewCourse' } }]
+		: []),
 ])
 
 useKeyboardShortcuts({
@@ -112,7 +112,7 @@ useKeyboardShortcuts({
 	shortcuts: [saveShortcut(() => form.submitCourse())],
 })
 
-usePageMeta(() => ({ title: title.value }))
+usePageMeta(() => ({ title: title.value || __('New course') }))
 
 onMounted(() => capture('course_form_opened', { source: takeFormSource() }))
 onBeforeUnmount(() => {

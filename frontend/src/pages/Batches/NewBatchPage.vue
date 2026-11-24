@@ -79,9 +79,7 @@ function onCreated(name: string): void {
 	})
 }
 
-const title = computed<string>(
-	() => form.doc.value?.title?.trim() || __('Untitled batch')
-)
+const title = computed<string>(() => form.doc.value?.title?.trim() || '')
 
 const batch = reactive({
 	data: computed(
@@ -99,7 +97,7 @@ const batch = reactive({
 
 const breadcrumbs = computed(() => [
 	{ label: __('Batches'), route: { name: 'Batches' } },
-	{ label: title.value, route: { name: 'NewBatch' } },
+	...(title.value ? [{ label: title.value, route: { name: 'NewBatch' } }] : []),
 ])
 
 useKeyboardShortcuts({
@@ -108,7 +106,7 @@ useKeyboardShortcuts({
 	shortcuts: [saveShortcut(() => form.submitBatch())],
 })
 
-usePageMeta(() => ({ title: title.value }))
+usePageMeta(() => ({ title: title.value || __('New batch') }))
 
 onMounted(() => capture('batch_form_opened', { source: takeFormSource() }))
 onBeforeUnmount(() => {
