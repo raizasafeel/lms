@@ -17,7 +17,7 @@
 					v-model:draft="draftCourses"
 					:batchName="batch.data.name"
 					:editable="Boolean(doc)"
-					:hideProgress="isStudentView && !batch.data.is_student"
+					:hideProgress="hideCourseProgress"
 					:category="doc?.category ?? batch.data.category"
 				/>
 
@@ -94,7 +94,7 @@ import { injectBatchForm } from '@/pages/Batches/composables/useBatchForm'
 import type { BatchDetails, Resource } from '@/types'
 
 /** The batch page. Instructors edit it in place; learners and previews read it. */
-defineProps<{ batch: Resource<BatchDetails> }>()
+const props = defineProps<{ batch: Resource<BatchDetails> }>()
 
 const form = injectBatchForm()
 const isStudentView = useStudentView()
@@ -102,6 +102,13 @@ const aboutHeadingId = useId()
 
 const doc = computed(() =>
 	isStudentView.value ? null : form?.doc.value ?? null
+)
+
+// Progress is a learner's: the editing view shows none, and a not-enrolled
+// preview hides the instructor's own preview enrollment.
+const hideCourseProgress = computed(
+	() =>
+		Boolean(doc.value) || (isStudentView.value && !props.batch.data.is_student)
 )
 
 // Set only on a new batch: its courses and assessments wait for the first save.
