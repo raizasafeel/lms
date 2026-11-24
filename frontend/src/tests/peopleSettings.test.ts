@@ -156,6 +156,7 @@ describe('PeopleGroup', () => {
 		expect(rows[0]).toContain('Owner')
 		expect(rows[0]).toContain('Change owner')
 		expect(rows[1]).toContain('Edits content and settings')
+		expect(rows[1]).not.toContain('schedules classes')
 		expect(rows[2]).toContain('Grades work and answers questions')
 	})
 

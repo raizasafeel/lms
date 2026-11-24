@@ -588,6 +588,17 @@ describe('the Classes tab opener', () => {
 		expect(wrapper.find('[data-testid="live-class-add"]').exists()).toBe(true)
 	})
 
+	it('offers Add to a batch Editor who is not an evaluator', async () => {
+		const router = makeRouter()
+		await router.push('/batches/B1#classes')
+		const editor = { name: 'eda@example.com', is_evaluator: false }
+		const wrapper = await mountTab(router, editor, {
+			can_manage: true,
+			can_schedule_classes: true,
+		})
+		expect(wrapper.find('[data-testid="live-class-add"]').exists()).toBe(true)
+	})
+
 	it('opens the form route carrying the current tab hash (C2)', async () => {
 		const router = makeRouter()
 		await router.push('/batches/B1#classes')

@@ -28,7 +28,7 @@
 				:key="`${row.member}-${row.role}`"
 				:name="describe(row.member).full_name || row.member"
 				:image="describe(row.member).user_image"
-				:description="roleDescription(row.role)"
+				:description="roleDescription(row.role, doctype)"
 				:role="row.role"
 				:roles="eligibleRoles(doctype, describe(row.member).roles)"
 				@update:role="(role) => setRole(index, role)"

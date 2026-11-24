@@ -30,9 +30,15 @@ export function roleLabel(role: PeopleRole): string {
 	}[role]
 }
 
-export function roleDescription(role: PeopleRole): string {
+export function roleDescription(
+	role: PeopleRole,
+	doctype: PeopleDoctype
+): string {
 	return {
-		Editor: __('Edits content and settings'),
+		Editor:
+			doctype === 'LMS Batch'
+				? __('Edits content and settings, and schedules classes')
+				: __('Edits content and settings'),
 		Grader: __('Grades work and answers questions'),
 		'Live class conductor': __('Runs live classes'),
 	}[role]

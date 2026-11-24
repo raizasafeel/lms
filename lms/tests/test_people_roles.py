@@ -312,3 +312,59 @@ class TestOnlyEvaluatorsGrade(PeopleFixtures):
 		submission = self.graded_submission()
 		submission.enforce_grading_permission()
 		self.assertEqual(submission.status, "Not Graded")
+
+
+class TestEditorsRunLiveClasses(PeopleFixtures):
+	"""A batch's Editors schedule, change and cancel its live classes; a Grader does not."""
+
+	def setUp(self):
+		super().setUp()
+		self.batch = self.make_batch(self.make_course().name, published=1)
+		self.batch.append("people", {"member": self.grader.name, "role": GRADER})
+		self.batch.save()
+		live_class = frappe.get_doc(
+			{
+				"doctype": "LMS Live Class",
+				"batch_name": self.batch.name,
+				"title": "People Class",
+				"date": nowdate(),
+				"time": "10:00:00",
+				"duration": 60,
+				"timezone": "Asia/Kolkata",
+				"host": "Administrator",
+			}
+		)
+		live_class.set_new_name()
+		live_class.db_insert()
+		self.live_class = live_class.name
+
+	def as_user(self, user, fn):
+		frappe.set_user(user)
+		try:
+			return fn()
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_an_editor_schedules_changes_and_cancels_classes(self):
+		from lms.lms.doctype.lms_batch.lms_batch import check_can_schedule_live_class
+		from lms.lms.utils import build_batch_details
+
+		self.as_user(self.editor.name, lambda: check_can_schedule_live_class(self.batch.name))
+		for ptype in ("write", "delete"):
+			self.assertTrue(
+				frappe.has_permission("LMS Live Class", ptype, self.live_class, user=self.editor.name)
+			)
+		details = self.as_user(self.editor.name, lambda: build_batch_details(self.batch.name))
+		self.assertTrue(details["can_schedule_classes"])
+
+	def test_a_grader_does_not(self):
+		from lms.lms.doctype.lms_batch.lms_batch import check_can_schedule_live_class
+		from lms.lms.utils import build_batch_details
+
+		with self.assertRaises(frappe.PermissionError):
+			self.as_user(self.grader.name, lambda: check_can_schedule_live_class(self.batch.name))
+		self.assertFalse(
+			frappe.has_permission("LMS Live Class", "write", self.live_class, user=self.grader.name)
+		)
+		details = self.as_user(self.grader.name, lambda: build_batch_details(self.batch.name))
+		self.assertFalse(details["can_schedule_classes"])
