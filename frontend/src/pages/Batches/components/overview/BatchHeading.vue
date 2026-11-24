@@ -13,10 +13,7 @@
 		</h1>
 
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-ink-gray-7">
-			<div v-if="doc" class="flex items-center gap-1.5">
-				<span class="lucide-tag size-4 shrink-0" />
-				<CategoryField v-model="doc.category" />
-			</div>
+			<CategoryField v-if="doc" v-model="doc.category" />
 			<span
 				v-else-if="batch.category"
 				class="flex items-center gap-1.5 font-medium"

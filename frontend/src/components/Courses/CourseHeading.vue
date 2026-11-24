@@ -15,13 +15,11 @@
 		</h1>
 
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-ink-gray-7">
-			<div v-if="doc" class="flex items-center gap-1.5">
-				<span class="lucide-tag size-4 shrink-0" />
-				<CategoryField
-					v-model="doc.category"
-					@update:modelValue="markDirty?.()"
-				/>
-			</div>
+			<CategoryField
+				v-if="doc"
+				v-model="doc.category"
+				@update:modelValue="markDirty?.()"
+			/>
 			<router-link
 				v-else-if="course.category"
 				:to="{ name: 'Courses', query: { category: course.category } }"

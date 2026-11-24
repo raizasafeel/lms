@@ -9,6 +9,7 @@
 		:onCreate="onCreate"
 		variant="ghost"
 		trigger="button"
+		icon="lucide-tag"
 		@update:modelValue="(value: string) => emit('update:modelValue', value)"
 	/>
 </template>

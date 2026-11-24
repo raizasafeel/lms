@@ -23,6 +23,16 @@
 			@update:open="onOpen"
 			:class="isButton ? 'w-fit' : 'w-full'"
 		>
+			<template v-if="icon" #prefix>
+				<span :class="[icon, 'size-4 shrink-0']" aria-hidden="true" />
+			</template>
+			<template v-if="icon" #item-prefix="{ selected }">
+				<span
+					v-if="selected"
+					:class="[icon, 'size-4 shrink-0']"
+					aria-hidden="true"
+				/>
+			</template>
 			<template #footer>
 				<div
 					data-popover-footer-sticky
@@ -114,6 +124,8 @@ const props = withDefaults(
 		inlineCreate?: boolean
 		inlineCreatePlaceholder?: string
 		onCreate?: CreateHandler
+		/** A lucide class drawn inside the control, before the value or placeholder. */
+		icon?: string
 		// Where the popover hangs off the control. `end` is the trailing edge in
 		// either direction, so a control near the end of a row opens inwards.
 		align?: 'start' | 'center' | 'end'
