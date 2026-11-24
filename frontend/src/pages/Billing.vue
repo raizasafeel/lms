@@ -392,12 +392,13 @@ const paymentLink = createResource({
 })
 
 // An instructor previewing the course as a learner: show the real checkout,
-// but finish by enrolling them in student view instead of taking payment.
+// but finish in enrolled student view instead of taking payment.
 const route = useRoute()
 const router = useRouter()
 const isPreview = computed(
 	() =>
-		props.type === 'course' && Boolean(studentViewMode(route.query.studentView))
+		['course', 'certificate'].includes(props.type) &&
+		Boolean(studentViewMode(route.query.studentView))
 )
 
 const generatePaymentLink = () => {

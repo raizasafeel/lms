@@ -23,7 +23,7 @@ vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/components/CertificationLinks.vue', () => ({
 	default: {
 		name: 'CertificationLinks',
-		props: ['courseName', 'price'],
+		props: ['courseName', 'price', 'preview'],
 		render: () => null,
 	},
 }))
@@ -113,6 +113,13 @@ describe('the side card in student view', () => {
 		const wrapper = mountPreview('enrolled')
 		expect(wrapper.text()).toContain('Start Learning')
 		expect(wrapper.text()).not.toContain('Enroll Now')
+	})
+
+	it('keeps the certificate links, in preview, once enrolled', () => {
+		const links = mountPreview('enrolled').getComponent({
+			name: 'CertificationLinks',
+		})
+		expect(links.props('preview')).toBe('enrolled')
 	})
 })
 

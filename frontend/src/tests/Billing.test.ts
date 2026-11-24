@@ -431,4 +431,24 @@ describe('Billing in student view', () => {
 		expect(submitted.some((call) => call.url === PAYMENT_URL)).toBe(false)
 		routeQuery.value = {}
 	})
+
+	it('previews the certificate checkout and returns to the enrolled course', async () => {
+		routeQuery.value = { studentView: 1 }
+		submitted.length = 0
+		pushMock.mockClear()
+		const wrapper = await mountBilling(
+			{},
+			{ type: 'certificate', name: 'COURSE-1' }
+		)
+		expect(wrapper.find('[data-testid="preview-note"]').exists()).toBe(true)
+
+		await proceed(wrapper)
+		expect(pushMock).toHaveBeenCalledWith({
+			name: 'CourseDetail',
+			params: { courseName: 'COURSE-1' },
+			query: { studentView: 1 },
+		})
+		expect(submitted.some((call) => call.url === PAYMENT_URL)).toBe(false)
+		routeQuery.value = {}
+	})
 })

@@ -44,9 +44,9 @@
 						</span>
 					</Button>
 					<CertificationLinks
-						v-if="!preview"
 						:courseName="course.data.name"
 						:price="certificatePrice"
+						:preview="preview"
 						class="w-full"
 					/>
 				</div>

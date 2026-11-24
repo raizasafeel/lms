@@ -1,9 +1,9 @@
 <template>
 	<Button
-		v-if="certification.data && certification.data.certificate"
+		v-if="details?.certificate"
 		:route="{
 			name: 'CertificateVerification',
-			params: { certificateId: certification.data.certificate.name },
+			params: { certificateId: details.certificate.name },
 		}"
 	>
 		<template #prefix>
@@ -13,14 +13,13 @@
 	</Button>
 	<div
 		v-else-if="
-			certification.data &&
-			certification.data.membership &&
-			certification.data.paid_certificate &&
-			user.data?.is_student
+			details?.membership &&
+			details.paid_certificate &&
+			(preview || user.data?.is_student)
 		"
 	>
 		<Button
-			v-if="!certification.data.membership.purchased_certificate"
+			v-if="!details.membership.purchased_certificate"
 			:variant="price ? 'solid' : 'subtle'"
 			:route="{
 				name: 'Billing',
@@ -28,6 +27,7 @@
 					type: 'certificate',
 					name: courseName,
 				},
+				query: studentViewQuery(preview ?? null),
 			}"
 			class="w-full"
 		>
@@ -39,7 +39,7 @@
 			}}
 		</Button>
 		<Button
-			v-else-if="!certification.data.membership.certificate"
+			v-else-if="!details.membership.certificate"
 			:route="{
 				name: 'CourseCertification',
 				params: {
@@ -57,7 +57,11 @@
 </template>
 <script setup lang="ts">
 import { Button, createResource } from 'frappe-ui'
-import { inject } from 'vue'
+import { computed, inject } from 'vue'
+import {
+	studentViewQuery,
+	type StudentViewMode,
+} from '@/composables/useStudentView'
 import type { CertificationInfo, Resource, SessionUser } from '@/types'
 
 const user = inject<SessionUser>('$user')!
@@ -66,6 +70,8 @@ const props = defineProps<{
 	courseName: string
 	/** Shown on the buy button when the certificate is sold on its own. */
 	price?: string
+	/** Student view: shows the links a learner in that state would see. */
+	preview?: StudentViewMode | null
 }>()
 
 const certification = createResource({
@@ -77,4 +83,11 @@ const certification = createResource({
 	},
 	auto: user.data ? true : false,
 }) as Resource<CertificationInfo | null>
+
+// A previewing instructor is no real enrolled learner, so act as a fresh one.
+const details = computed(() =>
+	props.preview === 'enrolled' && certification.data
+		? { ...certification.data, certificate: null, membership: {} }
+		: certification.data
+)
 </script>
