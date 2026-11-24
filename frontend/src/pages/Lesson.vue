@@ -50,9 +50,9 @@
 		<div class="flex sm:h-[94vh]">
 			<div v-if="isPreviewLocked" class="min-w-0 flex-1 sm:border-e">
 				<div
-					class="mx-auto max-w-[max(40rem,calc((100dvh-15rem)*16/9))] space-y-6 px-5 pt-5"
+					class="mx-auto flex max-w-[max(40rem,calc((100dvh-15rem)*16/9))] flex-col gap-6 px-5 pt-5"
 				>
-					<h1 class="text-4xl-semibold text-ink-gray-9">
+					<h1 :class="lessonHeadingClass">
 						{{ lesson.data.title }}
 					</h1>
 					<div
@@ -119,7 +119,7 @@
 				}"
 			>
 				<div
-					class="sm:border-e pt-8 sm:pt-5 pb-10 h-full"
+					class="sm:border-e sm:pt-5 pb-10 h-full"
 					:class="{
 						'w-full md:w-3/5 mx-auto border-none !pt-10': zenModeEnabled,
 					}"
@@ -132,7 +132,7 @@
 							class="flex flex-col space-y-3 md:space-y-0 @2xl:flex-row md:items-center justify-between"
 						>
 							<div class="flex flex-col">
-								<h1 class="text-4xl-semibold text-ink-gray-9">
+								<h1 :class="lessonHeadingClass">
 									{{ lesson.data.title }}
 								</h1>
 
@@ -568,6 +568,10 @@ const currentTab = ref<string | undefined>(undefined)
 const completedLesson = ref<string | null>(null)
 const settingsStore = useSettings()
 const { isMobile } = useScreenSize()
+// The mobile header already shows the title, so the h1 is only for screen readers.
+const lessonHeadingClass = computed(() =>
+	isMobile.value ? 'sr-only' : 'text-4xl-semibold text-ink-gray-9'
+)
 const showChapters = ref(false)
 const {
 	isOpen: chaptersOpen,

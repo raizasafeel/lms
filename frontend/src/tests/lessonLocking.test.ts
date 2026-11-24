@@ -525,7 +525,6 @@ describe('Lesson.vue after a save the lesson requirements declined', () => {
 			handlers?.onSuccess?.(40)
 			return Promise.resolve()
 		})
-
 		;(wrapper.vm as any).markProgress()
 		await flushPromises()
 
@@ -672,5 +671,43 @@ describe('Lesson.vue sidebar progress', () => {
 
 	it('keeps progress for a signed-in learner', async () => {
 		expect(await sidebarWithProgress({ name: 'a@example.com' })).toBe('true')
+	})
+})
+
+describe('Lesson.vue lesson heading on mobile', () => {
+	const headingAt = async (width: number, lesson: object) => {
+		vi.stubGlobal('innerWidth', width)
+		try {
+			wrapper = await mountLesson()
+			findResource('lms.lms.utils.get_lesson').data = {
+				...baseLesson,
+				...lesson,
+			}
+			await flushPromises()
+			const headings = wrapper.findAll('h1')
+			expect(headings).toHaveLength(1)
+			expect(headings[0].text()).toBe('Lesson 1')
+			return headings[0].classes()
+		} finally {
+			vi.unstubAllGlobals()
+			vi.stubGlobal('__', translateStub)
+		}
+	}
+
+	it('keeps the title for screen readers only, since the header shows it', async () => {
+		expect(await headingAt(410, {})).toEqual(['sr-only'])
+	})
+
+	it('does the same on the locked preview card', async () => {
+		expect(await headingAt(410, { no_preview: 1 })).toEqual(['sr-only'])
+		expect(wrapper.find('[data-testid="preview-locked"]').exists()).toBe(true)
+	})
+
+	it('shows the title on desktop', async () => {
+		expect(await headingAt(1500, {})).not.toContain('sr-only')
+	})
+
+	it('shows the locked preview title on desktop', async () => {
+		expect(await headingAt(1500, { no_preview: 1 })).not.toContain('sr-only')
 	})
 })
