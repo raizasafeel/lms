@@ -56,8 +56,12 @@ vi.mock('@/components/RichTextEditor.vue', () => ({
 		template: '<div />',
 	},
 }))
-vi.mock('@/components/Controls/VideoPreviewField.vue', () => ({
-	default: { template: '<div />' },
+vi.mock('@/components/InlineEdit/VideoLinkDialog.vue', () => ({
+	default: {
+		name: 'VideoLinkDialog',
+		props: ['open', 'modelValue'],
+		template: '<div />',
+	},
 }))
 vi.mock('@framework/ui/telemetry/index', () => ({}))
 vi.mock('@framework/ui/components/Onboarding/index', () => ({}))
@@ -174,7 +178,7 @@ describe('the image field', () => {
 
 	it('puts the video button in the top corner, apart from the thumbnail tools', () => {
 		const empty = mount(ImageField, { props: { swatches: true }, ...options })
-		const corner = empty.get('.top-2')
+		const corner = empty.get('.end-2.top-2')
 		expect(corner.text()).toBe('Add video')
 		expect(corner.classes()).toContain('opacity-0')
 
@@ -182,8 +186,44 @@ describe('the image field', () => {
 			props: { swatches: true, videoLink: 'https://youtu.be/x' },
 			...options,
 		})
-		expect(withVideo.get('.top-2').text()).toBe('Video')
-		expect(withVideo.get('.top-2').classes()).toContain('opacity-100')
+		expect(withVideo.get('.end-2.top-2').text()).toBe('Video')
+		expect(withVideo.get('.end-2.top-2').classes()).toContain('opacity-100')
+	})
+
+	it('opens the preview video dialog and writes back its link', async () => {
+		const wrapper = mount(ImageField, { props: { swatches: true }, ...options })
+		const dialog = wrapper.findComponent({ name: 'VideoLinkDialog' })
+		expect(dialog.props('open')).toBe(false)
+		await wrapper.get('.end-2.top-2 button').trigger('click')
+		expect(dialog.props('open')).toBe(true)
+		dialog.vm.$emit('update:modelValue', 'https://youtu.be/y')
+		expect(wrapper.emitted('update:videoLink')).toEqual([
+			['https://youtu.be/y'],
+		])
+	})
+
+	it('pins the icon top left and shuffle to the end of the swatch row', () => {
+		const wrapper = mount(ImageField, { props: { swatches: true }, ...options })
+		expect(
+			wrapper.get('.start-2.top-2 [aria-label="Thumbnail icon"]').exists()
+		).toBe(true)
+		const shuffle = wrapper.get('[aria-label="Random colour and icon"]')
+		expect(shuffle.classes()).toContain('ms-auto')
+		expect(shuffle.element.parentElement?.className).toContain('bottom-2')
+	})
+
+	it('marks the picked swatch with a dot, not a ring', () => {
+		const wrapper = mount(ImageField, {
+			props: { swatches: true, tint: 'Teal' },
+			...options,
+		})
+		const picked = wrapper.get('[aria-label="teal thumbnail"]')
+		expect(picked.attributes('aria-pressed')).toBe('true')
+		expect(picked.find('span').exists()).toBe(true)
+		expect(picked.classes().join(' ')).not.toContain('ring')
+		expect(
+			wrapper.get('[aria-label="red thumbnail"]').find('span').exists()
+		).toBe(false)
 	})
 
 	it('prompts for an image without swatches', () => {

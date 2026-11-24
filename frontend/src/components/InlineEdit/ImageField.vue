@@ -43,98 +43,96 @@
 			</template>
 		</FileUploader>
 		<div
-			class="absolute inset-x-0 bottom-0 flex items-center p-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
-			:class="swatches ? 'gap-1' : 'gap-1.5'"
+			class="absolute inset-x-2 bottom-2 flex items-center gap-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
 		>
 			<div
 				v-if="swatches && !image"
-				class="flex items-center gap-0.5 rounded-full bg-surface-base px-1 py-1 shadow-sm"
+				class="flex h-7 items-center gap-1 rounded-full bg-surface-base px-2 shadow-sm"
 			>
 				<button
 					v-for="(swatch, color) in COURSE_SWATCHES"
 					:key="color"
 					type="button"
-					class="size-3 rounded-full"
-					:class="[swatch, isPicked(color) && 'ring-2 ring-outline-gray-5']"
+					class="grid size-3 place-items-center rounded-full"
+					:class="swatch"
 					:aria-label="__('{0} thumbnail').format(color)"
 					:aria-pressed="isPicked(color)"
 					@click="tint = courseColor(color)"
-				/>
+				>
+					<span
+						v-if="isPicked(color)"
+						class="size-1 rounded-full bg-surface-base"
+						aria-hidden="true"
+					/>
+				</button>
 			</div>
 			<Button v-else-if="image" size="sm" @click="image = ''">
 				{{ __('Remove image') }}
 			</Button>
-			<template v-if="swatches && !image">
-				<Popover side="bottom" align="start">
-					<template #trigger>
-						<Button
-							size="sm"
-							:label="__('Thumbnail icon')"
-							:tooltip="__('Icon')"
-						>
-							<template #icon>
-								<span class="size-4" :class="courseIcon(icon)" />
-							</template>
-						</Button>
-					</template>
-					<template #default="{ close }">
-						<CourseIconPicker
-							class="w-72 p-2"
-							:modelValue="icon"
-							@update:modelValue="(name) => pickIcon(name, close)"
-						/>
-					</template>
-				</Popover>
-				<Button
-					size="sm"
-					icon="lucide-shuffle"
-					:label="__('Random colour and icon')"
-					:tooltip="__('Random colour and icon')"
-					@click="shuffle"
-				/>
-			</template>
+			<Button
+				v-if="swatches && !image"
+				size="sm"
+				class="ms-auto"
+				icon="lucide-shuffle"
+				:label="__('Random colour and icon')"
+				:tooltip="__('Random colour and icon')"
+				@click="shuffle"
+			/>
 		</div>
-		<!-- Apart from the thumbnail tools below, and on show once a video is set. -->
+		<div
+			v-if="swatches && !image"
+			class="absolute start-2 top-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+		>
+			<Popover side="bottom" align="start">
+				<template #trigger>
+					<Button size="sm" :label="__('Thumbnail icon')" :tooltip="__('Icon')">
+						<template #icon>
+							<span class="size-4" :class="courseIcon(icon)" />
+						</template>
+					</Button>
+				</template>
+				<template #default="{ close }">
+					<CourseIconPicker
+						class="w-72 p-2"
+						:modelValue="icon"
+						@update:modelValue="(name) => pickIcon(name, close)"
+					/>
+				</template>
+			</Popover>
+		</div>
 		<div
 			class="absolute end-2 top-2 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
 			:class="videoLink ? 'opacity-100' : 'opacity-0'"
 		>
-			<Popover side="bottom" align="end">
-				<template #trigger>
-					<Button size="sm" :tooltip="__('Preview video')">
-						<template #prefix>
-							<span
-								class="size-4"
-								:class="videoLink ? 'lucide-video' : 'lucide-video-off'"
-							/>
-						</template>
-						{{ videoLink ? __('Video') : __('Add video') }}
-					</Button>
+			<Button
+				size="sm"
+				:tooltip="__('Preview video')"
+				@click="showVideoDialog = true"
+			>
+				<template #prefix>
+					<span
+						class="size-4"
+						:class="videoLink ? 'lucide-video' : 'lucide-video-off'"
+					/>
 				</template>
-				<template #default>
-					<div class="w-[28rem] max-w-[90vw] p-3">
-						<VideoPreviewField
-							:modelValue="videoLink"
-							:label="__('Preview video')"
-							@update:modelValue="(url: string) => (videoLink = url)"
-						/>
-					</div>
-				</template>
-			</Popover>
+				{{ videoLink ? __('Video') : __('Add video') }}
+			</Button>
 		</div>
+		<VideoLinkDialog v-model:open="showVideoDialog" v-model="videoLink" />
 	</div>
 </template>
 
 <script setup lang="ts">
 import { Button, FileUploader, Popover, UploadError, toast } from 'frappe-ui'
-import VideoPreviewField from '@/components/Controls/VideoPreviewField.vue'
+import { ref } from 'vue'
 import CourseIconPicker from '@/components/InlineEdit/CourseIconPicker.vue'
+import VideoLinkDialog from '@/components/InlineEdit/VideoLinkDialog.vue'
 import { courseColor, courseIcon, shuffleThumbnail } from '@/utils/courseIcons'
 import { COURSE_SWATCHES, courseTint } from '@/utils/courseTints'
 import { safeUrl } from '@/utils/safeUrl'
 
 /**
- * A card image with its preview video behind a popover. With `swatches`, an
+ * A card image with its preview video behind a dialog. With `swatches`, an
  * empty image shows a colour tint and icon the editor picks instead.
  */
 defineProps<{ swatches?: boolean }>()
@@ -143,6 +141,8 @@ const image = defineModel<string | null | undefined>('image')
 const videoLink = defineModel<string | null | undefined>('videoLink')
 const tint = defineModel<string | null | undefined>('tint')
 const icon = defineModel<string | null | undefined>('icon')
+
+const showVideoDialog = ref(false)
 
 const isPicked = (color: string): boolean =>
 	(tint.value || '').toLowerCase() === color
