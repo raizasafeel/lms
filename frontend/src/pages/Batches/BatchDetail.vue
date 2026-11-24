@@ -27,9 +27,6 @@
 				<Badge v-if="batch.data?.accept_enrollments" theme="blue">
 					{{ __('Upcoming') }}
 				</Badge>
-				<Badge v-if="form.isDirty.value" theme="amber">
-					{{ __('Not saved') }}
-				</Badge>
 			</template>
 
 			<template #actions="{ tab }">

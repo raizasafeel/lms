@@ -1,26 +1,32 @@
 <template>
-	<span
-		class="inline-flex"
-		@mouseenter="previewGaps(true)"
-		@mouseleave="previewGaps(false)"
-		@focusin="previewGaps(true)"
-		@focusout="previewGaps(false)"
-	>
-		<Tooltip :text="tooltip" :hoverDelay="100">
-			<Button
-				:variant="form.isDirty.value ? 'solid' : 'subtle'"
-				:disabled="!form.isDirty.value"
-				:loading="form.resource.setValue?.loading"
-				@click="save"
-			>
-				{{ __('Save') }}
-			</Button>
-		</Tooltip>
-	</span>
+	<div class="inline-flex items-center gap-2">
+		<!-- A draft is unsaved by nature; its Draft badge already says so. -->
+		<Badge v-if="form.isDirty.value && !form.draftChapters" theme="amber">
+			{{ __('Not saved') }}
+		</Badge>
+		<span
+			class="inline-flex"
+			@mouseenter="previewGaps(true)"
+			@mouseleave="previewGaps(false)"
+			@focusin="previewGaps(true)"
+			@focusout="previewGaps(false)"
+		>
+			<Tooltip :text="tooltip" :hoverDelay="100">
+				<Button
+					:variant="form.isDirty.value ? 'solid' : 'subtle'"
+					:disabled="!form.isDirty.value"
+					:loading="form.resource.setValue?.loading"
+					@click="save"
+				>
+					{{ __('Save') }}
+				</Button>
+			</Tooltip>
+		</span>
+	</div>
 </template>
 
 <script setup lang="ts">
-import { Button, Tooltip } from 'frappe-ui'
+import { Badge, Button, Tooltip } from 'frappe-ui'
 import { computed, ref } from 'vue'
 import type { CourseForm } from '@/composables/useCourseForm'
 import { joinLabels } from '@/utils/courseForm'
