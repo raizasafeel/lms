@@ -2,6 +2,9 @@ import { ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import { useFlowDocked } from '@/composables/useFlowDocked'
 
+/** How long Flow's panel takes to slide in or out. */
+const FLOW_SLIDE_MS = 200
+
 export interface FoldablePanel {
 	isOpen: Ref<boolean>
 	fold: () => void
@@ -26,13 +29,19 @@ export function useFoldablePanel(): FoldablePanel {
 		closedForFlow = false
 	}
 
+	const isFlowDocked = useFlowDocked()
 	watch(
-		useFlowDocked(),
+		isFlowDocked,
 		(isDocked) => {
 			if (isDocked && isOpen.value) {
 				isOpen.value = false
 				closedForFlow = true
-			} else if (!isDocked && closedForFlow) open()
+			} else if (!isDocked && closedForFlow) {
+				// After Flow has slid out, so the page widens first, then the panel.
+				setTimeout(() => {
+					if (closedForFlow && !isFlowDocked.value) open()
+				}, FLOW_SLIDE_MS)
+			}
 		},
 		{ immediate: true }
 	)

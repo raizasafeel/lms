@@ -6,6 +6,7 @@
 			v-model="studentMode"
 			doctype="LMS Batch"
 			:name="batchName"
+			@exit="studentMode = null"
 			@change="refreshStudentView"
 		/>
 		<TabbedDetailPage
@@ -29,13 +30,6 @@
 			</template>
 
 			<template #actions="{ tab }">
-				<HeaderButton
-					v-if="studentMode"
-					variant="outline"
-					icon="lucide-x"
-					:label="__('Exit student view')"
-					@click="studentMode = null"
-				/>
 				<BatchHeaderActions
 					v-if="isAdmin"
 					:tab="tab?.key"

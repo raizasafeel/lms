@@ -1,25 +1,18 @@
 <template>
 	<div v-if="lesson.data" class="">
-		<PageHeader :breadcrumbs="breadcrumbs">
-			<template #actions>
-				<CertificationLinks :courseName="courseName" />
-				<HeaderButton
-					v-if="isStudentView"
-					variant="outline"
-					icon="lucide-x"
-					:label="__('Exit student view')"
-					@click="router.push(editorRoute)"
-				/>
-			</template>
-		</PageHeader>
 		<StudentViewBar
-			belowHeader
 			v-if="isStudentView"
 			v-model="studentMode"
 			doctype="LMS Course"
 			:name="courseName"
+			@exit="router.push(editorRoute)"
 			@change="lesson.reload()"
 		/>
+		<PageHeader :breadcrumbs="breadcrumbs">
+			<template #actions>
+				<CertificationLinks :courseName="courseName" />
+			</template>
+		</PageHeader>
 
 		<div
 			v-if="isMobile && lessonTotal"
@@ -118,7 +111,10 @@
 						'w-full md:w-3/5 mx-auto border-none !pt-10': zenModeEnabled,
 					}"
 				>
-					<div class="px-5">
+					<!-- A 16:9 video at this width still fits under the headers. -->
+					<div
+						class="mx-auto max-w-[max(40rem,calc((100dvh-15rem)*16/9))] px-5"
+					>
 						<div
 							class="flex flex-col space-y-3 md:space-y-0 @2xl:flex-row md:items-center justify-between"
 						>
@@ -158,12 +154,6 @@
 										</template>
 									</Button>
 								</Tooltip>
-								<LessonNavButtons
-									:hasPrev="!!lesson.data.prev"
-									:hasNext="!!(lesson.data.next && canGoNext)"
-									:courseName="courseName"
-									@switch="switchLesson"
-								/>
 								<Button
 									v-if="!chaptersOpen"
 									variant="subtle"
@@ -197,25 +187,6 @@
 									@switch="switchLesson"
 								/>
 							</div>
-						</div>
-
-						<div v-if="!zenModeEnabled" class="flex items-center mt-4 md:mt-2">
-							<span
-								class="h-6 me-1"
-								:class="{
-									'avatar-group overlap': lesson.data.instructors?.length > 1,
-								}"
-							>
-								<UserAvatar
-									v-for="instructor in lesson.data.instructors"
-									:key="instructor.username"
-									:user="instructor"
-								/>
-							</span>
-							<CourseInstructors
-								v-if="lesson.data?.instructors"
-								:instructors="lesson.data.instructors"
-							/>
 						</div>
 
 						<div
@@ -281,6 +252,18 @@
 								:content="lesson.data.body"
 								:youtube="lesson.data.youtube"
 								:quizId="lesson.data.quiz_id"
+							/>
+						</div>
+						<div
+							v-if="!zenModeEnabled"
+							class="mt-10 flex items-center"
+							data-testid="lesson-nav"
+						>
+							<LessonNavButtons
+								:hasPrev="!!lesson.data.prev"
+								:hasNext="!!(lesson.data.next && canGoNext)"
+								:courseName="courseName"
+								@switch="switchLesson"
 							/>
 						</div>
 					</div>
@@ -419,7 +402,6 @@ import {
 } from '@/utils/lessonProgress'
 import EditorJS from '@editorjs/editorjs'
 import LessonContent from '@/components/LessonContent.vue'
-import CourseInstructors from '@/components/CourseInstructors.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import Discussions from '@/components/Discussions.vue'
 import CertificationLinks from '@/components/CertificationLinks.vue'
@@ -431,8 +413,6 @@ import StudentLessonSidebar from '@/components/StudentLessonSidebar.vue'
 import StudentViewBar from '@/components/StudentViewBar.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
-import HeaderButton from '@/components/HeaderButton.vue'
-import UserAvatar from '@/components/UserAvatar.vue'
 import Notes from '@/components/Notes/Notes.vue'
 import InlineLessonMenu from '@/components/Notes/InlineLessonMenu.vue'
 import { parseStoredEditorJs } from '@/utils/lessonForm'

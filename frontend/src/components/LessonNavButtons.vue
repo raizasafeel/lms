@@ -5,7 +5,7 @@
 		</template>
 		<span>{{ __('Previous') }}</span>
 	</Button>
-	<Button v-if="hasNext" @click="emit('switch', 'next')">
+	<Button v-if="hasNext" class="ms-auto" @click="emit('switch', 'next')">
 		<template #suffix>
 			<span class="lucide-chevron-right size-4 rtl:rotate-180" />
 		</template>
@@ -14,7 +14,7 @@
 	<Button
 		v-else
 		:route="{ name: 'CourseDetail', params: { courseName } }"
-		class="text-p-base-medium"
+		class="ms-auto text-p-base-medium"
 	>
 		{{ __('Back to Course') }}
 	</Button>

@@ -26,7 +26,7 @@
 						params: { courseName },
 						query: previewQuery,
 					}"
-					class="min-w-0 text-lg-semibold text-ink-gray-9 leading-snug hover:underline"
+					class="min-w-0 truncate text-lg-semibold text-ink-gray-9 leading-snug hover:underline"
 					data-testid="course-home"
 				>
 					{{ courseTitle }}

@@ -1,7 +1,6 @@
 <template>
 	<div
-		class="sticky flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-outline-gray-2 bg-surface-base px-5 py-2"
-		:class="belowHeader ? 'top-[var(--header-frame-h)] z-[9]' : 'top-0 z-20'"
+		class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-outline-gray-2 bg-surface-base px-5 py-2"
 		role="region"
 		:aria-label="__('Student view')"
 	>
@@ -29,6 +28,17 @@
 				<span class="hidden sm:inline">{{ __('Reset progress') }}</span>
 			</Button>
 			<TabButtons v-model="mode" :options="modes" />
+			<Button
+				variant="outline"
+				:aria-label="__('Exit student view')"
+				class="max-sm:w-7 max-sm:px-0"
+				@click="emit('exit')"
+			>
+				<template #prefix>
+					<span class="lucide-x size-4" />
+				</template>
+				<span class="hidden sm:inline">{{ __('Exit') }}</span>
+			</Button>
 		</div>
 	</div>
 	<Dialog
@@ -61,10 +71,8 @@ type StudentMode = 'not-enrolled' | 'enrolled'
 const props = defineProps<{
 	doctype: 'LMS Course' | 'LMS Batch'
 	name: string
-	/** Sticks under the page header instead of at the very top. */
-	belowHeader?: boolean
 }>()
-const emit = defineEmits<{ change: [] }>()
+const emit = defineEmits<{ exit: []; change: [] }>()
 const mode = defineModel<StudentMode>({ required: true })
 
 const showReset = ref(false)
