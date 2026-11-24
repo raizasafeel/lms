@@ -66,6 +66,16 @@ describe('the batch heading', () => {
 		expect(wrapper.text()).toContain('INSTRUCTOR PICKER')
 	})
 
+	// The learner's paragraph is text-base; the field's padding is pulled out
+	// so the text sits where the learner's does.
+	it('sets the description at the learner text size and position', () => {
+		const wrapper = mountHeading({ doc: { description: 'x' }, form: form() })
+		const description = wrapper.findAll('input')[1]
+		expect(description.classes()).toEqual(
+			expect.arrayContaining(['text-base', 'leading-6', '-my-[7px]'])
+		)
+	})
+
 	// The server refuses instructor changes from a tagged evaluator.
 	it('keeps instructors read-only for an evaluator who is not an instructor', () => {
 		const wrapper = mountHeading({

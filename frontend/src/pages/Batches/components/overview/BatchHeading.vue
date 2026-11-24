@@ -1,19 +1,22 @@
 <template>
-	<section class="space-y-4">
+	<section class="flex flex-col gap-4">
 		<InlineText
 			bleed
 			v-if="doc"
 			v-model="doc.title"
 			:placeholder="__('Batch title')"
 			:missing="form?.isMissing('title')"
-			class="!py-0.5 text-4xl-semibold !leading-[1.2] text-ink-gray-9"
+			class="-my-px !py-0 text-4xl-semibold text-ink-gray-9"
 			@enter="descriptionField?.focus()"
 		/>
 		<h1 v-else class="text-4xl-semibold text-ink-gray-9">
 			{{ batch.title }}
 		</h1>
 
-		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-ink-gray-7">
+		<div
+			class="flex flex-wrap items-center gap-x-3 gap-y-2 text-ink-gray-7"
+			:class="doc && '-my-0.5'"
+		>
 			<CategoryField v-if="doc" v-model="doc.category" class="-mx-2" />
 			<span
 				v-else-if="batch.category"
@@ -73,7 +76,7 @@
 				)
 			"
 			:missing="form?.isMissing('description')"
-			class="leading-6 text-ink-gray-7"
+			class="-my-[7px] text-base leading-6 text-ink-gray-7"
 		/>
 		<p v-else-if="batch.description" class="leading-6 text-ink-gray-7">
 			{{ batch.description }}
