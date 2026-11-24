@@ -12,14 +12,19 @@
 				/>
 			</div>
 		</template>
-		<FormControl
-			v-if="isLong"
-			v-model="model"
-			type="textarea"
-			:placeholder="placeholder"
-			:aria-label="label"
-			variant="outline"
-		/>
+		<template v-if="isLong || $slots.default" #default>
+			<div class="space-y-3">
+				<slot />
+				<FormControl
+					v-if="isLong"
+					v-model="model"
+					type="textarea"
+					:placeholder="placeholder"
+					:aria-label="label"
+					variant="outline"
+				/>
+			</div>
+		</template>
 	</SettingRow>
 </template>
 
@@ -28,7 +33,7 @@ import { computed } from 'vue'
 import { FormControl } from 'frappe-ui'
 import SettingRow from '@/components/InlineEdit/SettingRow.vue'
 
-/** A settings row with one outline input: short ones sit on the end, a textarea under the label. */
+/** A settings row with one outline input: short ones sit on the end, a textarea under the label and any slotted content. */
 const props = withDefaults(
 	defineProps<{
 		label: string

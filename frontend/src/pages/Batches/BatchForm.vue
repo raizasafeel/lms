@@ -57,20 +57,24 @@
 				v-model="form!.meta.description"
 				type="textarea"
 				:label="__('Meta description')"
-				:summary="__('Leave empty to use the short description.')"
+				:summary="
+					__(
+						'How the batch appears in search results. Edit to change the preview; leave empty to use the short description.'
+					)
+				"
 				:placeholder="doc.description"
-			/>
+			>
+				<SearchPreview
+					:url="batchUrl"
+					:title="doc.title"
+					:description="form?.meta.description || doc.description"
+				/>
+			</SettingField>
 			<SettingField
 				type="textarea"
 				v-model="form!.meta.keywords"
 				:label="__('Meta keywords')"
 				:summary="__('Comma separated keywords for search engines.')"
-			/>
-			<SearchPreview
-				class="mt-4"
-				:url="batchUrl"
-				:title="doc.title"
-				:description="form?.meta.description || doc.description"
 			/>
 			<SettingImage
 				v-model="doc.meta_image"

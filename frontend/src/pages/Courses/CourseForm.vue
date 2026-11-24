@@ -24,24 +24,26 @@
 				type="textarea"
 				:label="__('Meta description')"
 				:summary="
-					__('About 150 characters. Leave empty to use the short introduction.')
+					__(
+						'How the course appears in search results. Edit to change the preview; leave empty to use the short introduction.'
+					)
 				"
 				@update:modelValue="form.markDirty()"
-			/>
+			>
+				<SearchPreview
+					:url="courseUrl"
+					:title="form.resource.doc.title"
+					:description="
+						form.meta.description || form.resource.doc.short_introduction
+					"
+				/>
+			</SettingField>
 			<SettingField
 				type="textarea"
 				v-model="form.meta.keywords"
 				:label="__('Meta keywords')"
 				:summary="__('Comma separated keywords for search engines.')"
 				@update:modelValue="form.markDirty()"
-			/>
-			<SearchPreview
-				class="mt-4"
-				:url="courseUrl"
-				:title="form.resource.doc.title"
-				:description="
-					form.meta.description || form.resource.doc.short_introduction
-				"
 			/>
 		</SettingsGroup>
 

@@ -97,6 +97,20 @@ describe('the shared settings fields', () => {
 		expect(textarea.element.closest('.shrink-0')).toBeNull()
 	})
 
+	it('shows slotted content above a textarea, with no divider between', () => {
+		const wrapper = mount(SettingField, {
+			props: { label: 'Meta description', type: 'textarea' },
+			slots: { default: '<p data-testid="extra">Preview</p>' },
+			global,
+		})
+		const extra = wrapper.get('[data-testid="extra"]').element
+		const textarea = wrapper.getComponent({ name: 'FormControl' }).element
+		expect(extra.parentElement).toBe(textarea.parentElement)
+		expect(
+			extra.compareDocumentPosition(textarea) & Node.DOCUMENT_POSITION_FOLLOWING
+		).toBeTruthy()
+	})
+
 	it('draws a danger action red and reports the click', async () => {
 		const wrapper = mount(SettingAction, {
 			props: { label: 'Delete course', action: 'Delete', danger: true },
@@ -122,6 +136,9 @@ describe('the search preview', () => {
 		expect(wrapper.text()).toContain('school.example/lms/courses/erpnext')
 		expect(wrapper.text()).toContain('ERPNext Essentials')
 		expect(wrapper.text()).toContain('Become a certified consultant.')
+		expect(wrapper.classes()).toEqual(
+			expect.arrayContaining(['rounded-6', 'border', 'border-outline-gray-2'])
+		)
 	})
 
 	it('asks for a description while there is none', () => {
