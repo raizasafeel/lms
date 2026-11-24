@@ -155,7 +155,7 @@
 		<template #overlay="{ tab }">
 			<div
 				v-if="isFormTab(tab?.key) && !isMobile"
-				class="pointer-events-none absolute end-0 top-0 z-10 flex h-12 items-center px-5"
+				class="pointer-events-none absolute end-0 top-0 z-10 flex h-[var(--header-frame-h)] items-center px-5"
 			>
 				<div class="pointer-events-auto">
 					<CourseSaveButton :form="form" />
