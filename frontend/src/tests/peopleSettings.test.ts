@@ -44,11 +44,11 @@ vi.mock('frappe-ui', async () => {
 			template:
 				'<button :aria-label="ariaLabel" v-bind="$attrs"><slot /><slot name="icon" /></button>',
 		},
-		Select: {
-			name: 'Select',
+		MultiSelect: {
+			name: 'MultiSelect',
 			props: ['modelValue', 'options'],
 			emits: ['update:modelValue'],
-			template: '<select />',
+			template: '<div class="roles"><slot name="summary" /></div>',
 		},
 		FormControl: {
 			name: 'FormControl',
@@ -165,15 +165,22 @@ describe('PeopleGroup', () => {
 		expect(wrapper.text()).not.toContain('Change owner')
 	})
 
-	it('only lets an evaluator be picked as a Grader', async () => {
+	it('disables a role the person may not hold, saying why', async () => {
 		const { wrapper } = mountPeople([
 			{ member: 'ash@example.com', role: 'Editor' },
 		])
 		await flushPromises()
-		const select = wrapper.findComponent({ name: 'Select' })
-		expect(
-			select.props('options').map((o: { value: string }) => o.value)
-		).toEqual(['Editor'])
+		const options = wrapper
+			.findComponent({ name: 'MultiSelect' })
+			.props('options')
+		expect(options).toEqual([
+			expect.objectContaining({ value: 'Editor', disabled: false }),
+			expect.objectContaining({
+				value: 'Grader',
+				disabled: true,
+				description: 'Only evaluators can grade',
+			}),
+		])
 	})
 
 	it('adds someone in the first role they may hold and removes them again', async () => {
@@ -197,18 +204,43 @@ describe('PeopleGroup', () => {
 		])
 	})
 
-	it('folds a role change into a row the person already holds', async () => {
+	it('shows each person once with all their roles', async () => {
 		const { wrapper, people } = mountPeople([
 			{ member: 'both@example.com', role: 'Editor' },
 			{ member: 'both@example.com', role: 'Grader' },
 		])
 		await flushPromises()
-		wrapper
-			.findAllComponents({ name: 'Select' })[1]
-			.vm.$emit('update:modelValue', 'Editor')
+		const rows = wrapper.findAll('li')
+		expect(rows).toHaveLength(2)
+		expect(rows[1].find('.roles').text()).toBe('Editor, Grader')
+		expect(rows[1].text()).toContain(
+			'Edits content and settings · Grades work and answers questions'
+		)
+
+		const roles = wrapper.findComponent({ name: 'MultiSelect' })
+		roles.vm.$emit('update:modelValue', ['Grader'])
 		expect(people.value).toEqual([
-			{ member: 'both@example.com', role: 'Editor' },
+			{ member: 'both@example.com', role: 'Grader' },
 		])
+		roles.vm.$emit('update:modelValue', [])
+		expect(people.value).toEqual([])
+	})
+
+	it('describes a batch editor as scheduling classes', async () => {
+		const { wrapper } = host(
+			PeopleGroup,
+			{
+				doctype: 'LMS Batch',
+				name: 'b1',
+				owner: 'owner@example.com',
+				canChangeOwner: true,
+			},
+			[{ member: 'ash@example.com', role: 'Editor' }]
+		)
+		await flushPromises()
+		expect(wrapper.findAll('li')[1].text()).toContain(
+			'Edits content and settings, and schedules classes'
+		)
 	})
 })
 
@@ -276,6 +308,18 @@ describe('EvaluationGroup', () => {
 		await wrapper.find('button[aria-label="Remove EVE"]').trigger('click')
 		expect(people.value).toEqual([
 			{ member: 'ash@example.com', role: 'Editor' },
+		])
+	})
+
+	it('removing an evaluator keeps their other roles', async () => {
+		const { wrapper, people } = mountEvaluation([
+			{ member: 'both@example.com', role: 'Editor' },
+			{ member: 'both@example.com', role: 'Grader' },
+		])
+		await flushPromises()
+		await wrapper.find('button[aria-label="Remove BOTH"]').trigger('click')
+		expect(people.value).toEqual([
+			{ member: 'both@example.com', role: 'Editor' },
 		])
 	})
 

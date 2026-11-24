@@ -71,3 +71,43 @@ export function withMembers(
 		)
 	)
 }
+
+/** Why someone may not hold `role`, shown beside the disabled choice. */
+export function ineligibleReason(role: PeopleRole): string {
+	return {
+		Editor: __('Needs the Course Creator role'),
+		Grader: __('Only evaluators can grade'),
+		'Live class conductor': __(
+			'Needs the Course Creator or Batch Evaluator role'
+		),
+	}[role]
+}
+
+/** The roles `member` holds, in role order. */
+export function rolesOf(
+	doctype: PeopleDoctype,
+	rows: PersonRow[],
+	member: string
+): PeopleRole[] {
+	return ROLES_BY_DOCTYPE[doctype].filter((role) =>
+		rows.some((row) => row.member === member && row.role === role)
+	)
+}
+
+/** Gives `member` exactly `roles`, leaving everyone else's rows as they were. */
+export function withMemberRoles(
+	doctype: PeopleDoctype,
+	rows: PersonRow[],
+	member: string,
+	roles: PeopleRole[]
+): PersonRow[] {
+	return ROLES_BY_DOCTYPE[doctype].flatMap((role) => {
+		const members = membersWith(rows, role).filter((each) => each !== member)
+		const held = membersWith(rows, role).includes(member)
+		if (roles.includes(role)) {
+			const at = held ? membersWith(rows, role).indexOf(member) : members.length
+			members.splice(at, 0, member)
+		}
+		return members.map((each) => ({ member: each, role }))
+	})
+}

@@ -24,16 +24,32 @@
 				</template>
 			</PersonRow>
 			<PersonRow
-				v-for="(row, index) in people"
-				:key="`${row.member}-${row.role}`"
-				:name="describe(row.member).full_name || row.member"
-				:image="describe(row.member).user_image"
-				:description="roleDescription(row.role, doctype)"
-				:role="row.role"
-				:roles="eligibleRoles(doctype, describe(row.member).roles)"
-				@update:role="(role) => setRole(index, role)"
-				@remove="remove(index)"
-			/>
+				v-for="member in members"
+				:key="member"
+				:name="nameOf(member)"
+				:image="describe(member).user_image"
+				:description="describeRoles(member)"
+			>
+				<template #actions>
+					<RolesPicker
+						:doctype="doctype"
+						:name="nameOf(member)"
+						:roles="rolesOf(doctype, people, member)"
+						:eligible="eligibleRoles(doctype, describe(member).roles)"
+						@update:roles="(roles) => setRoles(member, roles)"
+					/>
+					<Button
+						variant="ghost"
+						size="sm"
+						:aria-label="__('Remove {0}').format(nameOf(member))"
+						@click="setRoles(member, [])"
+					>
+						<template #icon>
+							<span class="lucide-x size-4" aria-hidden="true" />
+						</template>
+					</Button>
+				</template>
+			</PersonRow>
 		</ul>
 		<div class="py-2.5">
 			<MultiLink
@@ -84,9 +100,12 @@ import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import ChangeOwnerDialog from '@/components/InlineEdit/People/ChangeOwnerDialog.vue'
 import PersonOption from '@/components/InlineEdit/People/PersonOption.vue'
 import PersonRow from '@/components/InlineEdit/People/PersonRow.vue'
+import RolesPicker from '@/components/InlineEdit/People/RolesPicker.vue'
 import {
 	eligibleRoles,
 	roleDescription,
+	rolesOf,
+	withMemberRoles,
 	STAFF_SITE_ROLES,
 	type PeopleDoctype,
 	type PersonRow as Person,
@@ -175,20 +194,15 @@ async function setMembers(next: string[]): Promise<void> {
 	]
 }
 
-function setRole(index: number, role: PeopleRole): void {
-	const row = people.value[index]
-	const holds = people.value.some(
-		(other, at) =>
-			at !== index && other.member === row.member && other.role === role
-	)
-	people.value = holds
-		? people.value.filter((_, at) => at !== index)
-		: people.value.map((other, at) =>
-				at === index ? { ...other, role } : other
-		  )
-}
+const nameOf = (member: string): string => describe(member).full_name || member
 
-function remove(index: number): void {
-	people.value = people.value.filter((_, at) => at !== index)
+const describeRoles = (member: string): string =>
+	rolesOf(props.doctype, people.value, member)
+		.map((role) => roleDescription(role, props.doctype))
+		.join(' · ')
+
+// Clearing every role takes the person off.
+function setRoles(member: string, roles: PeopleRole[]): void {
+	people.value = withMemberRoles(props.doctype, people.value, member, roles)
 }
 </script>
