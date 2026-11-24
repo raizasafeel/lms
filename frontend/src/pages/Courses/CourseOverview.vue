@@ -82,7 +82,6 @@
 				<CourseReviews
 					v-if="course.data.name"
 					:courseName="course.data.name"
-					:avg_rating="course.data.rating"
 					:membership="membership"
 				/>
 			</div>

@@ -98,6 +98,13 @@ export interface CourseReviewInfo {
 	owner_details: UserInfo
 }
 
+/** The signed-in member's own review, as stored: `rating` is 0–1. */
+export interface OwnCourseReview {
+	name: string
+	rating: number
+	review?: string
+}
+
 export interface OutlineLesson {
 	name: string
 	title: string
