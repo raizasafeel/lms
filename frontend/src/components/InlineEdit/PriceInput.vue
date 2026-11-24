@@ -13,7 +13,10 @@
 			"
 		>
 			<template v-if="symbol" #prefix>
-				<span class="text-p-base text-ink-gray-6" aria-hidden="true">
+				<span
+					class="inline-flex min-w-4 justify-center text-p-base text-ink-gray-6"
+					aria-hidden="true"
+				>
 					{{ symbol }}
 				</span>
 			</template>

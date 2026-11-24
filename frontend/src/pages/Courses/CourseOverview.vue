@@ -87,7 +87,7 @@
 			</div>
 
 			<aside
-				class="hidden md:flex w-80 shrink-0 flex-col space-y-6 self-start sticky top-5"
+				class="hidden md:flex w-80 shrink-0 flex-col space-y-6 self-start sticky-below-header"
 			>
 				<CourseEditCard v-if="editable" :course="course" />
 				<template v-else>

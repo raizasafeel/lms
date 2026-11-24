@@ -141,4 +141,41 @@ describe('the shared header frame', () => {
 			expect(restated, `${path} restates the frame inline`).toBe(false)
 		}
 	})
+
+	// The overview side cards stuck at top-5 and slid under the 48px header.
+	describe('the side card that sticks below it', () => {
+		const stickyRule = (): postcss.Rule | undefined => {
+			const css = readFileSync(resolve(ROOT, 'src/index.css'), 'utf8')
+			let found: postcss.Rule | undefined
+			postcss.parse(css).walkRules((rule) => {
+				if (rule.selectors.includes('.sticky-below-header')) found = rule
+			})
+			return found
+		}
+
+		const value = (prop: string): string | undefined =>
+			stickyRule()?.nodes.find(
+				(node): node is postcss.Declaration =>
+					node.type === 'decl' && node.prop === prop
+			)?.value
+
+		it('clears the header and fits the viewport', () => {
+			expect(value('position')).toBe('sticky')
+			expect(value('top')).toContain('var(--header-frame-h)')
+			expect(value('max-height')).toContain('var(--header-frame-h)')
+			expect(value('overflow-y')).toBe('auto')
+		})
+
+		it('is worn by both overview asides', () => {
+			for (const path of [
+				'src/pages/Courses/CourseOverview.vue',
+				'src/pages/Batches/BatchOverview.vue',
+			]) {
+				const source = readFileSync(resolve(ROOT, path), 'utf8')
+				const aside = source.match(/<aside\s+class="([^"]*)"/)?.[1] ?? ''
+				expect(aside, path).toMatch(/\bsticky-below-header\b/)
+				expect(aside, path).not.toMatch(/\btop-\d/)
+			}
+		})
+	})
 })

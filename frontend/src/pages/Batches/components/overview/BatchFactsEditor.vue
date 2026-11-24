@@ -1,6 +1,6 @@
 <template>
 	<div class="space-y-2.5 text-p-base text-ink-gray-8">
-		<div class="flex items-center gap-2.5 rounded-4" :class="ring('dates')">
+		<div class="flex items-center gap-2 rounded-4 ps-2" :class="ring('dates')">
 			<span class="lucide-calendar size-4 shrink-0 text-ink-gray-5" />
 			<DateRangePicker
 				v-model="dates"
@@ -8,7 +8,7 @@
 				format="D MMM YYYY"
 				:placeholder="__('Start and end dates')"
 				:aria-label="__('Batch dates')"
-				class="flex-1"
+				class="-ms-2 flex-1"
 			/>
 		</div>
 		<TimeRangeField
@@ -16,10 +16,13 @@
 			v-model:end="doc.end_time"
 			:startLabel="__('Class start time')"
 			:endLabel="__('Class end time')"
-			class="-ms-2 rounded-4"
+			class="rounded-4"
 			:class="ring('times')"
 		/>
-		<div class="flex items-center gap-2.5 rounded-4" :class="ring('timezone')">
+		<div
+			class="flex items-center gap-2 rounded-4 ps-2"
+			:class="ring('timezone')"
+		>
 			<span class="lucide-globe size-4 shrink-0 text-ink-gray-5" />
 			<Combobox
 				v-model="doc.timezone"
@@ -27,10 +30,10 @@
 				:placeholder="__('Timezone')"
 				:aria-label="__('Timezone')"
 				variant="ghost"
-				class="flex-1"
+				class="-ms-2 flex-1"
 			/>
 		</div>
-		<div class="flex items-center gap-2.5">
+		<div class="flex items-center gap-2 ps-2">
 			<span
 				class="size-4 shrink-0 text-ink-gray-5"
 				:class="doc.medium === 'Offline' ? 'lucide-map-pin' : 'lucide-video'"
@@ -40,13 +43,13 @@
 				:options="mediumOptions"
 				variant="ghost"
 				:aria-label="__('Medium')"
-				class="w-40"
+				class="-ms-2 w-40"
 				@update:modelValue="
 					(value) => (doc.medium = value as LMSBatch['medium'])
 				"
 			/>
 		</div>
-		<div class="flex items-center gap-2.5">
+		<div class="flex items-center gap-2 ps-2">
 			<span class="lucide-armchair size-4 shrink-0 text-ink-gray-5" />
 			<FormControl
 				:modelValue="doc.seat_count || ''"
@@ -55,7 +58,7 @@
 				variant="ghost"
 				placeholder="–"
 				:aria-label="__('Seat count')"
-				class="w-20"
+				class="-ms-2 w-20"
 				@update:modelValue="
 					(value: string) => (doc.seat_count = Number(value) || 0)
 				"
@@ -74,7 +77,7 @@
 			:on="__('1-on-1 evaluation')"
 			:off="__('No evaluation')"
 		/>
-		<div v-if="doc.evaluation" class="flex items-center gap-2 ps-[1.625rem]">
+		<div v-if="doc.evaluation" class="flex items-center gap-2 ps-8">
 			<span class="shrink-0 text-p-sm text-ink-gray-6">{{
 				__('Book by')
 			}}</span>

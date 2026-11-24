@@ -1,8 +1,10 @@
 <template>
 	<div class="space-y-2.5 rounded-5 border border-outline-gray-2 p-3 text-p-sm">
 		<div class="flex items-center justify-between gap-2">
-			<span class="flex items-center gap-2 text-p-sm-medium text-ink-gray-8">
-				<span class="lucide-award size-4" />
+			<span
+				class="flex items-center gap-2 ps-2 text-p-sm-medium text-ink-gray-8"
+			>
+				<span class="lucide-award size-4 shrink-0" />
 				{{ __('Certificate') }}
 			</span>
 			<Select
@@ -26,11 +28,11 @@
 		<router-link
 			v-if="kind !== 'none'"
 			:to="{ hash: '#settings' }"
-			class="flex w-full items-center justify-between gap-2 rounded-3 px-1 py-0.5 text-ink-gray-6 hover:bg-surface-gray-2"
+			class="flex w-full items-center justify-between gap-2 rounded-3 px-2 py-0.5 text-ink-gray-6 hover:bg-surface-gray-2"
 		>
-			<span class="flex min-w-0 items-center gap-1.5">
+			<span class="flex min-w-0 items-center gap-2">
 				<span
-					class="size-3.5 shrink-0"
+					class="size-4 shrink-0"
 					:class="evaluatorLabel ? 'lucide-user-check' : 'lucide-palette'"
 				/>
 				<span class="truncate">{{

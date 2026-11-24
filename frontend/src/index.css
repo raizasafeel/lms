@@ -39,6 +39,15 @@ svg.lucide {
 	min-height: var(--header-frame-h);
 }
 
+/* A side card that pins just below the sticky header; a card taller than the
+   viewport scrolls on its own so its end stays reachable. */
+.sticky-below-header {
+	position: sticky;
+	top: calc(var(--header-frame-h) + 1.25rem);
+	max-height: calc(100dvh - var(--header-frame-h) - 2.5rem);
+	overflow-y: auto;
+}
+
 /* Keep focused elements from hiding under the sticky header. */
 main#scrollContainer,
 main#main-content {

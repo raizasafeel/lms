@@ -1,5 +1,5 @@
 <template>
-	<div class="flex items-center gap-2.5">
+	<div class="flex items-center gap-2 ps-2">
 		<span
 			class="size-4 shrink-0"
 			:class="[icon, enabled ? 'text-ink-gray-5' : 'text-ink-gray-4']"

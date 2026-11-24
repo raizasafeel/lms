@@ -181,6 +181,31 @@ describe('the certificate box', () => {
 		expect(doc.paid_certificate).toBe(0)
 		expect(wrapper.emitted('needsPayments')).toBeTruthy()
 	})
+
+	// Ghost fields draw their prefix at ps-2 in a 16px slot, so the rows
+	// around the price field put their icons in that same column.
+	it('lines every row icon up with the price field prefix', () => {
+		const wrapper = mount(CourseCertificateBox as never, {
+			props: { paymentsAppMissing: false },
+			global: {
+				mocks: { __: globalThis.__ },
+				provide: {
+					courseForm: formWith({ ...fullDoc, paid_certificate: 1 }),
+				},
+				stubs: { Link: true, 'router-link': { template: '<a><slot /></a>' } },
+			},
+		})
+		const rows = [
+			wrapper.find('.lucide-award'),
+			wrapper.find('.lucide-user-check'),
+		]
+		for (const icon of rows) {
+			expect(icon.classes()).toContain('size-4')
+			expect(icon.element.parentElement?.className).toMatch(/\bgap-2\b/)
+		}
+		expect(rows[0].element.parentElement?.className).toMatch(/\bps-2\b/)
+		expect(wrapper.find('a').classes()).toContain('px-2')
+	})
 })
 
 // Regression: currency picker 403 for Moderator and Course Creator, LMS roles

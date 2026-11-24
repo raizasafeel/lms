@@ -137,6 +137,27 @@ describe('the batch facts editor', () => {
 		expect(labels({})).toContain('Online')
 		expect(labels({ zoom_account: 'Z1' })).toContain('Online on Zoom')
 	})
+
+	// Ghost fields draw their prefix at ps-2 and text at ps-8; every row
+	// matches that, so the time pickers' own prefixes need no offset.
+	it('puts every icon and label in the ghost field prefix columns', () => {
+		const facts = mountFacts({ evaluation: 1, certification: 1 })
+		const icons = facts.findAll('.size-4.shrink-0')
+		expect(icons.length).toBe(6)
+		for (const icon of icons) {
+			const row = icon.element.parentElement!
+			expect([...row.classList]).toContain('ps-2')
+			expect([...row.classList]).toContain('gap-2')
+			const field = icon.element.nextElementSibling
+			if (field?.tagName === 'DIV')
+				expect([...field.classList]).toContain('-ms-2')
+		}
+		expect(facts.findComponent(TimeRangeField).classes()).not.toContain('-ms-2')
+		expect(
+			facts.findComponent({ name: 'DatePicker' }).element.parentElement
+				?.className
+		).toContain('ps-8')
+	})
 })
 
 describe('the assessment add button', () => {
