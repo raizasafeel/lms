@@ -1,16 +1,25 @@
 <template>
+	<!-- With Flow docked the side column eases shut while the nav fades out,
+	     so the panel is gone before Flow's own finishes sliding in. -->
 	<div
-		class="grid w-full items-start gap-x-12 gap-y-10 px-5 py-8"
-		:class="{ '@4xl:grid-cols-[minmax(0,1fr)_minmax(0,16rem)]': !flowDocked }"
+		class="grid w-full items-start gap-y-10 px-5 py-8 @4xl:transition-[grid-template-columns,column-gap] @4xl:duration-300 @4xl:ease-in-out"
+		:class="
+			flowDocked
+				? '@4xl:grid-cols-[minmax(0,1fr)_0rem] gap-x-0'
+				: '@4xl:grid-cols-[minmax(0,1fr)_16rem] gap-x-12'
+		"
 	>
 		<div class="min-w-0 space-y-10">
 			<slot />
 		</div>
 		<aside
-			v-if="!flowDocked"
-			class="hidden @4xl:sticky @4xl:top-[calc(var(--header-frame-h)+1.25rem)] @4xl:block"
+			class="hidden overflow-hidden transition-[opacity,transform] duration-200 ease-out @4xl:sticky @4xl:top-[calc(var(--header-frame-h)+1.25rem)] @4xl:block"
+			:class="flowDocked ? 'pointer-events-none translate-x-4 opacity-0' : ''"
+			:inert="flowDocked || undefined"
+			data-testid="settings-sections"
 		>
 			<SettingsSectionNav
+				class="w-64"
 				:sections="sections"
 				:active="active"
 				@select="goTo"

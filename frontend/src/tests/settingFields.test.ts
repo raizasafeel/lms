@@ -179,12 +179,16 @@ describe('the settings page section nav', () => {
 		const wrapper = mountPage()
 		await flushPromises()
 		// Flow sets its dock width first; the margin it drives animates in later.
+		const panel = () => wrapper.get('[data-testid="settings-sections"]')
 		document.documentElement.style.setProperty('--flow-dock-width', '420px')
 		await flushPromises()
-		expect(wrapper.find('nav').exists()).toBe(false)
+		// It fades out and goes inert, so it can animate instead of vanishing.
+		expect(panel().attributes('inert')).toBeDefined()
+		expect(panel().classes()).toContain('opacity-0')
 		document.documentElement.style.removeProperty('--flow-dock-width')
 		await flushPromises()
-		expect(wrapper.find('nav').exists()).toBe(true)
+		expect(panel().attributes('inert')).toBeUndefined()
+		expect(panel().classes()).not.toContain('opacity-0')
 		wrapper.unmount()
 	})
 
