@@ -5,8 +5,12 @@
 		rows="1"
 		:placeholder="placeholder"
 		:aria-label="label || placeholder"
-		class="block resize-none overflow-hidden px-2.5 py-1.5"
-		:class="[GHOST_FIELD, missingRing(missing), bleed ? BLEED_TEXT : 'w-full']"
+		class="block resize-none overflow-hidden py-1.5"
+		:class="[
+			plain ? PLAIN_FIELD : ['px-2.5', GHOST_FIELD],
+			missingRing(missing),
+			bleed ? BLEED_TEXT : 'w-full',
+		]"
 		@input="onInput"
 		@keydown.enter.prevent="emit('enter')"
 	/>
@@ -18,6 +22,7 @@ import { useResizeObserver } from '@vueuse/core'
 import {
 	BLEED_TEXT,
 	GHOST_FIELD,
+	PLAIN_FIELD,
 	missingRing,
 } from '@/components/InlineEdit/fieldClasses'
 
@@ -32,6 +37,8 @@ const props = defineProps<{
 	missing?: boolean
 	/** Line its text up with the surrounding text, padding outside. */
 	bleed?: boolean
+	/** No fill or border of its own, for a row that highlights itself. */
+	plain?: boolean
 }>()
 
 const emit = defineEmits<{

@@ -123,19 +123,29 @@ describe('the inline text field', () => {
 })
 
 describe('the draft course outline', () => {
-	it('keeps a row field clear of its icon but its text in the icon column', () => {
-		const wrapper = mount(DraftCourseOutline, {
+	const mountOutline = () =>
+		mount(DraftCourseOutline, {
 			props: { modelValue: [{ title: 'Basics', lessons: ['Setup'] }] },
 			...options,
 		})
-		// The row gap is 8px: a 4px pull leaves 4px before the border, and
-		// border plus 3px padding puts the text back 8px from the icon.
+
+	it('fills the whole row on hover and focus, with no field outline', () => {
+		const wrapper = mountOutline()
 		for (const field of wrapper.findAll('textarea')) {
 			expect(field.classes()).toEqual(
-				expect.arrayContaining(['-ms-1', 'ps-[3px]'])
+				expect.arrayContaining(['border-0', 'px-0', 'focus:ring-0'])
 			)
-			expect(field.classes()).not.toContain('-ms-[11px]')
+			expect(field.classes()).not.toContain('focus:border-outline-gray-4')
+			expect(field.element.parentElement!.className).toContain(
+				'focus-within:bg-surface-gray-2'
+			)
 		}
+	})
+
+	it('adds a lesson from the chapter row', async () => {
+		const wrapper = mountOutline()
+		await wrapper.get('[aria-label="Add lesson to chapter 1"]').trigger('click')
+		expect(wrapper.findAll('[data-testid=draft-lesson]')).toHaveLength(2)
 	})
 })
 

@@ -2,6 +2,10 @@
 export const GHOST_FIELD =
 	'rounded-4 border border-transparent bg-transparent transition-colors placeholder:text-ink-gray-4 hover:bg-surface-gray-2 focus:border-outline-gray-4 focus:bg-surface-base focus:shadow-sm focus:outline-none focus:ring-0'
 
+/** Bare text for a field inside a row that draws its own hover and focus fill. */
+export const PLAIN_FIELD =
+	'border-0 bg-transparent px-0 placeholder:text-ink-gray-4 focus:outline-none focus:ring-0'
+
 /** The same, as classes for controls frappe-ui offers no ghost variant for. */
 export const ghostFieldClasses = GHOST_FIELD
 
