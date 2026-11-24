@@ -26,10 +26,15 @@
 			<template v-if="icon" #prefix>
 				<span :class="[icon, 'size-4 shrink-0']" aria-hidden="true" />
 			</template>
+			<!-- Combobox draws the selected value through the list's row slot too;
+			     the icon belongs on the control only, so rows hide it. -->
 			<template v-if="icon" #item-prefix="{ selected }">
 				<span
 					v-if="selected"
-					:class="[icon, 'size-4 shrink-0']"
+					:class="[
+						icon,
+						'hidden size-4 shrink-0 [[data-slot=trigger]_&]:block',
+					]"
 					aria-hidden="true"
 				/>
 			</template>
