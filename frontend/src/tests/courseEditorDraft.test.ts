@@ -455,8 +455,13 @@ describe('CourseEditor chapters panel', () => {
 		await dockFlow(true)
 		expect(panelOpen()).toBe(false)
 		expect(showButton().exists()).toBe(true)
+		vi.useFakeTimers()
 		await dockFlow(false)
+		// It waits for Flow to slide out, so the two never move at once.
+		expect(panelOpen()).toBe(false)
+		await vi.advanceTimersByTimeAsync(200)
 		expect(panelOpen()).toBe(true)
+		vi.useRealTimers()
 	})
 
 	it('stays folded after Flow closes when it was folded by hand', async () => {
