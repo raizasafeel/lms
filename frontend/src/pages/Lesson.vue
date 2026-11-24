@@ -48,46 +48,59 @@
 		</div>
 
 		<div class="flex sm:h-[94vh]">
-			<div v-if="lesson.data.no_preview" class="min-w-0 flex-1 sm:border-e">
-				<div class="shadow rounded-5 w-3/4 mt-10 mx-auto text-center p-4">
-					<div class="flex items-center justify-center mt-4 gap-x-2">
-						<span class="lucide-lock-keyhole size-4 text-ink-gray-5" />
-						<div class="text-lg-semibold text-ink-gray-7">
+			<div v-if="isPreviewLocked" class="min-w-0 flex-1 sm:border-e">
+				<div
+					class="mx-auto max-w-[max(40rem,calc((100dvh-15rem)*16/9))] space-y-6 px-5 pt-5"
+				>
+					<h1 class="text-4xl-semibold text-ink-gray-9">
+						{{ lesson.data.title }}
+					</h1>
+					<div
+						class="flex flex-col items-center gap-1 rounded-6 border border-outline-gray-2 px-5 py-10 text-center"
+						data-testid="preview-locked"
+					>
+						<span
+							class="lucide-lock-keyhole mb-2 size-5 text-ink-gray-6"
+							aria-hidden="true"
+						/>
+						<span class="text-p-base-medium text-ink-gray-9">
 							{{ __('This lesson is locked') }}
-						</div>
+						</span>
+						<span class="text-p-sm text-ink-gray-6">
+							{{
+								lesson.data.disable_self_learning
+									? __('Contact the Administrator to enroll for this course.')
+									: __('Enroll in the course to open it.')
+							}}
+						</span>
+						<Button
+							v-if="isStudentView"
+							class="mt-3"
+							variant="solid"
+							@click="studentMode = 'enrolled'"
+						>
+							{{ __('Start learning') }}
+						</Button>
+						<Button
+							v-else-if="user.data && !lesson.data.disable_self_learning"
+							class="mt-3"
+							variant="solid"
+							:loading="enrollment.loading"
+							@click="enrollStudent()"
+						>
+							{{ __('Start learning') }}
+						</Button>
+						<Button
+							v-else-if="!user.data"
+							class="mt-3"
+							@click="redirectToLogin(getLmsRoute(`courses/${courseName}`))"
+						>
+							<template #prefix>
+								<span class="lucide-log-in size-4" />
+							</template>
+							{{ __('Login') }}
+						</Button>
 					</div>
-					<div class="mt-1 mb-4 text-ink-gray-7">
-						{{
-							__(
-								'This lesson is not available for preview. Please enroll in the course to access it.'
-							)
-						}}
-					</div>
-					<Button
-						v-if="user.data && !lesson.data.disable_self_learning"
-						:loading="enrollment.loading"
-						@click="enrollStudent()"
-						variant="solid"
-					>
-						{{ __('Start Learning') }}
-					</Button>
-					<Badge
-						theme="blue"
-						size="lg"
-						v-else-if="lesson.data.disable_self_learning"
-						class="mt-2"
-					>
-						{{ __('Contact the Administrator to enroll for this course.') }}
-					</Badge>
-					<Button
-						v-else
-						@click="redirectToLogin(getLmsRoute(`courses/${courseName}`))"
-					>
-						<template #prefix>
-							<span class="lucide-log-in size-4" />
-						</template>
-						{{ __('Login') }}
-					</Button>
 				</div>
 			</div>
 			<div v-else-if="lesson.data.locked" class="min-w-0 flex-1 sm:border-e">
@@ -362,7 +375,6 @@
 </template>
 <script setup lang="ts">
 import {
-	Badge,
 	Button,
 	call,
 	createListResource,
@@ -1325,6 +1337,16 @@ const canEditLesson = computed(() => {
 	)
 	return Boolean(realUser.data?.is_moderator) || isInstructor
 })
+
+// A learner who has not enrolled sees only the lessons in the preview; so
+// does an editor previewing as one, whom the server would show everything.
+const isPreviewLocked = computed(
+	() =>
+		Boolean(lesson.data?.no_preview) ||
+		(isStudentView.value &&
+			studentMode.value === 'not-enrolled' &&
+			!lesson.data?.include_in_preview)
+)
 
 // Course editors see a lesson in the editor; the learner page is student view.
 watch(
