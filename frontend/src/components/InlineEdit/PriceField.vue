@@ -26,7 +26,6 @@
 import { Button, Dropdown } from 'frappe-ui'
 import { computed } from 'vue'
 import PriceInput from '@/components/InlineEdit/PriceInput.vue'
-import { formatNumberIntoCurrency } from '@/utils'
 
 /**
  * Free or paid, and the price when paid. `paid` is controlled, so a parent
@@ -57,9 +56,6 @@ const menu = computed(() =>
 	}))
 )
 
-const headline = computed<string>(() => {
-	if (!props.paid) return __('Free')
-	if (!props.amount || !props.currency) return __('Set a price')
-	return formatNumberIntoCurrency(props.amount, props.currency)
-})
+// Names the choice; the price itself is in the field below it.
+const headline = computed<string>(() => (props.paid ? __('Paid') : __('Free')))
 </script>

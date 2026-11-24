@@ -113,10 +113,12 @@ describe('the price field', () => {
 		expect(wrapper.emitted('update:paid')).toEqual([[true]])
 	})
 
-	it('shows the price learners pay once set', () => {
+	it('names the choice in its menu and leaves the price to the field', () => {
 		const wrapper = mountPrice({ paid: true, currency: 'INR', amount: 500 })
-		expect(wrapper.findComponent(PriceInput).exists()).toBe(true)
-		expect(wrapper.text()).toContain('500')
+		expect(wrapper.findComponent(PriceInput).props('amount')).toBe(500)
+		expect(wrapper.get('button').text()).toBe('Paid')
+		const free = mountPrice({ paid: false })
+		expect(free.get('button').text()).toBe('Free')
 	})
 
 	it('emits the amount as a number', async () => {
