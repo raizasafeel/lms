@@ -6,7 +6,7 @@
 			v-model="doc.title"
 			:placeholder="__('Course title')"
 			:missing="isMissing?.('title')"
-			class="-mt-[7px] text-4xl-semibold text-ink-gray-9"
+			class="!py-0.5 text-4xl-semibold !leading-[1.2] text-ink-gray-9"
 			@update:modelValue="markDirty?.()"
 			@enter="intro?.focus()"
 		/>

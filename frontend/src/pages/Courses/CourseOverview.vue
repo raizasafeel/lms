@@ -4,7 +4,7 @@
 		<div
 			class="flex flex-col @2xl:flex-row items-start justify-between w-full gap-x-8 gap-y-8"
 		>
-			<div class="@2xl:w-2/3 space-y-10 min-w-0">
+			<div class="flex-1 space-y-10 min-w-0">
 				<CourseHeading :course="course.data" :editable="editable" />
 				<div class="@2xl:hidden">
 					<CourseEditCard v-if="editable" :course="course" />
@@ -87,7 +87,7 @@
 			</div>
 
 			<aside
-				class="hidden @2xl:flex w-80 shrink-0 flex-col space-y-6 self-start sticky-below-header"
+				class="hidden @2xl:flex @2xl:w-72 @4xl:w-80 @6xl:w-[22rem] @7xl:w-96 shrink-0 flex-col space-y-6 self-start sticky-below-header transition-[width] duration-300 ease-in-out"
 			>
 				<CourseEditCard v-if="editable" :course="course" />
 				<template v-else>
