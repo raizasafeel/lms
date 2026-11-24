@@ -3,6 +3,13 @@
 		<PageHeader :breadcrumbs="breadcrumbs">
 			<template #actions>
 				<CertificationLinks :courseName="courseName" />
+				<HeaderButton
+					v-if="isStudentView"
+					variant="outline"
+					icon="lucide-x"
+					:label="__('Exit student view')"
+					@click="router.push(editorRoute)"
+				/>
 			</template>
 		</PageHeader>
 		<StudentViewBar
@@ -11,7 +18,6 @@
 			v-model="studentMode"
 			doctype="LMS Course"
 			:name="courseName"
-			@exit="router.push(editorRoute)"
 			@change="lesson.reload()"
 		/>
 
@@ -425,6 +431,7 @@ import StudentLessonSidebar from '@/components/StudentLessonSidebar.vue'
 import StudentViewBar from '@/components/StudentViewBar.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
+import HeaderButton from '@/components/HeaderButton.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import Notes from '@/components/Notes/Notes.vue'
 import InlineLessonMenu from '@/components/Notes/InlineLessonMenu.vue'

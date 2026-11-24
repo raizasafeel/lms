@@ -29,12 +29,6 @@
 				<span class="hidden sm:inline">{{ __('Reset progress') }}</span>
 			</Button>
 			<TabButtons v-model="mode" :options="modes" />
-			<Button variant="outline" :aria-label="__('Exit')" @click="emit('exit')">
-				<template #prefix>
-					<span class="lucide-x size-4" />
-				</template>
-				<span class="hidden sm:inline">{{ __('Exit') }}</span>
-			</Button>
 		</div>
 	</div>
 	<Dialog
@@ -70,7 +64,7 @@ const props = defineProps<{
 	/** Sticks under the page header instead of at the very top. */
 	belowHeader?: boolean
 }>()
-const emit = defineEmits<{ exit: []; change: [] }>()
+const emit = defineEmits<{ change: [] }>()
 const mode = defineModel<StudentMode>({ required: true })
 
 const showReset = ref(false)

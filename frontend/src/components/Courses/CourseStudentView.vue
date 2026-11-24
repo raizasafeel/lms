@@ -1,12 +1,20 @@
 <template>
 	<div class="flex min-h-full flex-col">
-		<PageHeader :breadcrumbs="breadcrumbs" />
+		<PageHeader :breadcrumbs="breadcrumbs">
+			<template #actions>
+				<HeaderButton
+					variant="outline"
+					icon="lucide-x"
+					:label="__('Exit student view')"
+					@click="emit('exit')"
+				/>
+			</template>
+		</PageHeader>
 		<StudentViewBar
 			belowHeader
 			v-model="mode"
 			doctype="LMS Course"
 			:name="course.data?.name ?? ''"
-			@exit="emit('exit')"
 			@change="refresh"
 		/>
 		<CourseOverview
@@ -20,6 +28,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import HeaderButton from '@/components/HeaderButton.vue'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
 import StudentViewBar from '@/components/StudentViewBar.vue'
 import CourseOverview from '@/pages/Courses/CourseOverview.vue'

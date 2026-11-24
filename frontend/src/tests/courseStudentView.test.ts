@@ -28,7 +28,15 @@ vi.mock('@/pages/Courses/CourseOverview.vue', () => ({
 vi.mock('@/components/Layouts/pages/PageHeader.vue', () => ({
 	default: {
 		props: ['breadcrumbs'],
-		template: `<header class="page-header">{{ breadcrumbs.map((crumb) => crumb.label).join(' / ') }}</header>`,
+		template: `<header class="page-header"><span class="crumbs">{{ breadcrumbs.map((crumb) => crumb.label).join(' / ') }}</span><slot name="actions" /></header>`,
+	},
+}))
+
+vi.mock('@/components/HeaderButton.vue', () => ({
+	default: {
+		props: ['label'],
+		emits: ['click'],
+		template: `<button :data-label="label" @click="$emit('click')">{{ label }}</button>`,
 	},
 }))
 
@@ -41,6 +49,7 @@ const mountView = () => {
 			course: course as never,
 			breadcrumbs: [{ label: 'Courses' }, { label: 'ERPNext' }],
 		},
+		global: { mocks: { __: (text: string) => text } },
 	})
 	return { wrapper, course }
 }
@@ -48,7 +57,7 @@ const mountView = () => {
 describe('CourseStudentView', () => {
 	it('keeps the page header above the bar', () => {
 		const { wrapper } = mountView()
-		expect(wrapper.find('.page-header').text()).toBe('Courses / ERPNext')
+		expect(wrapper.find('.crumbs').text()).toBe('Courses / ERPNext')
 	})
 
 	it('drives the shared bar for this course', () => {
@@ -76,9 +85,9 @@ describe('CourseStudentView', () => {
 		expect(mounts.count).toBe(before + 1)
 	})
 
-	it('passes exit up', async () => {
+	it('exits from the header', async () => {
 		const { wrapper } = mountView()
-		await wrapper.find('.exit').trigger('click')
+		await wrapper.find('[data-label="Exit student view"]').trigger('click')
 		expect(wrapper.emitted('exit')).toHaveLength(1)
 	})
 })

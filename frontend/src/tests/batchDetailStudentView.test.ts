@@ -160,7 +160,7 @@ describe("BatchDetail's student view", () => {
 	it('returns to the instructor page on exit', async () => {
 		const wrapper = await mountPage()
 		await wrapper.find('[data-label="Student view"]').trigger('click')
-		await wrapper.find('.exit').trigger('click')
+		await wrapper.find('[data-label="Exit student view"]').trigger('click')
 
 		expect(wrapper.find('.student-bar').exists()).toBe(false)
 		expect(visibleTabs()).toContain('settings')

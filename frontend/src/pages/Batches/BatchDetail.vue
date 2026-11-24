@@ -6,7 +6,6 @@
 			v-model="studentMode"
 			doctype="LMS Batch"
 			:name="batchName"
-			@exit="studentMode = null"
 			@change="refreshStudentView"
 		/>
 		<TabbedDetailPage
@@ -30,6 +29,13 @@
 			</template>
 
 			<template #actions="{ tab }">
+				<HeaderButton
+					v-if="studentMode"
+					variant="outline"
+					icon="lucide-x"
+					:label="__('Exit student view')"
+					@click="studentMode = null"
+				/>
 				<BatchHeaderActions
 					v-if="isAdmin"
 					:tab="tab?.key"
@@ -97,6 +103,7 @@ import StudentViewBar from '@/components/StudentViewBar.vue'
 import Discussions from '@/components/Discussions.vue'
 import ExportAnalyticsDialog from '@/components/Dashboard/ExportAnalyticsDialog.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import HeaderButton from '@/components/HeaderButton.vue'
 import TabbedDetailPage from '@/components/Layouts/pages/TabbedDetailPage.vue'
 import NotFound from '@/pages/NotFound.vue'
 import { canReadDiscussions } from '@/utils/doctypePermissions'

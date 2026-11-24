@@ -86,14 +86,14 @@ describe('StudentViewBar', () => {
 		toast.error.mockClear()
 	})
 
-	it('writes out both modes next to their icons, with the note and exit', () => {
+	it('writes out both modes next to their icons, with the note', () => {
 		wrapper = mountBar()
 		expect(tab('Not enrolled').find('.lucide-user-round').exists()).toBe(true)
 		expect(tab('Enrolled').find('.lucide-user-round-check').exists()).toBe(true)
 		expect(wrapper.text()).toContain(
 			'Nothing you do here is saved to a real learner'
 		)
-		expect(wrapper.text()).toContain('Exit')
+		expect(wrapper.text()).not.toContain('Exit')
 		expect(wrapper.text()).not.toContain('Reset progress')
 	})
 
@@ -153,19 +153,5 @@ describe('StudentViewBar', () => {
 		expect(reset.params).toEqual({ doctype: 'LMS Batch', name: 'COURSE-1' })
 		expect(toast.success).toHaveBeenCalled()
 		expect(wrapper.find('.dialog').exists()).toBe(false)
-	})
-
-	it('exits without touching the enrollment', async () => {
-		wrapper = mountBar()
-		const exit = wrapper.findAll('button').find((b) => b.text() === 'Exit')!
-		await exit.trigger('click')
-
-		expect(wrapper.emitted('exit')).toHaveLength(1)
-		expect(
-			(resources[`${ENROLL}:resource`] as any).submit
-		).not.toHaveBeenCalled()
-		expect(
-			(resources[`${RESET}:resource`] as any).submit
-		).not.toHaveBeenCalled()
 	})
 })
