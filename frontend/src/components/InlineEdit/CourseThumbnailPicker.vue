@@ -27,7 +27,7 @@
 				@click="shuffle"
 			/>
 		</div>
-		<div class="min-w-0 flex-1 space-y-3">
+		<div class="min-w-0 max-w-xl flex-1 space-y-3">
 			<div
 				class="flex flex-wrap items-center gap-2 p-1"
 				role="group"

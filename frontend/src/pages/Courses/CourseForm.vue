@@ -1,6 +1,6 @@
 <template>
 	<SkeletonLoader v-if="!form.resource.doc" variant="form" class="flex-1" />
-	<div v-else class="mx-auto w-full max-w-3xl space-y-10 px-5 py-8">
+	<div v-else class="w-full space-y-10 px-5 py-8">
 		<CoursePublishSettings />
 
 		<SettingsGroup
@@ -23,29 +23,36 @@
 			:title="__('Search and sharing')"
 			:description="__('How the course shows up in search results.')"
 		>
-			<SearchPreview
-				class="mb-3"
-				:url="courseUrl"
-				:title="form.resource.doc.title"
-				:description="
-					form.meta.description || form.resource.doc.short_introduction
-				"
-			/>
-			<SettingField
-				v-model="form.meta.description"
-				type="textarea"
-				:label="__('Meta description')"
-				:summary="
-					__('About 150 characters. Leave empty to use the short introduction.')
-				"
-				@update:modelValue="form.markDirty()"
-			/>
-			<SettingField
-				v-model="form.meta.keywords"
-				:label="__('Meta keywords')"
-				:summary="__('Comma separated keywords for search engines.')"
-				@update:modelValue="form.markDirty()"
-			/>
+			<!-- Beside the fields on wide screens, under them below lg. -->
+			<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
+				<div class="divide-y divide-outline-gray-1">
+					<SettingField
+						v-model="form.meta.description"
+						type="textarea"
+						:label="__('Meta description')"
+						:summary="
+							__(
+								'About 150 characters. Leave empty to use the short introduction.'
+							)
+						"
+						@update:modelValue="form.markDirty()"
+					/>
+					<SettingField
+						v-model="form.meta.keywords"
+						:label="__('Meta keywords')"
+						:summary="__('Comma separated keywords for search engines.')"
+						@update:modelValue="form.markDirty()"
+					/>
+				</div>
+				<SearchPreview
+					class="self-start"
+					:url="courseUrl"
+					:title="form.resource.doc.title"
+					:description="
+						form.meta.description || form.resource.doc.short_introduction
+					"
+				/>
+			</div>
 		</SettingsGroup>
 
 		<SettingsGroup v-if="actions" :title="__('Manage')">
