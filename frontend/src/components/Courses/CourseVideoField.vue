@@ -25,39 +25,34 @@
 				aria-hidden="true"
 			/>
 		</div>
+		<!-- Icons only, so they sit over the video without covering it; shown on
+		     hover or focus. The thumbnail is edited in Settings: one points there. -->
 		<div
-			class="absolute end-2 top-2 flex items-center gap-1.5 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
-			:class="videoLink ? 'opacity-100' : 'opacity-0'"
+			class="absolute end-2 top-2 flex items-center gap-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
 		>
-			<!-- The thumbnail is edited in Settings; this points the way there. -->
 			<Button
 				size="sm"
-				icon-left="lucide-image"
+				icon="lucide-image"
 				:label="__('Edit thumbnail')"
+				:tooltip="__('Edit thumbnail')"
 				:route="{ hash: '#settings', query: { section: 'thumbnail' } }"
 				data-testid="edit-thumbnail"
 			/>
 			<Button
 				size="sm"
-				:tooltip="__('Preview video')"
+				:icon="videoLink ? 'lucide-video' : 'lucide-video-off'"
+				:label="videoLabel"
+				:tooltip="videoLabel"
 				data-testid="video-button"
 				@click="showDialog = true"
-			>
-				<template #prefix>
-					<span
-						class="size-4"
-						:class="videoLink ? 'lucide-video' : 'lucide-video-off'"
-					/>
-				</template>
-				{{ videoLink ? __('Change video') : __('Add video') }}
-			</Button>
+			/>
 		</div>
 		<VideoLinkDialog v-model:open="showDialog" v-model="videoLink" />
 	</div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Button } from 'frappe-ui'
 import VideoPreview from '@/components/VideoPreview.vue'
 import VideoLinkDialog from '@/components/InlineEdit/VideoLinkDialog.vue'
@@ -77,4 +72,7 @@ defineProps<{
 const videoLink = defineModel<string | null | undefined>('videoLink')
 
 const showDialog = ref<boolean>(false)
+const videoLabel = computed(() =>
+	videoLink.value ? __('Change video') : __('Add video')
+)
 </script>
