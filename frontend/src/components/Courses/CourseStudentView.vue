@@ -1,5 +1,5 @@
 <template>
-	<div class="flex min-h-full flex-col">
+	<div class="flex min-h-full shrink-0 flex-col">
 		<StudentViewBar
 			v-model="mode"
 			doctype="LMS Course"

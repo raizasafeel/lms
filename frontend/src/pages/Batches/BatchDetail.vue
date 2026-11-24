@@ -1,6 +1,10 @@
 <template>
 	<NotFound v-if="(batch.fetched || batch.error) && !batch.data?.name" />
-	<div v-else class="flex h-full flex-col">
+	<div
+		v-else
+		class="flex flex-col"
+		:class="page?.flowsWithPage ? 'min-h-full shrink-0' : 'h-full'"
+	>
 		<StudentViewBar
 			v-if="studentMode"
 			v-model="studentMode"
@@ -148,6 +152,9 @@ watch(
 // The forms in the <router-view> below change what this endpoint reports.
 provide('reloadBatchDetails', () => batch.reload())
 
+// Its flow decides the root's height, so the sticky student view bar
+// spans the whole page.
+const page = ref(null)
 /** null, or which learner the instructor is previewing the page as. */
 const studentMode = ref(null)
 provideStudentView(user, () => Boolean(studentMode.value))

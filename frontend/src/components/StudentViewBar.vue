@@ -1,6 +1,7 @@
 <template>
 	<div
-		class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-outline-gray-2 bg-surface-base px-5 py-2"
+		ref="bar"
+		class="sticky top-0 z-10 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-outline-gray-2 bg-surface-base px-5 py-2"
 		role="region"
 		:aria-label="__('Student view')"
 	>
@@ -57,6 +58,7 @@ import { computed, ref, watch } from 'vue'
 import { Button, createResource, Dialog, TabButtons, toast } from 'frappe-ui'
 import type { Resource } from '@/types'
 import { useScreenSize } from '@/utils/composables'
+import { useStickyStackHeight } from '@/composables/useStickyStackHeight'
 import { resourceErrorMessage, submitResource } from '@/utils/resource'
 
 type StudentMode = 'not-enrolled' | 'enrolled'
@@ -74,6 +76,10 @@ const mode = defineModel<StudentMode>({ required: true })
 
 const showReset = ref(false)
 const { isMobile } = useScreenSize()
+
+// It wraps to two rows on phones, so its height is measured.
+const bar = ref<HTMLElement | null>(null)
+useStickyStackHeight(bar, '--student-view-bar-h')
 
 const modes = [
 	{

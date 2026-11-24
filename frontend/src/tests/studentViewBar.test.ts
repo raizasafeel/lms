@@ -173,6 +173,18 @@ describe('StudentViewBar', () => {
 		expect(wrapper.find('.dialog').exists()).toBe(false)
 	})
 
+	it('sticks and adds its height to the sticky stack while shown', () => {
+		wrapper = mountBar()
+		const root = document.documentElement.style
+		expect(wrapper.find('[role="region"]').classes()).toEqual(
+			expect.arrayContaining(['sticky', 'top-0'])
+		)
+		expect(root.getPropertyValue('--student-view-bar-h')).toMatch(/px$/)
+
+		wrapper.unmount()
+		expect(root.getPropertyValue('--student-view-bar-h')).toBe('')
+	})
+
 	it('exits without touching the enrollment', async () => {
 		wrapper = mountBar()
 		const exit = wrapper.findAll('button').find((b) => b.text() === 'Exit')!

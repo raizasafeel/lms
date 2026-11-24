@@ -33,6 +33,10 @@ svg.lucide {
    scroll containers below clear exactly the header (WCAG 2.4.11). */
 :root {
 	--header-frame-h: calc(2.625rem + 1px);
+	/* Everything pinned at the top: the student view bar (measured while
+	   shown) above the page header. */
+	--student-view-bar-h: 0px;
+	--sticky-stack-h: calc(var(--student-view-bar-h) + var(--header-frame-h));
 }
 
 .header-frame {
@@ -44,15 +48,15 @@ svg.lucide {
    viewport scrolls on its own so its end stays reachable. */
 .sticky-below-header {
 	position: sticky;
-	top: calc(var(--header-frame-h) + 1.25rem);
-	max-height: calc(100dvh - var(--header-frame-h) - 2.5rem);
+	top: calc(var(--sticky-stack-h) + 1.25rem);
+	max-height: calc(100dvh - var(--sticky-stack-h) - 2.5rem);
 	overflow-y: auto;
 }
 
 /* Keep focused elements from hiding under the sticky header. */
 main#scrollContainer,
 main#main-content {
-	scroll-padding-block-start: var(--header-frame-h);
+	scroll-padding-block-start: var(--sticky-stack-h);
 }
 
 /* frappe-ui swaps the dark-mode checkbox tick but ships no radio equivalent, so

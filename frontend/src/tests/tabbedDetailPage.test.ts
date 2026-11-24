@@ -231,6 +231,23 @@ describe('TabbedDetailPage tab visibility', () => {
 		expect(wrapper.find('[data-testid="solo"]').exists()).toBe(true)
 	})
 
+	// A bounded box would end the sticky header's run one viewport down.
+	it('grows the single view with the page, like a flow tab', async () => {
+		const hidden = tabs({
+			overview: { when: false },
+			dashboard: { when: false },
+			editor: { when: false },
+			settings: { when: false },
+		})
+
+		const { wrapper } = await mountPage({ tabs: hidden, slots: { solo } })
+
+		expect(wrapper.classes()).toEqual(
+			expect.arrayContaining(['min-h-full', 'shrink-0'])
+		)
+		expect((wrapper.vm as any).flowsWithPage).toBe(true)
+	})
+
 	it('renders nothing rather than throwing when there is no single view either', async () => {
 		const hidden = tabs({
 			overview: { when: false },

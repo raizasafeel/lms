@@ -1,6 +1,9 @@
 <template>
 	<SkeletonLoader v-if="loading" variant="header" />
-	<header v-else class="header-frame sticky top-0 z-10 justify-between">
+	<header
+		v-else
+		class="header-frame sticky top-[var(--student-view-bar-h)] z-10 justify-between"
+	>
 		<div class="flex min-w-0 flex-1 items-center gap-2">
 			<template v-if="isMobile">
 				<router-link
