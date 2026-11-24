@@ -1,10 +1,21 @@
 import { describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
-const { call } = vi.hoisted(() => ({ call: vi.fn() }))
+const { call, openFileSelector } = vi.hoisted(() => ({
+	call: vi.fn(),
+	openFileSelector: vi.fn(),
+}))
 
 vi.mock('frappe-ui', () => ({
 	call,
+	FileUploader: {
+		name: 'FileUploader',
+		props: ['private', 'fileTypes', 'validateFile'],
+		emits: ['success'],
+		setup: () => ({ openFileSelector }),
+		template:
+			'<div><slot :progress="0" :uploading="false" :openFileSelector="openFileSelector" /></div>',
+	},
 	Button: {
 		name: 'Button',
 		props: ['theme', 'variant', 'loading'],
@@ -24,6 +35,7 @@ vi.mock('frappe-ui', () => ({
 			'<button role="switch" @click="$emit(\'update:modelValue\', !modelValue)" />',
 	},
 }))
+vi.mock('@/utils', () => ({ validateFile: () => undefined }))
 vi.mock('@/components/Controls/Link.vue', () => ({
 	default: {
 		name: 'Link',
@@ -56,6 +68,7 @@ vi.mock('@/components/CourseCard.vue', () => ({
 
 import SettingAction from '@/components/InlineEdit/SettingAction.vue'
 import SettingField from '@/components/InlineEdit/SettingField.vue'
+import SettingImage from '@/components/InlineEdit/SettingImage.vue'
 import SettingSwitch from '@/components/InlineEdit/SettingSwitch.vue'
 import SearchPreview from '@/components/InlineEdit/SearchPreview.vue'
 import SettingRow from '@/components/InlineEdit/SettingRow.vue'
@@ -107,6 +120,49 @@ describe('the shared settings fields', () => {
 		expect(button.props('theme')).toBe('red')
 		await button.trigger('click')
 		expect(wrapper.emitted('click')).toHaveLength(1)
+	})
+})
+
+describe('the settings image', () => {
+	const mountImage = (modelValue: string | null) =>
+		mount(SettingImage, {
+			props: { label: 'Meta image', modelValue },
+			global,
+		})
+
+	it('uploads public from an empty box on the end of the row', async () => {
+		const wrapper = mountImage(null)
+		expect(
+			wrapper.getComponent({ name: 'FileUploader' }).props('private')
+		).toBe(false)
+		const pick = wrapper.get('[data-testid="setting-image-pick"]')
+		expect(pick.element.closest('.shrink-0')).not.toBeNull()
+		expect(pick.attributes('aria-label')).toBe('Upload image')
+		expect(wrapper.find('[data-testid="setting-image-remove"]').exists()).toBe(
+			false
+		)
+		await wrapper
+			.getComponent({ name: 'FileUploader' })
+			.vm.$emit('success', { file_url: '/files/share.png' })
+		expect(wrapper.emitted('update:modelValue')).toEqual([['/files/share.png']])
+	})
+
+	it('changes the image from its hover overlay', async () => {
+		const wrapper = mountImage('/files/share.png')
+		const pick = wrapper.get('[data-testid="setting-image-pick"]')
+		expect(pick.attributes('aria-label')).toBe('Change image')
+		expect(pick.text()).toContain('Change')
+		expect(pick.html()).toContain('group-hover:opacity-100')
+		await pick.trigger('click')
+		expect(openFileSelector).toHaveBeenCalled()
+	})
+
+	it('clears the image from the corner cross', async () => {
+		const wrapper = mountImage('/files/share.png')
+		const remove = wrapper.get('[data-testid="setting-image-remove"]')
+		expect(remove.attributes('aria-label')).toBe('Remove image')
+		await remove.trigger('click')
+		expect(wrapper.emitted('update:modelValue')).toEqual([[null]])
 	})
 })
 

@@ -66,14 +66,10 @@
 				:label="__('Meta keywords')"
 				:summary="__('Comma separated keywords for search engines.')"
 			/>
-			<ImageUploadField
-				class="py-3.5"
+			<SettingImage
+				v-model="doc.meta_image"
 				:label="__('Meta image')"
-				:description="__('Shown when the batch link is shared.')"
-				:image_url="doc.meta_image || ''"
-				:is_private="false"
-				@upload="(url) => (doc.meta_image = url)"
-				@remove="doc.meta_image = null"
+				:summary="__('Shown when the batch link is shared.')"
 			/>
 			<SettingRow
 				:label="__('Meta preview')"
@@ -98,11 +94,11 @@
 import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SettingField from '@/components/InlineEdit/SettingField.vue'
+import SettingImage from '@/components/InlineEdit/SettingImage.vue'
 import SettingLink from '@/components/InlineEdit/SettingLink.vue'
 import SettingSwitch from '@/components/InlineEdit/SettingSwitch.vue'
 import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import SettingsPage from '@/components/InlineEdit/SettingsPage.vue'
-import ImageUploadField from '@/components/Controls/ImageUploadField.vue'
 import SearchPreview from '@/components/InlineEdit/SearchPreview.vue'
 import SettingRow from '@/components/InlineEdit/SettingRow.vue'
 import BatchManageGroup from '@/pages/Batches/components/BatchManageGroup.vue'
