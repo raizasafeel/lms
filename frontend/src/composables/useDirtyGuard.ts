@@ -1,4 +1,4 @@
-import { onScopeDispose, ref, watch, type Ref } from 'vue'
+import { onScopeDispose, ref } from 'vue'
 import type { Router } from 'vue-router'
 
 // Confirm before a navigation discards an unsaved settings form.
@@ -62,65 +62,6 @@ export function installDirtyGuard(
 	return () => {
 		stopBefore()
 		stopAfter()
-	}
-}
-
-// Keys that move on their own (new `modified`/`__last_sync_on` on every
-// reload, whether or not anything visible changed); comparing them fires a false prompt.
-const VOLATILE = new Set([
-	'creation',
-	'docstatus',
-	'idx',
-	'modified',
-	'modified_by',
-	'owner',
-])
-
-const isVolatile = (key: string) => key.startsWith('__') || VOLATILE.has(key)
-
-// Key order is not meaning: sort, and drop volatile keys, before comparing.
-const stable = (value: unknown): unknown => {
-	if (Array.isArray(value)) return value.map(stable)
-	if (value && typeof value === 'object') {
-		const out: Record<string, unknown> = {}
-		for (const key of Object.keys(value as object).sort()) {
-			if (isVolatile(key)) continue
-			out[key] = stable((value as Record<string, unknown>)[key])
-		}
-		return out
-	}
-	return value
-}
-
-const serialize = (value: unknown) => JSON.stringify(stable(value))
-
-// Guard a detail form against the state it loaded with. Re-baseline only
-// when a replaced doc was still clean; a dirty prev keeps its baseline.
-export function useDirtyDoc(doc: Ref<any>) {
-	let pristine: string | null = null
-	const snapshot = () => {
-		if (pristine === null && doc.value) pristine = serialize(doc.value)
-		return pristine
-	}
-	watch(
-		doc,
-		(next, prev) => {
-			if (!next) return
-			// A prev already dirty keeps its baseline; it's a real edit, not a reload.
-			if (pristine === null || (prev && serialize(prev) === pristine)) {
-				pristine = serialize(next)
-			}
-		},
-		{ immediate: true }
-	)
-	useDirtyGuard(() => !!doc.value && serialize(doc.value) !== snapshot())
-
-	// A save is the new baseline; re-snapshot, don't latch a flag (a form stays
-	// open after save and must be guarded again).
-	return {
-		markSaved: () => {
-			pristine = doc.value ? serialize(doc.value) : null
-		},
 	}
 }
 

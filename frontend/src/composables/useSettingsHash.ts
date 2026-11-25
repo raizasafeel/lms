@@ -74,16 +74,6 @@ export function pushSettingsHash(
 	})
 }
 
-// Open settings from anywhere in the app. `slug` names a tab; omit it to land
-// on whatever tab is showing, or the default one.
-export function useOpenSettings() {
-	const router = useRouter()
-	return (slug: string | null = null, close: (() => void) | null = null) => {
-		if (close) close()
-		pushSettingsHash(router, slug)
-	}
-}
-
 // Keeps the settings dialog in sync with the URL hash. The URL is the source of
 // truth; the store (isSettingsOpen, activeTab) is only a read-only mirror of it.
 export function useSettingsHash(tabs: ComputedRef<SettingsRoutableGroup[]>) {
