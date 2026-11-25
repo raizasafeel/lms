@@ -65,13 +65,22 @@ describe('CertificateStack', () => {
 		expect(sheets[1].zIndex).toBeGreaterThan(sheets[2].zIndex)
 	})
 
-	it('renders the real preview only for the top sheet until played', async () => {
-		const wrapper = mountStack()
+	it('renders the visible sheets and the next one up front, the rest once played', async () => {
+		const wrapper = mountStack({
+			certificates: [
+				...certificates,
+				{ name: 'next', title: 'Vue' },
+				{ name: 'later', title: 'Go' },
+			],
+		})
 		expect(wrapper.findAll('[data-thumbnail]').map((t) => t.text())).toEqual([
 			'newest',
+			'middle',
+			'oldest',
+			'next',
 		])
 		await wrapper.setProps({ playing: true })
-		expect(wrapper.findAll('[data-thumbnail]')).toHaveLength(3)
+		expect(wrapper.findAll('[data-thumbnail]')).toHaveLength(5)
 	})
 
 	it('cycles through the certificates while playing', async () => {

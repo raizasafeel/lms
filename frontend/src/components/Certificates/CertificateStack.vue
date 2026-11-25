@@ -11,7 +11,7 @@
 				:style="sheetStyle(index)"
 			>
 				<CertificateThumbnail
-					v-if="index === 0 || hasPlayed"
+					v-if="index <= VISIBLE_LAYERS || hasPlayed"
 					:certificate="certificate.name"
 					:title="certificate.title"
 				/>
@@ -32,6 +32,8 @@ import CertificateThumbnail from '@/components/Certificates/CertificateThumbnail
 /** Milliseconds each certificate stays on top while the stack plays. */
 const STEP = 1300
 const VISIBLE_LAYERS = 3
+// The visible sheets and the first hidden one, which the first step reveals, load up
+// front so no sheet shows its loading state mid-animation; the rest wait for a hover.
 
 const props = defineProps<{
 	/** Latest first; the first one sits on top. */
