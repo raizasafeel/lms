@@ -17,7 +17,7 @@
 		</div>
 		<img
 			v-if="image"
-			:src="image"
+			:src="safeUrl(image)"
 			alt=""
 			class="size-16 shrink-0 rounded-4 object-cover"
 		/>
@@ -25,6 +25,8 @@
 </template>
 
 <script setup lang="ts">
+import { safeUrl } from '@/utils/safeUrl'
+
 /** A search result as engines show it: address, title, description and thumbnail. */
 defineProps<{
 	url: string
