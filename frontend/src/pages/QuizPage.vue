@@ -16,19 +16,13 @@ import Quiz from '@/components/Quiz.vue'
 import { createResource, usePageMeta } from 'frappe-ui'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
 import { computed, inject, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { sessionStore } from '../stores/session'
 
 const { brand } = sessionStore()
 const user = inject('$user')
-const router = useRouter()
 const fromLesson = ref(false)
 
 onMounted(() => {
-	if (!user.data) {
-		router.push({ name: 'Courses' })
-	}
-
 	if (new URLSearchParams(window.location.search).get('fromLesson')) {
 		fromLesson.value = true
 	}

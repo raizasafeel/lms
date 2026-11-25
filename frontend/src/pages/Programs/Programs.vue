@@ -135,9 +135,6 @@ const currentTab = ref('published')
 const filters = ref({})
 
 onMounted(() => {
-	if (!user.data) {
-		window.location.href = '/login'
-	}
 	if (user.data?.is_moderator || user.data?.is_instructor) {
 		setFiltersFromQuery()
 		updatePrograms()

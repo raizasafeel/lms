@@ -143,6 +143,7 @@ export const routes = [
 		name: 'Billing',
 		component: () => import('@/pages/Billing.vue'),
 		props: true,
+		meta: { requiresLogin: true },
 	},
 	{
 		path: '/statistics',
@@ -217,6 +218,7 @@ export const routes = [
 		path: '/certified-participants',
 		name: 'CertifiedParticipants',
 		component: () => import('@/pages/CertifiedParticipants.vue'),
+		meta: { requiresLogin: true },
 	},
 	{
 		path: '/certificates/:certificateId',
@@ -260,6 +262,7 @@ export const routes = [
 		name: 'QuizPage',
 		component: () => import('@/pages/QuizPage.vue'),
 		props: true,
+		meta: { requiresLogin: true },
 	},
 	{
 		path: '/quiz-submission/:submission',
@@ -291,6 +294,7 @@ export const routes = [
 		path: '/programs',
 		name: 'Programs',
 		component: () => import('@/pages/Programs/Programs.vue'),
+		meta: { requiresLogin: true },
 		children: [
 			{
 				// `/edit` is mandatory, not stylistic. A bare `:programName` child
@@ -358,6 +362,7 @@ export const routes = [
 		name: 'AssignmentSubmission',
 		component: () => import('@/pages/AssignmentSubmission.vue'),
 		props: true,
+		meta: { requiresLogin: true },
 	},
 	{
 		path: '/assignment-submissions',

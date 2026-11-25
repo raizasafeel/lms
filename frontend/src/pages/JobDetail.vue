@@ -57,7 +57,7 @@
 					:label="__('Login to apply')"
 					icon="lucide-log-in"
 					variant="subtle"
-					@click="redirectToLogin(`/job-openings/${job.data?.name}`)"
+					@click="redirectToLogin()"
 				/>
 			</template>
 		</PageHeader>

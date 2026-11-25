@@ -247,12 +247,6 @@
 				"
 			/>
 		</div>
-		<div v-else-if="!user.data?.name">
-			<NotPermitted
-				:text="__('Please login to access this page.')"
-				:buttonLink="loginUrl(getLmsRoute(`billing/${type}/${name}`))"
-			/>
-		</div>
 	</PageBody>
 </template>
 <script setup>
@@ -277,7 +271,6 @@ import BillingSkeleton from '@/components/Skeletons/BillingSkeleton.vue'
 import { useLoadingAnnouncement } from '@/utils/a11y'
 import { useTelemetry } from '@framework/ui/telemetry/index'
 import { getLmsRoute } from '@/utils/basePath'
-import { loginUrl } from '@/utils/login'
 import {
 	INDIAN_STATE_OPTIONS,
 	canonicalIndianState,

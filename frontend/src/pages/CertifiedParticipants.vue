@@ -230,10 +230,6 @@ function newCourseFromEmptyState() {
 }
 
 onMounted(() => {
-	if (!user.data) {
-		router.push({ name: 'Courses' })
-		return
-	}
 	setFiltersFromQuery()
 	updateParticipants()
 	// TextInput emits on input and change; watched after query hydration to avoid a refetch.
