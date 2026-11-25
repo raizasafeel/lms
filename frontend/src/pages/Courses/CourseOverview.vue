@@ -90,14 +90,12 @@
 				class="hidden @2xl:flex w-[22rem] shrink-0 flex-col space-y-6 self-start sticky-below-header"
 			>
 				<CourseEditCard v-if="editable" :course="course" />
-				<template v-else>
-					<CourseCardOverlay
-						:course="course"
-						:preview="preview"
-						@enroll="emit('enroll')"
-					/>
-					<CourseCreatorCard :instructors="course.data.instructors || []" />
-				</template>
+				<CourseCardOverlay
+					v-else
+					:course="course"
+					:preview="preview"
+					@enroll="emit('enroll')"
+				/>
 			</aside>
 		</div>
 
@@ -127,7 +125,6 @@ import CourseCardOverlay from '@/components/CourseCardOverlay.vue'
 import CourseOutline from '@/components/CourseOutline.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import CourseReviews from '@/components/CourseReviews.vue'
-import CourseCreatorCard from '@/components/CourseCreatorCard.vue'
 import RelatedCourses from '@/components/RelatedCourses.vue'
 import RelatedCoursesEditor from '@/components/Courses/RelatedCoursesEditor.vue'
 import CourseEditCard from '@/components/Courses/CourseEditCard.vue'

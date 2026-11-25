@@ -263,7 +263,7 @@ const saving = computed<boolean>(() =>
 	Boolean(newAssignment.loading || assignmentDoc?.setValue?.loading)
 )
 
-// An image-only question has no text but is not empty (CourseCreatorCard.vue).
+// An image-only question has no text but is not empty.
 const hasContent = (html: string): boolean =>
 	html.replace(/<[^>]*>/g, '').trim().length > 0 || /<img\b/i.test(html)
 
