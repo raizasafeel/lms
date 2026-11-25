@@ -43,7 +43,20 @@
 		</div>
 		<p class="text-p-sm text-ink-gray-6">{{ __(integration.description) }}</p>
 		<div class="mt-auto flex items-center justify-between gap-3">
+			<Button
+				v-if="status.action && !installUrl"
+				size="sm"
+				:label="status.action.label"
+				:tooltip="status.label"
+				data-testid="integration-action"
+				@click="emit('action', status.action)"
+			>
+				<template #prefix>
+					<span class="lucide-circle-alert size-4 text-ink-amber-6" />
+				</template>
+			</Button>
 			<span
+				v-else
 				class="truncate text-p-sm"
 				:class="status.warning ? 'text-ink-amber-8' : 'text-ink-gray-6'"
 				data-testid="integration-status"
@@ -63,7 +76,7 @@
 			</Button>
 			<div v-else class="flex shrink-0 items-center gap-2">
 				<Button
-					v-if="integration.configure"
+					v-if="integration.configure && status.action?.opens !== 'configure'"
 					size="sm"
 					:label="__('Configure')"
 					:disabled="!canConfigure"
@@ -71,7 +84,7 @@
 					@click="emit('configure')"
 				/>
 				<Button
-					v-if="integration.records"
+					v-if="integration.records && status.action?.opens !== 'records'"
 					size="sm"
 					:label="__(integration.records.label)"
 					:disabled="!canOpenRecords"
@@ -85,7 +98,7 @@
 
 <script setup lang="ts">
 import { Button, Switch, Tooltip } from 'frappe-ui'
-import type { CardLine, Integration } from './integrations'
+import type { CardAction, CardLine, Integration } from './integrations'
 
 defineProps<{
 	integration: Integration
@@ -103,5 +116,6 @@ const emit = defineEmits<{
 	install: []
 	configure: []
 	openRecords: []
+	action: [action: CardAction]
 }>()
 </script>

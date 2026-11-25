@@ -32,9 +32,19 @@ export interface IntegrationStatus {
 
 export type IntegrationChanges = Partial<Record<IntegrationKey, boolean>>
 
+/** A fix for what the card is missing: its Configure page, or its records page. */
+export interface CardAction {
+	label: string
+	opens: 'configure' | 'records'
+	/** A record on the records page to open, such as 'new' for a create form. */
+	record?: string
+}
+
 export interface CardLine {
 	label: string
 	warning?: boolean
+	/** Shown as a button in place of the warning. */
+	action?: CardAction
 }
 
 export interface Integration {
@@ -174,15 +184,34 @@ export const installApp = (
 const plural = (count: number, one: string, many: string): string =>
 	count === 1 ? __(one) : __(many).format(String(count))
 
-const accountsLine = (accounts: number): CardLine =>
+const fix = (
+	label: string,
+	opens: CardAction['opens'],
+	record?: string
+): CardAction => ({ label: __(label), opens, record })
+
+/** A create form skips the list's dependency banner, so it opens only once met. */
+const accountsLine = (accounts: number, canCreate: boolean): CardLine =>
 	accounts
 		? { label: plural(accounts, '1 account', '{0} accounts') }
-		: { label: __('No accounts yet'), warning: true }
+		: {
+				label: __('No accounts yet'),
+				warning: true,
+				action: fix('Add an account', 'records', canCreate ? 'new' : undefined),
+		  }
 
-const calendarLine = (
-	state: IntegrationStatus['google_calendar']
-): CardLine => {
-	if (!state.calendars) return { label: __('No calendars yet'), warning: true }
+const calendarLine = (status: IntegrationStatus): CardLine => {
+	const state = status.google_calendar
+	if (!state.calendars)
+		return {
+			label: __('No calendars yet'),
+			warning: true,
+			action: fix(
+				'Add a calendar',
+				'records',
+				isGoogleConnected(status) ? 'new' : undefined
+			),
+		}
 	const calendars = plural(state.calendars, '1 calendar', '{0} calendars')
 	if (!state.need_access) return { label: calendars }
 	return {
@@ -190,11 +219,12 @@ const calendarLine = (
 			String(state.need_access)
 		)}`,
 		warning: true,
+		action: fix('Grant calendar access', 'records'),
 	}
 }
 
 const zoomLine = (state: IntegrationStatus['zoom']): CardLine => {
-	const accounts = accountsLine(state.accounts)
+	const accounts = accountsLine(state.accounts, true)
 	const attendance = state.attendance
 		? __('attendance on')
 		: __('attendance off')
@@ -203,7 +233,11 @@ const zoomLine = (state: IntegrationStatus['zoom']): CardLine => {
 
 const flowLine = (state: IntegrationStatus['flow']): CardLine => {
 	if (!state.ready)
-		return { label: __('No AI service connected'), warning: true }
+		return {
+			label: __('No AI service connected'),
+			warning: true,
+			action: fix('Connect an AI service', 'configure'),
+		}
 	return {
 		label: state.hide_for_learners
 			? __('Connected · hidden for learners')
@@ -216,9 +250,17 @@ const onLines: Record<IntegrationKey, (status: IntegrationStatus) => CardLine> =
 		google: (status) =>
 			status.google.has_credentials
 				? { label: __('Connected') }
-				: { label: __('Needs a client ID and secret'), warning: true },
-		google_calendar: (status) => calendarLine(status.google_calendar),
-		google_meet: (status) => accountsLine(status.google_meet.accounts),
+				: {
+						label: __('Needs a client ID and secret'),
+						warning: true,
+						action: fix('Set up client ID and secret', 'configure'),
+				  },
+		google_calendar: (status) => calendarLine(status),
+		google_meet: (status) =>
+			accountsLine(
+				status.google_meet.accounts,
+				isGoogleConnected(status) && status.google_calendar.calendars > 0
+			),
 		zoom: (status) => zoomLine(status.zoom),
 		code_runner: (status) => ({
 			label: status.code_runner.own_server
@@ -228,7 +270,11 @@ const onLines: Record<IntegrationKey, (status: IntegrationStatus) => CardLine> =
 		unsplash: (status) =>
 			status.unsplash.has_key
 				? { label: __('Connected') }
-				: { label: __('Needs an access key'), warning: true },
+				: {
+						label: __('Needs an access key'),
+						warning: true,
+						action: fix('Add access key', 'configure'),
+				  },
 		raven: () => ({ label: __('Connected') }),
 		flow: (status) => flowLine(status.flow),
 	}
@@ -276,6 +322,9 @@ const isGoogleReady = (
 	status: IntegrationStatus,
 	pending: { enabled: (key: IntegrationKey) => boolean }
 ): boolean => pending.enabled('google') && status.google.has_credentials
+
+const isGoogleConnected = (status: IntegrationStatus): boolean =>
+	status.google.enabled && status.google.has_credentials
 
 /** Pages that hold what an integration needs before it can work. */
 const SETUP_PAGES: IntegrationKey[] = ['google', 'code_runner', 'unsplash']

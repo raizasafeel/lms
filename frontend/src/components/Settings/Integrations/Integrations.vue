@@ -17,6 +17,7 @@
 				@install="installApp(card.installUrl ?? '', openSettings)"
 				@configure="emit('update:record', card.integration.key)"
 				@open-records="openSettings(card.integration.records?.slug ?? '')"
+				@action="(action) => runAction(card.integration, action)"
 			/>
 		</div>
 	</SettingsLayout>
@@ -45,6 +46,7 @@ import {
 	missingApp,
 	saveIntegrations,
 	statusLine,
+	type CardAction,
 	type Integration,
 	type IntegrationKey,
 } from './integrations'
@@ -84,6 +86,11 @@ const toggle = async (key: IntegrationKey, value: boolean) => {
 	} finally {
 		delete pending[key]
 	}
+}
+
+const runAction = (integration: Integration, action: CardAction) => {
+	if (action.opens === 'configure') emit('update:record', integration.key)
+	else openSettings(integration.records?.slug ?? '', null, null, action.record)
 }
 
 const cardFor = (integration: Integration) => {
