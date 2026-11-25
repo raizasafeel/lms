@@ -31,8 +31,19 @@
 
 		<slot name="toolbar" />
 
+		<div
+			v-if="
+				loading && !rows.length && layout === 'grid' && $slots['card-skeleton']
+			"
+			class="px-5 pb-5"
+			data-testid="card-skeletons"
+		>
+			<div class="grid gap-5" :class="gridClass">
+				<slot v-for="i in 8" :key="i" name="card-skeleton" />
+			</div>
+		</div>
 		<SkeletonLoader
-			v-if="loading && !rows.length"
+			v-else-if="loading && !rows.length"
 			:variant="skeletonVariant"
 			:count="8"
 			class="px-5 pb-5"

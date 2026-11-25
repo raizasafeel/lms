@@ -21,7 +21,13 @@
 				{{ __('Add') }}
 			</Button>
 		</div>
+		<OutlineRowsSkeleton
+			v-if="outline.loading && !outline.data"
+			:count="skeletonRows"
+			data-testid="outline-skeleton"
+		/>
 		<div
+			v-else
 			:class="{
 				'border-2 rounded-5 py-2 px-2': showOutline && outline.data?.length,
 			}"
@@ -72,6 +78,7 @@ import { useRoute, useRouter } from 'vue-router'
 import Draggable from 'vuedraggable'
 
 import ChapterRow from '@/components/ChapterRow.vue'
+import OutlineRowsSkeleton from '@/components/Skeletons/OutlineRowsSkeleton.vue'
 import { studentViewMode } from '@/composables/useStudentView'
 import { openFormRoute } from '@/composables/useFormRoute'
 import type { OutlineChapter, OutlineLesson, Resource } from '@/types'
@@ -129,6 +136,8 @@ const props = withDefaults(
 		editorLinks?: boolean
 		selectedLessonNumber?: string
 		hideHeader?: boolean
+		/** Rows to hold while the outline loads: chapters plus the open one's lessons. */
+		skeletonRows?: number
 	}>(),
 	{
 		showOutline: false,
@@ -140,6 +149,7 @@ const props = withDefaults(
 		selectedLessonNumber: '',
 		completedLesson: null,
 		hideHeader: false,
+		skeletonRows: 8,
 	}
 )
 

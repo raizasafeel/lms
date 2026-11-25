@@ -28,7 +28,13 @@
 							:options="courseListOptions"
 						>
 							<template #cell="{ column, row, value }">
-								<span v-if="column.key === 'progress'">
+								<span
+									v-if="column.key === 'progress' && isProgressPending"
+									class="inline-block h-[0.7em] w-8 rounded-4 bg-surface-gray-2 align-middle motion-safe:animate-pulse"
+									aria-hidden="true"
+									data-testid="progress-skeleton"
+								/>
+								<span v-else-if="column.key === 'progress'">
 									{{ getProgress(row.course) }}%
 								</span>
 								<span v-else>{{ value }}</span>
@@ -45,7 +51,10 @@
 						/>
 					</div>
 					<!-- <BatchCourses :batch="batch" /> -->
-					<Assessments :batch="batch.data.name" />
+					<Assessments
+						:batch="batch.data.name"
+						:expected="batch.data.assessments?.length"
+					/>
 				</div>
 			</div>
 			<div class="border-t divide-y lg:border-s lg:border-t-0 lg:h-[88vh]">
@@ -95,6 +104,10 @@ const progressList = createListResource({
 	fields: ['course', 'progress', 'name'],
 	auto: true,
 })
+
+const isProgressPending = computed(
+	() => progressList.list.loading && !progressList.data
+)
 
 const getProgress = (course) => {
 	const progress = progressList.data?.find((p) => p.course === course)

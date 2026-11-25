@@ -70,8 +70,13 @@
 					</Button>
 				</div>
 
+				<ChipsSkeleton
+					v-if="categories.list.loading && !categories.data"
+					scroll
+					data-testid="category-skeleton"
+				/>
 				<div
-					v-if="categoryOptions.length"
+					v-else-if="categoryOptions.length"
 					ref="categoryRow"
 					class="flex gap-2 overflow-x-auto pb-2"
 					role="group"
@@ -96,7 +101,14 @@
 					</button>
 				</div>
 
-				<p class="text-p-sm text-ink-gray-6" data-testid="member-count">
+				<SkeletonText
+					v-if="memberCount === null"
+					width="w-36"
+					class="motion-safe:animate-pulse"
+					aria-hidden="true"
+					data-testid="member-count-skeleton"
+				/>
+				<p v-else class="text-p-sm text-ink-gray-6" data-testid="member-count">
 					{{
 						memberCount === 1
 							? __('1 certified member')
@@ -104,6 +116,10 @@
 					}}
 				</p>
 			</div>
+		</template>
+
+		<template #card-skeleton>
+			<MemberCardSkeleton />
 		</template>
 
 		<template #card="{ row }">
@@ -168,6 +184,9 @@ import EmptyStateActions from '@/components/EmptyStateActions.vue'
 import { profileRoute } from '@/utils/routes'
 import { timeAgo } from '@/utils/format'
 import UserAvatar from '@/components/UserAvatar.vue'
+import ChipsSkeleton from '@/components/Skeletons/ChipsSkeleton.vue'
+import MemberCardSkeleton from '@/components/Skeletons/MemberCardSkeleton.vue'
+import SkeletonText from '@/components/Skeletons/SkeletonText.vue'
 
 const filters = ref({})
 const currentCategory = ref('')
@@ -175,7 +194,7 @@ const nameFilter = ref('')
 const openToWork = ref(false)
 const hiring = ref(false)
 const { brand } = sessionStore()
-const memberCount = ref(0)
+const memberCount = ref(null)
 const user = inject('$user')
 const router = useRouter()
 const playingCard = ref(null)

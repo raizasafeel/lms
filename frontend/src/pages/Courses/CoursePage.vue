@@ -86,6 +86,29 @@
 			<SkeletonLoader v-else variant="course-page" />
 		</template>
 
+		<template #loading="{ tab }">
+			<div
+				v-if="tab.key === 'editor'"
+				class="flex min-h-0 flex-1"
+				data-testid="tab-skeleton"
+			>
+				<SkeletonLoader variant="editor-content" class="min-w-0 flex-1" />
+				<SkeletonLoader
+					variant="editor-sidebar"
+					class="hidden w-[30%] min-w-72 border-s @2xl:block"
+				/>
+			</div>
+			<SkeletonLoader
+				v-else
+				:variant="TAB_SKELETONS[tab.key] || 'lines'"
+				:class="{
+					'flex-1': tab.key === 'settings',
+					'p-5': !TAB_SKELETONS[tab.key],
+				}"
+				data-testid="tab-skeleton"
+			/>
+		</template>
+
 		<template #tab-body-editor>
 			<div
 				v-if="isMobile && editorSelected"
@@ -186,6 +209,7 @@
 			</Button>
 		</template>
 	</TabbedDetailPage>
+	<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
 	<LessonHelp v-model="showLessonHelp" />
 	<ExportAnalyticsDialog
 		v-if="exportMounted"
@@ -237,6 +261,7 @@ import {
 } from '@/composables/useKeyboardShortcuts'
 import type { CourseDetails, Resource, SessionUser } from '@/types'
 import { isInstructorOf } from '@/utils/instructors'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 
 type Brand = { name?: string; logo?: string; favicon?: string }
 
@@ -444,6 +469,16 @@ const breadcrumbs = computed(() => {
 	}
 	return crumbs
 })
+
+const TAB_SKELETONS: Record<string, 'course-page' | 'form'> = {
+	overview: 'course-page',
+	settings: 'form',
+}
+
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => !course.data,
+	() => (course.data ? __('{0} loaded').format(course.data.title) : '')
+)
 
 // CourseDetail hands this to the enrol form in its <router-view>, so enrolling
 // refreshes the dashboard's Enrolled stat; key-less, the form cannot reach it.

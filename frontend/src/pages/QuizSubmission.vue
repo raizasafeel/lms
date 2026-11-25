@@ -64,6 +64,11 @@
 	</PageHeader>
 
 	<PageBody>
+		<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
+		<QuizSubmissionSkeleton
+			v-if="submissionDetails.get.loading && !submissionDetails.doc"
+			data-testid="quiz-submission-skeleton"
+		/>
 		<!-- Questions read as the page; the sidebar is a margin note about who sat
 		     it and how it went, so it stacks under them once there is no room for
 		     a second column. PageBody owns the one scroll box.
@@ -73,7 +78,7 @@
 		     Top padding therefore belongs to each column: on the grid it would sit
 		     above the rule and leave the same gap again. -->
 		<div
-			v-if="submissionDetails.doc"
+			v-else-if="submissionDetails.doc"
 			class="grid lg:flex-1 @4xl:grid-cols-[minmax(0,1fr)_300px] @4xl:grid-rows-[auto_1fr]"
 		>
 			<!-- The rule belongs to this column, not to the sidebar blocks: they are
@@ -267,8 +272,12 @@
 					<div class="mt-4">
 						<!-- The rule runs behind the markers rather than between them,
 						     so the events read as one run of time. -->
+						<ViolationLogSkeleton
+							v-if="violationLog.loading && !violationLog.data"
+							data-testid="violation-log-skeleton"
+						/>
 						<ol
-							v-if="violationLog.data?.length"
+							v-else-if="violationLog.data?.length"
 							class="border-s border-outline-gray-2 ps-4"
 						>
 							<li
@@ -372,6 +381,9 @@ import { safeUrl } from '@/utils/safeUrl'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
 import AssessmentAuthors from '@/components/Assessment/AssessmentAuthors.vue'
 import PageBody from '@/components/Layouts/pages/PageBody.vue'
+import QuizSubmissionSkeleton from '@/components/Skeletons/QuizSubmissionSkeleton.vue'
+import ViolationLogSkeleton from '@/components/Skeletons/ViolationLogSkeleton.vue'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 import HeaderButton from '@/components/HeaderButton.vue'
 import ShortcutTooltip from '@/components/ShortcutTooltip.vue'
 import {
@@ -416,6 +428,11 @@ const submissionDetails = createDocumentResource({
 	name: props.submission,
 	auto: true,
 })
+
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => submissionDetails.get.loading && !submissionDetails.doc,
+	() => (submissionDetails.doc ? __('Submission loaded') : '')
+)
 
 const violationLog = createResource({
 	url: 'lms.lms.doctype.lms_quiz.lms_quiz.get_quiz_violation_logs',

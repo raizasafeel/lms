@@ -63,6 +63,10 @@
 			</FormControl>
 		</template>
 
+		<template #card-skeleton>
+			<ProgramCardSkeleton />
+		</template>
+
 		<template #card="{ row }">
 			<button
 				type="button"
@@ -118,6 +122,7 @@ import { sessionStore } from '@/stores/session'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
 import ListPage from '@/components/Layouts/pages/ListPage.vue'
 import EmptyStateActions from '@/components/EmptyStateActions.vue'
+import ProgramCardSkeleton from '@/components/Skeletons/ProgramCardSkeleton.vue'
 import StudentPrograms from '@/pages/Programs/StudentPrograms.vue'
 import { openFormRoute } from '@/composables/useFormRoute'
 

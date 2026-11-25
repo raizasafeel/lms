@@ -8,8 +8,14 @@
 				{{ __('Learners take these from their batch dashboard') }}
 			</span>
 		</div>
+		<OverviewListSkeleton
+			v-if="isPending"
+			data-testid="batch-assessments-skeleton"
+			:rows="expected ?? 0"
+			footer
+		/>
 		<OverviewEmptyTile
-			v-if="(draft || assessments.fetched) && !rows.length"
+			v-else-if="(draft || assessments.fetched) && !rows.length"
 			icon="lucide-clipboard-check"
 			:title="__('No assessments yet')"
 			:description="
@@ -71,6 +77,7 @@
 import { computed } from 'vue'
 import { Button, call, createResource, toast } from 'frappe-ui'
 import OverviewEmptyTile from '@/pages/Batches/components/overview/OverviewEmptyTile.vue'
+import OverviewListSkeleton from '@/components/Skeletons/OverviewListSkeleton.vue'
 import BatchAssessmentAdd from '@/pages/Batches/components/overview/BatchAssessmentAdd.vue'
 import {
 	assessmentKey,
@@ -79,7 +86,11 @@ import {
 } from '@/pages/Batches/components/overview/assessmentTypes'
 
 /** The batch's assessments as instructors edit them: open, remove, add. */
-const props = defineProps<{ batchName?: string }>()
+const props = defineProps<{
+	batchName?: string
+	/** How many assessments the batch has, so the skeleton matches the list. */
+	expected?: number
+}>()
 
 /** A new batch's assessments, kept here until the batch is first saved. */
 const draft = defineModel<BatchAssessment[]>('draft')
@@ -91,6 +102,14 @@ const assessments = createResource({
 })
 
 const types = assessmentTypes()
+
+const isPending = computed<boolean>(
+	() =>
+		!draft.value &&
+		Boolean(props.batchName) &&
+		!assessments.data &&
+		!assessments.error
+)
 
 const rows = computed<BatchAssessment[]>(
 	() => draft.value ?? assessments.data ?? []

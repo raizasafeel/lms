@@ -2,9 +2,14 @@
 	<FormShell
 		:title="isNew ? __('New Program') : __('Edit Program')"
 		size="2xl"
+		:loading="!refusal && isPending"
 		:message="refusal"
 		@close="close"
 	>
+		<template #loading>
+			<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
+			<ProgramFormSkeleton />
+		</template>
 		<template #header-action>
 			<Badge theme="amber" v-if="dirty">
 				{{ __('Not Saved') }}
@@ -269,6 +274,8 @@ import Link from '@/components/Controls/Link.vue'
 import ResponsiveListView from '@/components/ResponsiveListView.vue'
 import Draggable from 'vuedraggable'
 import ProgramProgressSummary from '@/components/Programs/ProgramProgressSummary.vue'
+import ProgramFormSkeleton from '@/components/Skeletons/ProgramFormSkeleton.vue'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 import { resourceErrorMessage, submitResource } from '@/utils/resource'
 import { withoutSelectedRows } from '@/utils/programSelection'
 
@@ -372,6 +379,20 @@ const programCourses = createListResource({
 		program.value.program_courses = data
 	},
 })
+
+// Both halves of an existing program land before its fields show, so a Save
+// can never post a half-loaded program back.
+const isPending = computed(() => {
+	if (isNew.value) return false
+	const docPending = !programDoc?.doc && !programDoc?.get.error
+	const coursesPending = programCourses.list.loading && !programCourses.data
+	return docPending || coursesPending
+})
+
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => isPending.value,
+	() => ''
+)
 
 const fetchCourses = () => {
 	programCourses.update({

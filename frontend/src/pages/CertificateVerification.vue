@@ -1,6 +1,7 @@
 <template>
 	<div class="flex min-h-full flex-col">
 		<PageHeader :breadcrumbs="breadcrumbs" />
+		<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
 		<div
 			v-if="details"
 			class="mx-auto grid w-full max-w-6xl items-start gap-8 px-5 py-6 @4xl:grid-cols-[minmax(0,1fr)_20rem]"
@@ -81,8 +82,12 @@
 				</component>
 			</aside>
 		</div>
-		<EmptyStateLayout
-			v-else-if="certificate.error"
+		<CertificatePageSkeleton
+			v-else-if="!certificate.error"
+			data-testid="certificate-skeleton"
+		/>
+				<EmptyStateLayout
+			v-else
 			name="Certificate"
 			title-tag="h1"
 			icon="lucide-search-x"
@@ -107,6 +112,8 @@ import EmptyStateLayout from '@/components/Layouts/EmptyStateLayout.vue'
 import CertificateAwardedFor from '@/components/Certificates/CertificateAwardedFor.vue'
 import CertificateValidityCard from '@/components/Certificates/CertificateValidityCard.vue'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
+import CertificatePageSkeleton from '@/components/Skeletons/CertificatePageSkeleton.vue'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 import { sessionStore } from '@/stores/session'
 import dayjs from '@/utils/dayjs'
 import { profileRoute } from '@/utils/routes'
@@ -125,6 +132,11 @@ const certificate = createResource({
 }) as Resource<CertificateDetails | null>
 
 const details = computed(() => certificate.data)
+
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => !certificate.data && !certificate.error,
+	() => (certificate.data ? __('Certificate loaded') : '')
+)
 
 const STATUSES = {
 	valid: { theme: 'green', icon: 'lucide-badge-check', label: __('Verified') },

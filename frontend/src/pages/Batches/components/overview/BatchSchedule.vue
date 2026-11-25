@@ -1,16 +1,29 @@
 <template>
-	<section v-if="classes.length || editable">
+	<section v-if="classes.length || editable || isPending">
 		<div class="mb-4 flex items-baseline justify-between gap-4">
 			<h2 class="text-3xl-semibold text-ink-gray-9">{{ __('Schedule') }}</h2>
-			<span v-if="classes.length" class="text-p-base text-ink-gray-6">
+			<SkeletonText
+				v-if="isPending"
+				text="text-p-base"
+				width="w-24"
+				class="w-24 motion-safe:animate-pulse"
+				aria-hidden="true"
+			/>
+			<span v-else-if="classes.length" class="text-p-base text-ink-gray-6">
 				{{ countLabel }}
 			</span>
 			<span v-else-if="editable" class="text-p-sm text-ink-gray-6">
 				{{ __('Shown to enrolled learners once you add classes') }}
 			</span>
 		</div>
+		<OverviewListSkeleton
+			v-if="isPending"
+			data-testid="batch-schedule-skeleton"
+			:rows="needsProvider ? 0 : SHOWN"
+			row="schedule"
+		/>
 		<OverviewEmptyTile
-			v-if="!classes.length"
+			v-else-if="!classes.length"
 			icon="lucide-calendar-plus"
 			:title="emptyState.title"
 			:description="emptyState.description"
@@ -69,6 +82,8 @@ import dayjs from '@/utils/dayjs'
 import { openBatchForm } from '@/composables/useBatchForms'
 import { injectBatchForm } from '@/pages/Batches/composables/useBatchForm'
 import OverviewEmptyTile from '@/pages/Batches/components/overview/OverviewEmptyTile.vue'
+import OverviewListSkeleton from '@/components/Skeletons/OverviewListSkeleton.vue'
+import SkeletonText from '@/components/Skeletons/SkeletonText.vue'
 
 interface LiveClassRow {
 	name: string
@@ -100,6 +115,11 @@ const liveClasses = createListResource({
 })
 
 const classes = computed<LiveClassRow[]>(() => liveClasses.data || [])
+
+const isPending = computed<boolean>(
+	() =>
+		Boolean(props.batchName) && liveClasses.list.loading && !liveClasses.data
+)
 
 // Upcoming first; once the batch is over, its last few.
 const nextClasses = computed<LiveClassRow[]>(() => {

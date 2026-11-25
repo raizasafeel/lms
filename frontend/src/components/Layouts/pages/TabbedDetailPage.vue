@@ -64,6 +64,7 @@
 							v-bind="bodyProps(own(tab.data))"
 						/>
 					</template>
+					<slot v-else name="loading" :tab="own(tab.data)" />
 				</template>
 			</Tabs>
 
@@ -114,6 +115,8 @@ defineSlots<{
 	actions?: (props: { tab?: DetailTab; instance: unknown }) => any
 	status?: () => any
 	solo?: () => any
+	/** Stands in for a tab's body while `loading`. */
+	loading?: (props: { tab: DetailTab }) => any
 	overlay?: (props: { tab?: DetailTab }) => any
 	'tab-row-end'?: (props: { tab?: DetailTab }) => any
 	[body: `tab-body-${string}`]: (props: { tab: DetailTab; doc: unknown }) => any

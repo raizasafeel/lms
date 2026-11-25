@@ -1,6 +1,8 @@
 <template>
 	<section
-		v-if="canReadReviews && (reviews.data?.length || membership)"
+		v-if="
+			canReadReviews && (reviews.data?.length || membership || isReviewsPending)
+		"
 		class="space-y-6"
 	>
 		<div class="flex items-center justify-between gap-3">
@@ -17,8 +19,12 @@
 			</Button>
 		</div>
 
+		<CourseReviewsSkeleton
+			v-if="isReviewsPending"
+			data-testid="reviews-skeleton"
+		/>
 		<CourseReviewSummary
-			v-if="ratings.length"
+			v-else-if="ratings.length"
 			v-model:stars="starFilter"
 			:ratings="ratings"
 		/>
@@ -108,6 +114,7 @@
 
 <script setup lang="ts">
 import { createResource, Button } from 'frappe-ui'
+import CourseReviewsSkeleton from '@/components/Skeletons/CourseReviewsSkeleton.vue'
 import { computed, inject, reactive, ref, watch } from 'vue'
 import CourseReviewSummary from '@/components/CourseReviewSummary.vue'
 import ReviewStars from '@/components/ReviewStars.vue'
@@ -171,6 +178,8 @@ const reviews = createResource({
 	},
 	auto: Boolean(props.courseName && canReadReviews.value),
 }) as Resource<CourseReviewInfo[] | null>
+
+const isReviewsPending = computed(() => reviews.loading && !reviews.data)
 
 watch(
 	() => props.courseName,

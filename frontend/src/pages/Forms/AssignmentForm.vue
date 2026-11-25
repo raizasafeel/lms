@@ -1,7 +1,13 @@
 <template>
 	<FormShell :title="formTitle" size="lg" :message="refusal" @close="close">
 		<template #default>
+			<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
+			<AssignmentFormSkeleton
+				v-if="isAssignmentPending"
+				data-testid="assignment-form-skeleton"
+			/>
 			<fieldset
+				v-else
 				:disabled="!canEdit"
 				data-testid="assignment-fields"
 				class="m-0 min-w-0 space-y-4 border-0 p-0 text-base"
@@ -124,6 +130,8 @@ import BooleanSwitch from '@/components/Controls/BooleanSwitch.vue'
 import { useFormRoute } from '@/composables/useFormRoute'
 import Link from '@/components/Controls/Link.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
+import AssignmentFormSkeleton from '@/components/Skeletons/AssignmentFormSkeleton.vue'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 import { InputLabel } from 'frappe-ui/experimental'
 import { resourceErrorMessage, submitResource } from '@/utils/resource'
 import { toDatetimeLocal, fromDatetimeLocal } from '@/utils/schedule'
@@ -213,6 +221,15 @@ const assignmentDoc = createDocumentResource({
 		console.error(err)
 	},
 })
+
+const isAssignmentPending = computed(() =>
+	Boolean(assignmentDoc?.get.loading && !assignmentDoc.doc)
+)
+
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => isAssignmentPending.value,
+	() => (assignmentDoc?.doc ? __('Assignment loaded') : '')
+)
 
 // C3: the watch this replaces had no `immediate`, so a directly mounted route
 // never ran its load at all. It is still needed here alongside `auto`, because

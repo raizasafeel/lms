@@ -5,6 +5,7 @@
 		class="flex flex-col"
 		:class="page?.flowsWithPage ? 'min-h-full shrink-0' : 'h-full'"
 	>
+		<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
 		<StudentViewBar
 			v-if="studentMode"
 			v-model="studentMode"
@@ -136,6 +137,7 @@ import {
 	saveShortcut,
 } from '@/composables/useKeyboardShortcuts'
 import { useBatchForm } from '@/pages/Batches/composables/useBatchForm'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 import {
 	confirmUnsavedChanges,
 	useUnsavedChangesGuard,
@@ -168,6 +170,11 @@ const batch = createResource({
 	}),
 	auto: true,
 })
+
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => !batch.data && !batch.error,
+	() => (batch.data?.title ? __('{0} loaded').format(batch.data.title) : '')
+)
 
 // The router reuses this component when you go straight from one batch to
 // another, so setup does not run a second time.

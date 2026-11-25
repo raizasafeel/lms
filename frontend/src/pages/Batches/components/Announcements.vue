@@ -1,5 +1,11 @@
 <template>
 	<div class="mx-auto mt-5 flex w-[90%] flex-1 flex-col lg:w-[75%]">
+		<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
+		<AnnouncementsSkeleton
+			v-if="!communications.data && communications.loading"
+			data-testid="announcements-skeleton"
+			:empty="canAnnounce && !hasStudents"
+		/>
 		<h2
 			v-if="communications.data?.length"
 			class="text-ink-gray-9 text-lg-semibold mb-5"
@@ -84,6 +90,8 @@ import { computed, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { timeAgo } from '@/utils'
 import EmptyStateLayout from '@/components/Layouts/EmptyStateLayout.vue'
+import AnnouncementsSkeleton from '@/components/Skeletons/AnnouncementsSkeleton.vue'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 import { openBatchForm } from '@/composables/useBatchForms'
 
 const props = defineProps({
@@ -125,6 +133,11 @@ const communications = createResource({
 	auto: true,
 	cache: ['announcement', props.batch],
 })
+
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => !communications.data && communications.loading,
+	() => __('Announcements loaded')
+)
 </script>
 <style>
 .prose-sm p {

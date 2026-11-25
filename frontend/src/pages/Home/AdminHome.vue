@@ -76,7 +76,13 @@
 			</div>
 		</div>
 
-		<div v-if="createdCourses.data?.length" class="mt-10">
+		<HomeSectionSkeleton
+			v-if="isPending(createdCourses)"
+			kind="courses"
+			class="mt-10"
+			data-testid="courses-skeleton"
+		/>
+		<div v-else-if="createdCourses.data?.length" class="mt-10">
 			<div class="flex items-center justify-between mb-3">
 				<span class="text-lg-semibold text-ink-gray-9">
 					{{ __('Courses Created') }}
@@ -104,7 +110,13 @@
 			</div>
 		</div>
 
-		<div v-if="createdBatches.data?.length" class="mt-10">
+		<HomeSectionSkeleton
+			v-if="isPending(createdBatches)"
+			kind="batches"
+			class="mt-10"
+			data-testid="batches-skeleton"
+		/>
+		<div v-else-if="createdBatches.data?.length" class="mt-10">
 			<div class="flex items-center justify-between mb-3">
 				<span class="text-lg-semibold text-ink-gray-9">
 					{{ __('Upcoming Batches') }}
@@ -133,7 +145,12 @@
 		</div>
 
 		<EmptyStateLayout
-			v-if="!createdCourses.data?.length && !createdBatches.data?.length"
+			v-if="
+				createdCourses.data &&
+				createdBatches.data &&
+				!createdCourses.data.length &&
+				!createdBatches.data.length
+			"
 			name="Courses"
 			:title="__('No courses created')"
 			:description="
@@ -156,7 +173,7 @@
 </template>
 <script setup lang="ts">
 import { Button, createResource } from 'frappe-ui'
-import { inject } from 'vue'
+import { inject, watch } from 'vue'
 import { formatTime } from '@/utils'
 import { formatTimezone } from '@/utils/timezone'
 import { profileRoute } from '@/utils/routes'
@@ -165,14 +182,18 @@ import EmptyStateLayout from '@/components/Layouts/EmptyStateLayout.vue'
 import { setFormSource } from '@/composables/formTracking'
 import BatchCard from '@/pages/Batches/components/BatchCard.vue'
 import LiveClassCard from '@/pages/Home/LiveClassCard.vue'
+import HomeSectionSkeleton from '@/components/Skeletons/HomeSectionSkeleton.vue'
+import { isPending } from '@/pages/Home/pending'
 
 const user = inject<any>('$user')
 const dayjs = inject<any>('$dayjs')
 
 const props = defineProps<{
-	liveClasses?: { data?: any[] }
-	evals?: { data?: any[] }
+	liveClasses?: { data?: any[] | null; error?: unknown }
+	evals?: { data?: any[] | null; error?: unknown }
 }>()
+
+const emit = defineEmits<{ pending: [boolean] }>()
 
 const createdCourses = createResource({
 	url: 'lms.lms.api.get_created_courses',
@@ -183,4 +204,10 @@ const createdBatches = createResource({
 	url: 'lms.lms.api.get_created_batches',
 	auto: true,
 })
+
+watch(
+	() => isPending(createdCourses) || isPending(createdBatches),
+	(pending) => emit('pending', pending),
+	{ immediate: true }
+)
 </script>

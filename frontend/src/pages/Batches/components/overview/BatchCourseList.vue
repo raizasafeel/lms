@@ -1,13 +1,27 @@
 <template>
-	<section v-if="editable || cards.length">
+	<section v-if="editable || cards.length || (isPending && expected)">
 		<div class="mb-4 flex items-baseline justify-between gap-4">
 			<h2 class="text-3xl-semibold text-ink-gray-9">{{ __('Courses') }}</h2>
 			<span v-if="cards.length" class="text-p-base text-ink-gray-6">
 				{{ courseCount }}
 			</span>
+			<SkeletonText
+				v-else-if="isPending && expected"
+				text="text-p-base"
+				width="w-16"
+				class="w-16 motion-safe:animate-pulse"
+				aria-hidden="true"
+			/>
 		</div>
+		<OverviewListSkeleton
+			v-if="isPending"
+			data-testid="batch-courses-skeleton"
+			:rows="expected ?? 0"
+			row="course"
+			:footer="editable"
+		/>
 		<OverviewEmptyTile
-			v-if="!cards.length"
+			v-else-if="!cards.length"
 			icon="lucide-book-open"
 			:title="__('No courses yet')"
 			:description="__('Learners see the courses you add here, in this order.')"
@@ -103,6 +117,8 @@ import { useCoursePickerItems } from '@/composables/useCoursePickerItems'
 import PickerDialog from '@/components/InlineEdit/PickerDialog.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import OverviewEmptyTile from '@/pages/Batches/components/overview/OverviewEmptyTile.vue'
+import OverviewListSkeleton from '@/components/Skeletons/OverviewListSkeleton.vue'
+import SkeletonText from '@/components/Skeletons/SkeletonText.vue'
 import { courseIcon } from '@/utils/courseIcons'
 import { courseTint } from '@/utils/courseTints'
 import { safeUrl } from '@/utils/safeUrl'
@@ -128,6 +144,8 @@ const props = defineProps<{
 	studentView?: StudentViewMode | null
 	/** The batch's category; courses in it are suggested first. */
 	category?: string | null
+	/** How many courses the batch has, so the skeleton matches the list. */
+	expected?: number
 }>()
 
 /** A new batch's courses, kept here until the batch is first saved. */
@@ -163,6 +181,11 @@ const picker = useCoursePickerItems(
 
 // A draft lists its courses from the picker's rows: they have no batch yet.
 if (draft.value) picker.load()
+
+const isPending = computed<boolean>(
+	() =>
+		!draft.value && Boolean(props.batchName) && !courses.data && !courses.error
+)
 
 const cards = computed<BatchCourseCard[]>(() => {
 	if (!draft.value) return courses.data || []

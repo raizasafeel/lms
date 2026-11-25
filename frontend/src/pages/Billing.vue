@@ -1,8 +1,10 @@
 <template>
 	<PageHeader :breadcrumbs="breadcrumbs" />
 	<PageBody :title="__('Billing Details')">
+		<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
+		<BillingSkeleton v-if="isPending" />
 		<div
-			v-if="(access.data?.access || isPreview) && orderSummary.data"
+			v-else-if="(access.data?.access || isPreview) && orderSummary.data"
 			class="px-5 pb-10"
 		>
 			<Alert
@@ -271,6 +273,8 @@ import PageBody from '@/components/Layouts/pages/PageBody.vue'
 import { sessionStore } from '../stores/session'
 import Link from '@/components/Controls/Link.vue'
 import NotPermitted from '@/components/NotPermitted.vue'
+import BillingSkeleton from '@/components/Skeletons/BillingSkeleton.vue'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 import { useTelemetry } from '@framework/ui/telemetry/index'
 import { getLmsRoute } from '@/utils/basePath'
 import { loginUrl } from '@/utils/login'
@@ -499,6 +503,19 @@ const validateAddress = () => {
 
 // A validation failure arrives as an Error; handing that to toast.error renders
 // an empty toast, which is why a rejected checkout looked like a dead button.
+// Access is asked first and the order summary only once it is granted.
+const isPending = computed(() => {
+	if (!user.data?.name) return false
+	if (!access.data) return !access.error
+	const canPay = access.data.access || isPreview.value
+	return canPay && !orderSummary.data && !orderSummary.error
+})
+
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => isPending.value,
+	() => ''
+)
+
 const showError = (err) => {
 	toast.error(err.messages?.[0] || err.message || err)
 }

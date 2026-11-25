@@ -6,7 +6,9 @@ import { BATCH_FORM } from '@/pages/Batches/composables/useBatchForm'
 
 vi.stubGlobal('__', (text: string) => text)
 
-const { rows } = vi.hoisted(() => ({ rows: { data: [] as unknown[] } }))
+const { rows } = vi.hoisted(() => ({
+	rows: { data: [] as unknown[], list: { loading: false } },
+}))
 
 vi.mock('frappe-ui', () => ({
 	createListResource: () => rows,

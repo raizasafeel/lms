@@ -332,6 +332,29 @@ describe('TabbedDetailPage document binding', () => {
 		expect(shell(wrapper).exists()).toBe(true)
 		expect(wrapper.find('[data-testid="body-overview"]').exists()).toBe(false)
 	})
+
+	it('fills the open tab with the loading slot until the document arrives', async () => {
+		const { wrapper } = await mountPage({
+			tabs: tabs(),
+			props: { loading: true },
+			slots: {
+				loading: (props: { tab: Tab }) =>
+					h('div', { 'data-testid': `skeleton-${props.tab.key}` }),
+			},
+		})
+
+		expect(wrapper.find('[data-testid="skeleton-overview"]').exists()).toBe(
+			true
+		)
+
+		await wrapper.setProps({ loading: false })
+		await flushPromises()
+
+		expect(wrapper.find('[data-testid="skeleton-overview"]').exists()).toBe(
+			false
+		)
+		expect(wrapper.find('[data-testid="body-overview"]').exists()).toBe(true)
+	})
 })
 
 describe('TabbedDetailPage actions', () => {

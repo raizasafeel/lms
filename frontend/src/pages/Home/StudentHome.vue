@@ -28,7 +28,14 @@
 			</div>
 		</div>
 
-		<div v-if="myCourses.data?.length" class="mt-10">
+		<HomeSectionSkeleton
+			v-if="isPending(myCourses)"
+			kind="courses"
+			student
+			class="mt-10"
+			data-testid="courses-skeleton"
+		/>
+		<div v-else-if="myCourses.data?.length" class="mt-10">
 			<div class="flex items-center justify-between mb-3">
 				<h2 class="font-semibold text-md text-ink-gray-9">
 					{{
@@ -60,7 +67,14 @@
 			</div>
 		</div>
 
-		<div v-if="myBatches.data?.length" class="mt-10">
+		<HomeSectionSkeleton
+			v-if="isPending(myBatches)"
+			kind="batches"
+			student
+			class="mt-10"
+			data-testid="batches-skeleton"
+		/>
+		<div v-else-if="myBatches.data?.length" class="mt-10">
 			<div class="flex items-center justify-between mb-3">
 				<h2 class="font-semibold text-md text-ink-gray-9">
 					{{
@@ -94,12 +108,14 @@
 	</div>
 </template>
 <script setup lang="ts">
-import { inject } from 'vue'
+import { inject, watch } from 'vue'
 import { createResource } from 'frappe-ui'
 import CourseCard from '@/components/CourseCard.vue'
 import BatchCard from '@/pages/Batches/components/BatchCard.vue'
 import UpcomingEvaluations from '@/components/UpcomingEvaluations.vue'
 import LiveClassCard from '@/pages/Home/LiveClassCard.vue'
+import HomeSectionSkeleton from '@/components/Skeletons/HomeSectionSkeleton.vue'
+import { isPending } from '@/pages/Home/pending'
 
 const user = inject<any>('$user')
 
@@ -116,4 +132,12 @@ const myBatches = createResource({
 	url: 'lms.lms.api.get_my_batches',
 	auto: true,
 })
+
+const emit = defineEmits<{ pending: [boolean] }>()
+
+watch(
+	() => isPending(myCourses) || isPending(myBatches),
+	(pending) => emit('pending', pending),
+	{ immediate: true }
+)
 </script>

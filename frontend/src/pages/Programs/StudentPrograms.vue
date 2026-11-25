@@ -6,6 +6,18 @@
 			</h1>
 			<TabButtons v-model="currentTab" :options="tabs" class="w-fit" />
 		</div>
+		<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
+		<div
+			v-if="programs.loading && !programs.data"
+			class="grid grid-cols-1 @4xl:grid-cols-3 gap-5"
+			data-testid="program-skeletons"
+		>
+			<StudentProgramCardSkeleton
+				v-for="i in 3"
+				:key="i"
+				:progress="currentTab === 'enrolled'"
+			/>
+		</div>
 		<template v-for="(data, category) in programs.data" :key="category">
 			<template v-if="category == currentTab">
 				<div
@@ -72,6 +84,8 @@ import { convertToTitleCase } from '@/utils'
 import ProgressBar from '@/components/ProgressBar.vue'
 import EmptyStateLayout from '@/components/Layouts/EmptyStateLayout.vue'
 import { openFormRoute } from '@/composables/useFormRoute'
+import StudentProgramCardSkeleton from '@/components/Skeletons/StudentProgramCardSkeleton.vue'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 
 const currentTab = ref('enrolled')
 const router = useRouter()
@@ -80,6 +94,11 @@ const programs = createResource({
 	url: 'lms.lms.utils.get_programs',
 	auto: true,
 })
+
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => programs.loading,
+	() => (programs.data ? __('Programs loaded') : '')
+)
 
 const openDetails = (programName: any, category: string) => {
 	if (category === 'enrolled') {

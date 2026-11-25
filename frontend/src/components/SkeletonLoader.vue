@@ -195,7 +195,11 @@ import { computed } from 'vue'
  *   course-outline  the same CourseOutline inline in a page section, sized by
  *                   the call site's `count`
  *   list            components/ResponsiveListView.vue
- *   cards           the #card slot of a grid ListPage
+ *   cards           the #card slot of a grid ListPage with no #card-skeleton
+ *
+ * Content with a shape of its own (CourseCard, BatchCard, the certified-member
+ * card, category chips, forms) has a sibling in components/Skeletons/, built
+ * from SkeletonText so each line box is exactly as tall as the real text.
  *
  * Each variant mirrors its counterpart's own breakpoint, not a house default:
  * anything keyed off `isMobile` (<640px) belongs at `sm:`, while CourseOverview
@@ -219,8 +223,7 @@ import { computed } from 'vue'
  * Announcing the fetch (WCAG 4.1.3) belongs to the page, not here: one page
  * mounts several of these, and that would be several announcements for one
  * fetch. `useLoadingAnnouncement` in utils/a11y.ts is the hook; ListPage wires
- * it for all twelve list pages, but CourseOverview, CourseDetail, BatchDetail,
- * CourseForm and CourseEditor still swap in a skeleton with nothing said.
+ * it for the list pages, CoursePage and BatchDetail for their tabs.
  */
 const props = withDefaults(
 	defineProps<{

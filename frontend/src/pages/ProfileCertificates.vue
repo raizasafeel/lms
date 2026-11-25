@@ -8,8 +8,16 @@
 				{{ certificates.data.length }}
 			</span>
 		</div>
+		<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
 		<div
-			v-if="certificates.data?.length"
+			v-if="isPending"
+			class="grid grid-cols-1 gap-4 @2xl:grid-cols-2 @4xl:grid-cols-3"
+			data-testid="certificates-skeleton"
+		>
+			<ProfileCertificateCardSkeleton v-for="i in 3" :key="i" />
+		</div>
+		<div
+			v-else-if="certificates.data?.length"
 			class="grid grid-cols-1 gap-4 @2xl:grid-cols-2 @4xl:grid-cols-3"
 		>
 			<div
@@ -86,8 +94,10 @@
 </template>
 <script setup>
 import { Badge, Button, createResource } from 'frappe-ui'
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import CertificateThumbnail from '@/components/Certificates/CertificateThumbnail.vue'
+import ProfileCertificateCardSkeleton from '@/components/Skeletons/ProfileCertificateCardSkeleton.vue'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 import {
 	downloadCertificate,
 	formatCertificateDate,
@@ -116,6 +126,13 @@ const certificates = createResource({
 	},
 	cache: ['certificates', props.profile.data?.username],
 })
+
+const isPending = computed(() => !certificates.data && !certificates.error)
+
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => isPending.value,
+	() => (certificates.data ? __('Certificates loaded') : '')
+)
 
 const titleOf = (certificate) =>
 	certificate.course_title || certificate.batch_title

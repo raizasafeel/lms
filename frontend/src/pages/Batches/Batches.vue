@@ -98,8 +98,12 @@
 						{{ __('Clear filters') }}
 					</Button>
 				</div>
+				<ChipsSkeleton
+					v-if="batches.list.loading && !batches.data"
+					data-testid="category-skeleton"
+				/>
 				<div
-					v-if="categoryOptions.length"
+					v-else-if="categoryOptions.length"
 					class="flex flex-wrap gap-2"
 					role="group"
 					:aria-label="__('Category')"
@@ -134,6 +138,10 @@
 			/>
 		</template>
 
+		<template #card-skeleton>
+			<BatchCardSkeleton />
+		</template>
+
 		<template #card="{ row }">
 			<BatchCard
 				:batch="row"
@@ -159,6 +167,8 @@ import { computed, inject, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { sessionStore } from '@/stores/session'
 import BatchCard from '@/pages/Batches/components/BatchCard.vue'
+import BatchCardSkeleton from '@/components/Skeletons/BatchCardSkeleton.vue'
+import ChipsSkeleton from '@/components/Skeletons/ChipsSkeleton.vue'
 import ListPage from '@/components/Layouts/pages/ListPage.vue'
 import { setFormSource } from '@/composables/formTracking'
 import { useFlowChanges } from '@/composables/useFlowChanges'

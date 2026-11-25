@@ -6,6 +6,10 @@
 		:message="refusal"
 		@close="close"
 	>
+		<template #loading>
+			<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
+			<ProgramEnrollmentSkeleton />
+		</template>
 		<template #default>
 			<div
 				v-if="program.data"
@@ -101,6 +105,8 @@ import type { FrappeResourceError } from 'frappe-ui'
 import { computed, inject, onBeforeUnmount, onMounted } from 'vue'
 import FormShell from '@/components/FormShell.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
+import ProgramEnrollmentSkeleton from '@/components/Skeletons/ProgramEnrollmentSkeleton.vue'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 import HeaderButton from '@/components/HeaderButton.vue'
 import { useFormRoute } from '@/composables/useFormRoute'
 import { sessionStore } from '@/stores/session'
@@ -150,6 +156,12 @@ onMounted(() => {
 })
 
 const loadingProgram = computed(() => !program.data && !program.error)
+
+// The region lives in the loading slot, so only the start is worth saying.
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => loadingProgram.value,
+	() => ''
+)
 
 // There was no v-if on the card that opened this — StudentPrograms only ever
 // showed it under the "Published" tab, and that split is made server-side. So

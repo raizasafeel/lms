@@ -3,6 +3,7 @@
 		v-if="batch?.data"
 		class="flex flex-col p-5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
 	>
+		<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
 		<LoadError v-if="statsError" :error="statsError" @retry="stats.reload()" />
 		<DashboardEmptyState
 			v-else-if="showStudentsEmptyState"
@@ -91,6 +92,7 @@ import {
 } from '@/utils/dashboard/charts'
 import { BATCH_FILTER_GROUPS, groupOf } from '@/utils/dashboard/filters'
 import { firstLoadError } from '@/utils/loadError'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 import type {
 	BatchDashboardStats,
 	BatchFilter,
@@ -129,6 +131,11 @@ const stats = createResource<BatchDashboardStats>({
 
 // A failed reload keeps the stats on screen; only a first load fails the body.
 const statsError = computed(() => firstLoadError(stats))
+
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => !stats.data && !statsError.value,
+	() => (stats.data ? __('Dashboard loaded') : '')
+)
 
 const showStudentsEmptyState = computed<boolean>(
 	() => stats.data?.enrolled === 0

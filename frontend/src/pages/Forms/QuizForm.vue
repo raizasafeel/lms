@@ -1,5 +1,5 @@
 <template>
-	<PageHeader :breadcrumbs="breadcrumbs" :loading="quizDetails.loading">
+	<PageHeader :breadcrumbs="breadcrumbs" :loading="isQuizPending">
 		<template #actions>
 			<template v-if="!readOnlyMode">
 				<Badge
@@ -42,12 +42,8 @@
 		</template>
 	</PageHeader>
 	<h1 class="sr-only">{{ pageTitle }}</h1>
-	<div
-		v-if="quizDetails.loading && !quizDetails.doc"
-		class="flex items-center justify-center py-20"
-	>
-		<LoadingIndicator class="size-5 text-ink-gray-5" />
-	</div>
+	<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
+	<QuizFormSkeleton v-if="isQuizPending" data-testid="quiz-form-skeleton" />
 	<div
 		v-else-if="doc"
 		class="grid flex-1 grid-cols-1 lg:min-h-0 @4xl:grid-cols-[7fr,3fr]"
@@ -391,7 +387,6 @@ import {
 	toast,
 	createDocumentResource,
 	Badge,
-	LoadingIndicator,
 } from 'frappe-ui'
 import BooleanSwitch from '@/components/Controls/BooleanSwitch.vue'
 import HeaderButton from '@/components/HeaderButton.vue'
@@ -401,6 +396,8 @@ import { toDatetimeLocal, fromDatetimeLocal } from '@/utils/schedule'
 import Draggable from 'vuedraggable'
 import QuestionCard from '@/components/Quiz/QuestionCard.vue'
 import QuestionBankPanel from '@/components/Quiz/QuestionBankPanel.vue'
+import QuizFormSkeleton from '@/components/Skeletons/QuizFormSkeleton.vue'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 import Quiz from '@/components/Quiz.vue'
 import {
 	allowedUiTypesFor,
@@ -928,6 +925,16 @@ const openQuiz = (quizID) =>
 		: null
 const quizResource = shallowRef(openQuiz(props.quizID))
 const quizDetails = computed(() => quizResource.value ?? standInQuiz)
+
+// A document resource reports its fetch on `get`; it has no `loading` of its own.
+const isQuizPending = computed(() =>
+	Boolean(quizResource.value?.get.loading && !quizResource.value.doc)
+)
+
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => isQuizPending.value,
+	() => (quizDetails.value.doc ? __('Quiz loaded') : '')
+)
 
 // /quizzes/new and /quizzes/:quizID resolve to the same component and
 // <router-view> has no key, so vue patches this page instead of remounting.

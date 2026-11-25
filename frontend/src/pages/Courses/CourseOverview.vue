@@ -48,6 +48,7 @@
 							:courseName="course.data.name"
 							:getProgress="Boolean(membership)"
 							:editorLinks="isCourseAdmin && !preview"
+							:skeletonRows="outlineRows"
 						/>
 					</div>
 				</section>
@@ -208,6 +209,11 @@ const outlineStats = computed(() => {
 	}
 	return parts.join(' · ')
 })
+
+// The outline opens with its first chapter expanded.
+const outlineRows = computed<number>(
+	() => (outline.data?.length || 0) + (outline.data?.[0]?.lessons?.length || 0)
+)
 
 const hasCourseContent = computed(() => {
 	const chapters = outline.data || []

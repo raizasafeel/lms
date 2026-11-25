@@ -1,5 +1,12 @@
 <template>
 	<div class="flex flex-1 flex-col p-5">
+		<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
+		<LiveClassesSkeleton
+			v-if="isPending"
+			data-testid="live-classes-skeleton"
+			:empty="needsProvider"
+			:can-add="canCreateClass()"
+		/>
 		<template v-if="liveClasses.data?.length">
 			<Alert
 				v-if="canManageClasses() && !hasProviderAccount()"
@@ -180,6 +187,8 @@ import { formatTime } from '@/utils/'
 import { openBatchForm } from '@/composables/useBatchForms'
 import LiveClassAttendance from '@/components/Modals/LiveClassAttendance.vue'
 import EmptyStateLayout from '@/components/Layouts/EmptyStateLayout.vue'
+import LiveClassesSkeleton from '@/components/Skeletons/LiveClassesSkeleton.vue'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 import { safeUrl } from '@/utils/safeUrl'
 
 const user = inject('$user')
@@ -225,6 +234,13 @@ const liveClasses = createListResource({
 	orderBy: 'date',
 	auto: true,
 })
+
+const isPending = computed(() => liveClasses.list.loading && !liveClasses.data)
+
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => isPending.value,
+	() => __('Classes loaded')
+)
 
 // A class is Failed once Google Calendar has refused its learners' invites on
 // every automatic retry; the hosts get a notification pointing here.

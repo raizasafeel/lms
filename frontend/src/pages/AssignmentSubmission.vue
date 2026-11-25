@@ -1,5 +1,9 @@
 <template>
-	<PageHeader v-if="!fromLesson" :breadcrumbs="breadcrumbs">
+	<PageHeader
+		v-if="!fromLesson"
+		:breadcrumbs="breadcrumbs"
+		:loading="title.loading && !title.data"
+	>
 		<template #actions>
 			<AssessmentAuthors doctype="LMS Assignment" :name="assignmentID" />
 		</template>

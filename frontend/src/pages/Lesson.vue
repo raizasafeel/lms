@@ -375,6 +375,13 @@
 			/>
 		</BottomSheet>
 	</div>
+	<LessonPageSkeleton
+		v-else
+		:chaptersOpen="chaptersOpen"
+		:withProgress="Boolean(user.data)"
+		data-testid="lesson-skeleton"
+	/>
+	<span class="sr-only" role="status">{{ loadingAnnouncement }}</span>
 	<InlineLessonMenu
 		v-if="lesson.data?.name && canCreateNotes"
 		v-model="showInlineMenu"
@@ -436,6 +443,8 @@ import LessonTitle from '@/components/LessonTitle.vue'
 import StudentLessonSidebar from '@/components/StudentLessonSidebar.vue'
 import StudentViewBar from '@/components/StudentViewBar.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
+import LessonPageSkeleton from '@/components/Skeletons/LessonPageSkeleton.vue'
+import { useLoadingAnnouncement } from '@/utils/a11y'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
 import Notes from '@/components/Notes/Notes.vue'
 import InlineLessonMenu from '@/components/Notes/InlineLessonMenu.vue'
@@ -672,6 +681,11 @@ const lesson = createResource({
 	},
 	auto: true,
 })
+
+const loadingAnnouncement = useLoadingAnnouncement(
+	() => !lesson.data,
+	() => (lesson.data?.title ? __('{0} loaded').format(lesson.data.title) : '')
+)
 
 // The stored body would not parse, so there is nothing to render and nothing
 // the student can do about it. Say so rather than show a lesson with no body.

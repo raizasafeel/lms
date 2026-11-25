@@ -29,12 +29,14 @@
 					:hideProgress="Boolean(doc)"
 					:studentView="studentView"
 					:category="doc?.category ?? batch.data.category"
+					:expected="batch.data.courses?.length"
 				/>
 
 				<BatchAssessmentList
 					v-if="doc"
 					v-model:draft="draftAssessments"
 					:batchName="batch.data.name"
+					:expected="batch.data.assessments?.length"
 				/>
 
 				<section v-if="doc" class="space-y-3">

@@ -51,7 +51,12 @@
 			</template>
 		</div>
 
-		<ul class="flex-1 overflow-y-auto px-2 py-3 list-none">
+		<OutlineRowsSkeleton
+			v-if="outline.loading && !outline.data"
+			class="flex-1 px-2 py-3"
+			data-testid="outline-skeleton"
+		/>
+		<ul v-else class="flex-1 overflow-y-auto px-2 py-3 list-none">
 			<li v-for="chapter in outline.data || []" :key="chapter.name">
 				<Disclosure
 					v-slot="{ open }"
@@ -154,6 +159,7 @@
 import { computed, watch, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { Button, createResource, Tooltip } from 'frappe-ui'
+import OutlineRowsSkeleton from '@/components/Skeletons/OutlineRowsSkeleton.vue'
 import { studentViewMode, studentViewQuery } from '@/composables/useStudentView'
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/vue'
 import {

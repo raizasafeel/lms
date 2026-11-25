@@ -122,8 +122,12 @@
 						{{ __('Clear filters') }}
 					</Button>
 				</div>
+				<ChipsSkeleton
+					v-if="categories.list.loading && !categories.data"
+					data-testid="category-skeleton"
+				/>
 				<div
-					v-if="categoryOptions.length"
+					v-else-if="categoryOptions.length"
 					class="flex flex-wrap gap-2"
 					role="group"
 					:aria-label="__('Category')"
@@ -148,6 +152,10 @@
 			</div>
 		</template>
 
+		<template #card-skeleton>
+			<CourseCardSkeleton />
+		</template>
+
 		<template #card="{ row }">
 			<CourseCard
 				:course="row"
@@ -157,7 +165,29 @@
 
 		<template #after>
 			<section
-				v-if="currentTab === 'live' && upcomingCourses.data?.length"
+				v-if="
+					currentTab === 'live' &&
+					upcomingCourses.loading &&
+					!upcomingCourses.data
+				"
+				class="px-5 pb-5 motion-safe:animate-pulse"
+				aria-hidden="true"
+				data-testid="coming-soon-skeleton"
+			>
+				<SkeletonText
+					text="text-lg-semibold"
+					width="w-32"
+					class="mb-3 w-32"
+					strong
+				/>
+				<div
+					class="grid grid-cols-1 @2xl:grid-cols-2 @4xl:grid-cols-3 @7xl:grid-cols-4 gap-5"
+				>
+					<CourseCardSkeleton v-for="i in 4" :key="i" />
+				</div>
+			</section>
+			<section
+				v-else-if="currentTab === 'live' && upcomingCourses.data?.length"
 				class="px-5 pb-5"
 				data-testid="coming-soon"
 			>
@@ -198,6 +228,9 @@ import { computed, inject, onMounted, ref, watch } from 'vue'
 import { sessionStore } from '@/stores/session'
 import { canCreateCourse } from '@/utils'
 import CourseCard from '@/components/CourseCard.vue'
+import ChipsSkeleton from '@/components/Skeletons/ChipsSkeleton.vue'
+import CourseCardSkeleton from '@/components/Skeletons/CourseCardSkeleton.vue'
+import SkeletonText from '@/components/Skeletons/SkeletonText.vue'
 import { useRouter } from 'vue-router'
 import { openFormRoute } from '@/composables/useFormRoute'
 import { setFormSource } from '@/composables/formTracking'
