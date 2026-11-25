@@ -30,9 +30,7 @@ export interface IntegrationStatus {
 	}
 }
 
-export type IntegrationChanges = Partial<
-	Record<IntegrationKey | 'zoom_attendance', boolean>
->
+export type IntegrationChanges = Partial<Record<IntegrationKey, boolean>>
 
 export interface CardLine {
 	label: string
@@ -45,12 +43,10 @@ export interface Integration {
 	label: string
 	icon: string
 	description: string
-	/**
-	 * Where Configure goes: `inPlace` for a page of fields opened inside the
-	 * grid, or the slug of an integration's own sidebar page of records.
-	 * Neither, and the card has no Configure.
-	 */
-	configure?: 'inPlace' | { slug: string }
+	/** Configure opens a page of fields inside the grid. */
+	configure?: true
+	/** The integration's own sidebar page of records, and what its button reads (English). */
+	records?: { slug: string; label: string }
 }
 
 const STATUS_URL = 'lms.lms.integrations.get_integration_status'
@@ -75,7 +71,7 @@ export const integrations: Integration[] = [
 		label: 'Google',
 		icon: 'lucide-key-round',
 		description: 'Lets the school use Google Calendar and Google Meet.',
-		configure: 'inPlace',
+		configure: true,
 	},
 	{
 		key: 'google_calendar',
@@ -83,33 +79,36 @@ export const integrations: Integration[] = [
 		icon: 'lucide-calendar',
 		description:
 			"Books evaluations into evaluators' free slots and sends invites.",
+		records: { slug: 'google-calendar', label: 'Calendars' },
 	},
 	{
 		key: 'google_meet',
 		label: 'Google Meet',
 		icon: 'lucide-presentation',
 		description: 'Creates a Meet link for each live class and evaluation.',
+		records: { slug: 'google-meet', label: 'Accounts' },
 	},
 	{
 		key: 'zoom',
 		label: 'Zoom',
 		icon: 'lucide-video',
 		description: 'Creates a Zoom link for each live class.',
-		configure: { slug: 'zoom' },
+		configure: true,
+		records: { slug: 'zoom', label: 'Accounts' },
 	},
 	{
 		key: 'code_runner',
 		label: 'Code runner',
 		icon: 'lucide-square-terminal',
 		description: "Runs learners' code in programming exercises.",
-		configure: 'inPlace',
+		configure: true,
 	},
 	{
 		key: 'unsplash',
 		label: 'Unsplash',
 		icon: 'lucide-image',
 		description: 'Lets people pick cover images from Unsplash.',
-		configure: 'inPlace',
+		configure: true,
 	},
 	{
 		key: 'raven',
@@ -117,7 +116,7 @@ export const integrations: Integration[] = [
 		icon: 'lucide-messages-square',
 		description:
 			'Puts learners in a chat channel for each batch and posts announcements there.',
-		configure: { slug: 'raven' },
+		records: { slug: 'raven', label: 'Workspaces' },
 	},
 	{
 		key: 'flow',
@@ -125,7 +124,7 @@ export const integrations: Integration[] = [
 		icon: 'lucide-sparkles',
 		description:
 			'AI assistant beside the app for building courses and answering questions.',
-		configure: 'inPlace',
+		configure: true,
 	},
 ]
 
@@ -281,6 +280,9 @@ const isGoogleReady = (
 /** Pages that hold what an integration needs before it can work. */
 const SETUP_PAGES: IntegrationKey[] = ['google', 'code_runner', 'unsplash']
 
+const isUsable = (key: IntegrationKey, status: IntegrationStatus): boolean =>
+	!missingApp(key, status) && !needsGoogleRole(key, status)
+
 /**
  * Configure opens whenever the integration is on, and also while it is off
  * for one whose page holds its credentials, so they can go in first.
@@ -290,7 +292,15 @@ export const isConfigurable = (
 	status: IntegrationStatus
 ): boolean =>
 	Boolean(integration.configure) &&
-	!missingApp(integration.key, status) &&
-	!needsGoogleRole(integration.key, status) &&
+	isUsable(integration.key, status) &&
 	(isIntegrationEnabled(integration.key) ||
 		SETUP_PAGES.includes(integration.key))
+
+/** The records page opens when the sidebar lists it: once the integration is on. */
+export const hasRecordsAvailable = (
+	integration: Integration,
+	status: IntegrationStatus
+): boolean =>
+	Boolean(integration.records) &&
+	isUsable(integration.key, status) &&
+	isIntegrationEnabled(integration.key)

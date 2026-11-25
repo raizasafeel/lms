@@ -15,7 +15,8 @@
 				v-bind="card"
 				@toggle="(value) => toggle(card.integration.key, value)"
 				@install="installApp(card.installUrl ?? '', openSettings)"
-				@configure="configure(card.integration)"
+				@configure="emit('update:record', card.integration.key)"
+				@open-records="openSettings(card.integration.records?.slug ?? '')"
 			/>
 		</div>
 	</SettingsLayout>
@@ -31,9 +32,11 @@ import GoogleConfig from './GoogleConfig.vue'
 import CodeRunnerConfig from './CodeRunnerConfig.vue'
 import UnsplashConfig from './UnsplashConfig.vue'
 import FlowConfig from './FlowConfig.vue'
+import ZoomConfig from './ZoomConfig.vue'
 import {
 	installApp,
 	integrations,
+	hasRecordsAvailable,
 	integrationStatus as status,
 	isConfigurable,
 	isIntegrationEnabled,
@@ -57,15 +60,10 @@ const pages: Partial<Record<IntegrationKey, Component>> = {
 	code_runner: markRaw(CodeRunnerConfig),
 	unsplash: markRaw(UnsplashConfig),
 	flow: markRaw(FlowConfig),
+	zoom: markRaw(ZoomConfig),
 }
 
 const openKey = computed(() => props.record as IntegrationKey | null)
-
-const configure = (integration: Integration) => {
-	if (integration.configure === 'inPlace')
-		emit('update:record', integration.key)
-	else if (integration.configure) openSettings(integration.configure.slug)
-}
 
 /** Flipped and being written; shown at once and dropped when the write settles. */
 const pending = reactive<Partial<Record<IntegrationKey, boolean>>>({})
@@ -102,6 +100,7 @@ const cardFor = (integration: Integration) => {
 				: lockedReason(key, current, { enabled: isEnabled }),
 		installUrl: missingApp(key, current)?.url ?? null,
 		canConfigure: isConfigurable(integration, current),
+		canOpenRecords: hasRecordsAvailable(integration, current),
 	}
 }
 

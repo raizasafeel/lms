@@ -1,48 +1,15 @@
 <template>
-	<Tooltip :text="__('Records who joined each Zoom class and for how long.')">
-		<span class="flex items-center gap-2">
-			<span class="text-p-sm text-ink-gray-7">
-				{{ __('Attendance tracking') }}
-			</span>
-			<Switch
-				size="sm"
-				data-testid="zoom-attendance"
-				:model-value="isOn"
-				:disabled="!integrationStatus || saving"
-				:aria-label="__('Attendance tracking')"
-				@update:model-value="setAttendance"
-			/>
-		</span>
-	</Tooltip>
+	<BooleanSwitch
+		v-model="tracked"
+		:label="__('Attendance tracking')"
+		:description="__('Records who joined each Zoom class and for how long.')"
+		data-testid="zoom-attendance"
+	/>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { Switch, Tooltip } from 'frappe-ui'
-import type { FrappeResourceError } from 'frappe-ui'
-import {
-	integrationStatus,
-	loadIntegrationStatus,
-	saveIntegrations,
-} from '@/components/Settings/Integrations/integrations'
-import { reportSaveFailure } from '@/composables/useSettingsSource'
+import BooleanSwitch from '@/components/Controls/BooleanSwitch.vue'
 
-/** Writes on flip, like the account switches in the list below it. */
-const saving = ref(false)
-const isOn = computed(() => Boolean(integrationStatus.value?.zoom.attendance))
-
-onMounted(() => {
-	if (!integrationStatus.value) void loadIntegrationStatus()
-})
-
-const setAttendance = async (value: boolean) => {
-	saving.value = true
-	try {
-		await saveIntegrations({ zoom_attendance: value })
-	} catch (error) {
-		reportSaveFailure(error as FrappeResourceError)
-	} finally {
-		saving.value = false
-	}
-}
+/** The `track_zoom_attendance` flag of LMS Settings, saved by the page it sits on. */
+const tracked = defineModel<number | boolean | null | undefined>()
 </script>

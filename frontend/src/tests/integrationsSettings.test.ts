@@ -106,7 +106,7 @@ import Integrations from '@/components/Settings/Integrations/Integrations.vue'
 import GoogleConfig from '@/components/Settings/Integrations/GoogleConfig.vue'
 import UnsplashConfig from '@/components/Settings/Integrations/UnsplashConfig.vue'
 import FlowConfig from '@/components/Settings/Integrations/FlowConfig.vue'
-import ZoomAttendanceSwitch from '@/components/Settings/Zoom/ZoomAttendanceSwitch.vue'
+import ZoomConfig from '@/components/Settings/Integrations/ZoomConfig.vue'
 import {
 	integrationStatus,
 	isSidebarItemVisible,
@@ -143,6 +143,14 @@ const card = (wrapper: ReturnType<typeof mount>, key: string) =>
 
 const configure = (wrapper: ReturnType<typeof mount>, key: string) =>
 	card(wrapper, key).get('[data-testid="integration-configure"]')
+
+const records = (wrapper: ReturnType<typeof mount>, key: string) =>
+	card(wrapper, key).get('[data-testid="integration-records"]')
+
+const buttons = (wrapper: ReturnType<typeof mount>, key: string) =>
+	card(wrapper, key)
+		.findAll('button:not([role="switch"])')
+		.map((button) => button.text())
 
 const mountGrid = async (record: string | null = null) => {
 	const wrapper = mount(Integrations, { ...mountOptions, props: { record } })
@@ -227,6 +235,23 @@ describe('the Integrations grid', () => {
 		const wrapper = await mountGrid()
 		expect(card(wrapper, 'zoom').classes()).toContain('bg-surface-gray-1')
 		expect(configure(wrapper, 'zoom').attributes()).toHaveProperty('disabled')
+		expect(records(wrapper, 'zoom').attributes()).toHaveProperty('disabled')
+	})
+
+	it('splits Configure from the list of records on each card', async () => {
+		server.status = {
+			...withZoom(true),
+			raven: { enabled: true, raven: true, raven_integration: true },
+		}
+		const wrapper = await mountGrid()
+		expect(buttons(wrapper, 'google')).toEqual(['Configure'])
+		expect(buttons(wrapper, 'google_calendar')).toEqual(['Calendars'])
+		expect(buttons(wrapper, 'google_meet')).toEqual(['Accounts'])
+		expect(buttons(wrapper, 'zoom')).toEqual(['Configure', 'Accounts'])
+		expect(buttons(wrapper, 'code_runner')).toEqual(['Configure'])
+		expect(buttons(wrapper, 'unsplash')).toEqual(['Configure'])
+		expect(buttons(wrapper, 'raven')).toEqual(['Workspaces'])
+		expect(buttons(wrapper, 'flow')).toEqual(['Configure'])
 	})
 
 	it('opens a simple integration in place, on or off, and comes back', async () => {
@@ -243,28 +268,38 @@ describe('the Integrations grid', () => {
 		expect(page.emitted('update:record')).toEqual([[null]])
 	})
 
-	it('sends a list integration to its own sidebar page', async () => {
+	it('opens Zoom’s settings in place and its accounts in the sidebar', async () => {
 		server.status = withZoom(true)
 		const wrapper = await mountGrid()
 		await configure(wrapper, 'zoom').trigger('click')
+		await records(wrapper, 'zoom').trigger('click')
+		expect(wrapper.emitted('update:record')).toEqual([['zoom']])
 		expect(navigation.slugs).toEqual(['zoom'])
 	})
 
-	it('gives Google Calendar and Google Meet no Configure', async () => {
+	it('sends Calendar and Meet to their own sidebar pages', async () => {
 		const wrapper = await mountGrid()
-		for (const key of ['google_calendar', 'google_meet'])
-			expect(
-				card(wrapper, key)
-					.find('[data-testid="integration-configure"]')
-					.exists()
-			).toBe(false)
+		await records(wrapper, 'google_calendar').trigger('click')
+		await records(wrapper, 'google_meet').trigger('click')
+		expect(navigation.slugs).toEqual(['google-calendar', 'google-meet'])
 	})
 
-	it('offers to install Raven’s apps in place of its switch and Configure', async () => {
+	it('keeps Calendar’s list shut while Calendar is off', async () => {
+		server.status = {
+			...baseStatus(),
+			google_calendar: { enabled: false, calendars: 0, need_access: 0 },
+		}
+		const wrapper = await mountGrid()
+		expect(records(wrapper, 'google_calendar').attributes()).toHaveProperty(
+			'disabled'
+		)
+	})
+
+	it('offers to install Raven’s apps in place of its switch and list', async () => {
 		const wrapper = await mountGrid()
 		const raven = card(wrapper, 'raven')
 		expect(raven.find('[role="switch"]').exists()).toBe(false)
-		expect(raven.find('[data-testid="integration-configure"]').exists()).toBe(
+		expect(raven.find('[data-testid="integration-records"]').exists()).toBe(
 			false
 		)
 		const install = raven.get('[data-testid="integration-install"]')
@@ -275,7 +310,7 @@ describe('the Integrations grid', () => {
 		])
 	})
 
-	it('shows Raven’s switch and Configure once its apps are installed', async () => {
+	it('shows Raven’s switch and workspaces once its apps are installed', async () => {
 		server.status = {
 			...baseStatus(),
 			raven: { enabled: true, raven: true, raven_integration: true },
@@ -283,7 +318,7 @@ describe('the Integrations grid', () => {
 		const wrapper = await mountGrid()
 		const raven = card(wrapper, 'raven')
 		expect(raven.find('[role="switch"]').exists()).toBe(true)
-		await raven.get('[data-testid="integration-configure"]').trigger('click')
+		await raven.get('[data-testid="integration-records"]').trigger('click')
 		expect(navigation.slugs).toEqual(['raven'])
 	})
 
@@ -431,21 +466,25 @@ describe('an integration page', () => {
 	})
 })
 
-describe('the Zoom attendance switch', () => {
-	it('writes the flag the moment it flips', async () => {
-		integrationStatus.value = baseStatus()
-		server.status = {
-			...baseStatus(),
-			zoom: { ...baseStatus().zoom, attendance: false },
-		}
-		const wrapper = mount(ZoomAttendanceSwitch, mountOptions)
-		const toggle = wrapper.get('[data-testid="zoom-attendance"]')
-		expect(toggle.attributes('aria-checked')).toBe('true')
-		await toggle.trigger('click')
+describe('the Zoom page', () => {
+	it('saves attendance tracking on its own Save', async () => {
+		const wrapper = mount(ZoomConfig, mountOptions)
+		const [lms] = sources
+		expect(wrapper.get('header').text()).toContain('Zoom')
+		await wrapper.get('[data-testid="zoom-attendance"]').trigger('click')
+		expect(lms.doc.track_zoom_attendance).toBe(1)
+
+		lms.isDirty = true
+		await wrapper.vm.$nextTick()
+		await wrapper.get('[data-testid="zoom-save"]').trigger('click')
 		await flushPromises()
-		expect(server.calls).toEqual([
-			{ url: SAVE_URL, params: { changes: { zoom_attendance: false } } },
-		])
-		expect(toggle.attributes('aria-checked')).toBe('false')
+		expect(lms.save).toHaveBeenCalledOnce()
+		expect(server.calls.map((call) => call.url)).toEqual([STATUS_URL])
+	})
+
+	it('opens from the grid in place of the cards', async () => {
+		const page = await mountGrid('zoom')
+		expect(page.find('[data-enabled]').exists()).toBe(false)
+		expect(page.find('[data-testid="zoom-attendance"]').exists()).toBe(true)
 	})
 })

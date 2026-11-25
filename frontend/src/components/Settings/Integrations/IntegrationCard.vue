@@ -61,14 +61,24 @@
 					<span class="lucide-arrow-up-right size-3.5" />
 				</template>
 			</Button>
-			<Button
-				v-else-if="integration.configure"
-				size="sm"
-				:label="__('Configure')"
-				:disabled="!canConfigure"
-				data-testid="integration-configure"
-				@click="emit('configure')"
-			/>
+			<div v-else class="flex shrink-0 items-center gap-2">
+				<Button
+					v-if="integration.configure"
+					size="sm"
+					:label="__('Configure')"
+					:disabled="!canConfigure"
+					data-testid="integration-configure"
+					@click="emit('configure')"
+				/>
+				<Button
+					v-if="integration.records"
+					size="sm"
+					:label="__(integration.records.label)"
+					:disabled="!canOpenRecords"
+					data-testid="integration-records"
+					@click="emit('openRecords')"
+				/>
+			</div>
 		</div>
 	</div>
 </template>
@@ -85,11 +95,13 @@ defineProps<{
 	lockedReason: string
 	installUrl: string | null
 	canConfigure: boolean
+	canOpenRecords: boolean
 }>()
 
 const emit = defineEmits<{
 	toggle: [value: boolean]
 	install: []
 	configure: []
+	openRecords: []
 }>()
 </script>
