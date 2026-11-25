@@ -55,9 +55,12 @@
 		<div class="flex">
 			<div v-if="isPreviewLocked" class="min-w-0 flex-1 sm:border-e">
 				<div class="mx-auto flex max-w-6xl flex-col gap-6 px-5 pt-5">
-					<h1 :class="lessonHeadingClass">
-						{{ lesson.data.title }}
-					</h1>
+					<LessonTitle
+						:title="lesson.data.title"
+						:icon="lessonIcon"
+						:index="lessonIndex"
+						:total="lessonTotal"
+					/>
 					<div
 						class="flex flex-col items-center gap-1 rounded-6 border border-outline-gray-2 px-5 py-10 text-center"
 						data-testid="preview-locked"
@@ -122,19 +125,22 @@
 				}"
 			>
 				<div
-					class="sm:border-e sm:pt-5 pb-10 h-full"
+					class="sm:border-e pt-5 pb-10 h-full"
 					:class="{
 						'w-full md:w-3/5 mx-auto border-none !pt-10': zenModeEnabled,
 					}"
 				>
 					<div class="mx-auto max-w-6xl px-5">
 						<div
-							class="flex flex-col space-y-3 md:space-y-0 @2xl:flex-row md:items-center justify-between"
+							class="flex flex-col space-y-3 md:space-y-0 @2xl:flex-row md:items-end justify-between"
 						>
-							<div class="flex flex-col">
-								<h1 :class="lessonHeadingClass">
-									{{ lesson.data.title }}
-								</h1>
+							<div class="flex min-w-0 flex-col">
+								<LessonTitle
+									:title="lesson.data.title"
+									:icon="lessonIcon"
+									:index="lessonIndex"
+									:total="lessonTotal"
+								/>
 
 								<div
 									v-if="zenModeEnabled"
@@ -425,6 +431,7 @@ import CourseOutline from '@/components/CourseOutline.vue'
 import { useFoldablePanel } from '@/composables/useFoldablePanel'
 import LockedLessonNotice from '@/components/LockedLessonNotice.vue'
 import LessonNavButtons from '@/components/LessonNavButtons.vue'
+import LessonTitle from '@/components/LessonTitle.vue'
 import StudentLessonSidebar from '@/components/StudentLessonSidebar.vue'
 import StudentViewBar from '@/components/StudentViewBar.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
@@ -572,10 +579,6 @@ const currentTab = ref<string | undefined>(undefined)
 const completedLesson = ref<string | null>(null)
 const settingsStore = useSettings()
 const { isMobile } = useScreenSize()
-// The mobile header already shows the title, so the h1 is only for screen readers.
-const lessonHeadingClass = computed(() =>
-	isMobile.value ? 'sr-only' : 'text-4xl-semibold text-ink-gray-9'
-)
 const showChapters = ref(false)
 const {
 	isOpen: chaptersOpen,
@@ -913,6 +916,10 @@ const hasNext = computed(
 )
 const outlineLessons = computed(() =>
 	(outline.data ?? []).flatMap((c: OutlineChapter) => c.lessons ?? [])
+)
+// A preview-locked lesson carries no content, so its kind comes from the outline.
+const lessonIcon = computed(
+	() => lesson.data?.icon ?? outlineLessons.value[currentIndex.value]?.icon
 )
 const nextLessonLocked = computed(
 	() => !!outlineLessons.value[currentIndex.value + 1]?.locked
