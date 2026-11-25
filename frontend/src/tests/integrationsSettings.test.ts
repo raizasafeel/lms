@@ -177,7 +177,7 @@ beforeEach(() => {
 })
 
 describe('the Integrations grid', () => {
-	it('draws a card for every integration the LMS supports', async () => {
+	it('draws a card for each of the six integrations', async () => {
 		const wrapper = await mountGrid()
 		expect(server.calls[0].url).toBe(STATUS_URL)
 		const keys = wrapper
@@ -185,8 +185,6 @@ describe('the Integrations grid', () => {
 			.map((node) => node.attributes('data-testid'))
 		expect(keys).toEqual([
 			'integration-google',
-			'integration-google_calendar',
-			'integration-google_meet',
 			'integration-zoom',
 			'integration-code_runner',
 			'integration-unsplash',
@@ -199,10 +197,9 @@ describe('the Integrations grid', () => {
 		const wrapper = await mountGrid()
 		const line = (key: string) =>
 			card(wrapper, key).get('[data-testid="integration-status"]')
-		expect(line('google_meet').text()).toBe('1 account')
 		expect(line('code_runner').text()).toBe('Your own server')
 		expect(line('zoom').text()).toBe('Off')
-		expect(line('raven').text()).toBe('Needs the Raven integration app')
+		expect(line('raven').text()).toBe('Step 2 of 2')
 		expect(line('flow').text()).toBe('Connected · hidden for learners')
 	})
 
@@ -249,8 +246,6 @@ describe('the Integrations grid', () => {
 		}
 		const wrapper = await mountGrid()
 		expect(buttons(wrapper, 'google')).toEqual(['Configure'])
-		expect(buttons(wrapper, 'google_calendar')).toEqual(['Calendars'])
-		expect(buttons(wrapper, 'google_meet')).toEqual(['Accounts'])
 		expect(buttons(wrapper, 'zoom')).toEqual(['Configure', 'Accounts'])
 		expect(buttons(wrapper, 'code_runner')).toEqual(['Configure'])
 		expect(buttons(wrapper, 'unsplash')).toEqual(['Configure'])
@@ -285,29 +280,26 @@ describe('the Integrations grid', () => {
 		expect(navigation.slugs).toEqual(['zoom'])
 	})
 
-	it('sends Calendar and Meet to their own sidebar pages', async () => {
+	it('asks for Raven from the marketplace first', async () => {
 		server.status = {
 			...baseStatus(),
-			google_calendar: { enabled: true, calendars: 5, need_access: 0 },
+			raven: { enabled: false, raven: false, raven_integration: false },
 		}
 		const wrapper = await mountGrid()
-		await records(wrapper, 'google_calendar').trigger('click')
-		await records(wrapper, 'google_meet').trigger('click')
-		expect(navigation.slugs).toEqual(['google-calendar', 'google-meet'])
-	})
-
-	it('keeps Calendar’s list shut while Calendar is off', async () => {
-		server.status = {
-			...baseStatus(),
-			google_calendar: { enabled: false, calendars: 0, need_access: 0 },
-		}
-		const wrapper = await mountGrid()
-		expect(records(wrapper, 'google_calendar').attributes()).toHaveProperty(
-			'disabled'
+		const raven = card(wrapper, 'raven')
+		expect(raven.find('[role="switch"]').exists()).toBe(false)
+		expect(raven.get('[data-testid="integration-status"]').text()).toBe(
+			'Step 1 of 2'
 		)
+		const install = raven.get('[data-testid="integration-install"]')
+		expect(install.text()).toContain('Install Raven')
+		await install.trigger('click')
+		expect(external.urls).toEqual([
+			'https://cloud.frappe.io/marketplace/apps/raven',
+		])
 	})
 
-	it('offers to install Raven’s apps in place of its switch and list', async () => {
+	it('asks for the Raven integration app once Raven is in', async () => {
 		const wrapper = await mountGrid()
 		const raven = card(wrapper, 'raven')
 		expect(raven.find('[role="switch"]').exists()).toBe(false)
@@ -315,7 +307,7 @@ describe('the Integrations grid', () => {
 			false
 		)
 		const install = raven.get('[data-testid="integration-install"]')
-		expect(install.text()).toContain('Install required apps')
+		expect(install.text()).toContain('Install Raven integration')
 		await install.trigger('click')
 		expect(external.urls).toEqual([
 			'https://github.com/raizasafeel/raven_integration',
@@ -332,28 +324,6 @@ describe('the Integrations grid', () => {
 		expect(raven.find('[role="switch"]').exists()).toBe(true)
 		await raven.get('[data-testid="integration-records"]').trigger('click')
 		expect(navigation.slugs).toEqual(['raven'])
-	})
-
-	it('locks Calendar and Meet until Google has its credentials', async () => {
-		server.status = {
-			...baseStatus(),
-			google_calendar: { enabled: false, calendars: 0, need_access: 0 },
-			google_meet: { enabled: false, accounts: 0 },
-		}
-		const locked = await mountGrid()
-		for (const key of ['google_calendar', 'google_meet'])
-			expect(
-				card(locked, key).get('[role="switch"]').attributes()
-			).toHaveProperty('disabled')
-
-		server.status = {
-			...(server.status as IntegrationStatus),
-			google: { enabled: true, has_credentials: true, permitted: true },
-		}
-		const ready = await mountGrid()
-		expect(
-			card(ready, 'google_meet').get('[role="switch"]').attributes()
-		).not.toHaveProperty('disabled')
 	})
 })
 
@@ -375,8 +345,6 @@ describe('a card missing its setup', () => {
 		server.status = missingEverything()
 		const wrapper = await mountGrid()
 		expect(buttons(wrapper, 'google')).toEqual(['Set up client ID and secret'])
-		expect(buttons(wrapper, 'google_calendar')).toEqual(['Add a calendar'])
-		expect(buttons(wrapper, 'google_meet')).toEqual(['Add an account'])
 		expect(buttons(wrapper, 'zoom')).toEqual(['Add an account', 'Configure'])
 		expect(buttons(wrapper, 'unsplash')).toEqual(['Add access key'])
 		expect(buttons(wrapper, 'flow')).toEqual(['Connect an AI service'])
@@ -388,7 +356,7 @@ describe('a card missing its setup', () => {
 
 	it('keeps plain statuses as text', async () => {
 		const wrapper = await mountGrid()
-		for (const key of ['google_meet', 'code_runner', 'zoom', 'flow'])
+		for (const key of ['code_runner', 'zoom', 'flow'])
 			expect(
 				card(wrapper, key).find('[data-testid="integration-action"]').exists()
 			).toBe(false)
@@ -407,33 +375,96 @@ describe('a card missing its setup', () => {
 		expect(navigation.slugs).toEqual([])
 	})
 
-	it('opens a create form for a missing account once nothing blocks it', async () => {
-		server.status = {
-			...missingEverything(),
-			google: { enabled: true, has_credentials: true, permitted: true },
-			google_calendar: { enabled: true, calendars: 1, need_access: 0 },
-		}
-		const wrapper = await mountGrid()
-		await action(wrapper, 'zoom').trigger('click')
-		await action(wrapper, 'google_meet').trigger('click')
-		expect(navigation.slugs).toEqual(['zoom/new', 'google-meet/new'])
-	})
-
-	it('sends a blocked create to its list, where the banner says why', async () => {
+	it('opens a create form for a missing Zoom account', async () => {
 		server.status = missingEverything()
 		const wrapper = await mountGrid()
-		await action(wrapper, 'google_calendar').trigger('click')
-		await action(wrapper, 'google_meet').trigger('click')
+		await action(wrapper, 'zoom').trigger('click')
+		expect(navigation.slugs).toEqual(['zoom/new'])
+	})
+})
+
+describe('Google’s Calendar and Meet switches', () => {
+	const service = (wrapper: ReturnType<typeof mount>, key: string) =>
+		wrapper.get(`[data-testid="google-service-${key}"]`)
+	const serviceButton = (wrapper: ReturnType<typeof mount>, key: string) =>
+		service(wrapper, key).get('[data-testid="google-service-records"]')
+
+	const mountGoogle = (status: IntegrationStatus) => {
+		integrationStatus.value = status
+		return mount(GoogleConfig, mountOptions)
+	}
+
+	const connected = (): IntegrationStatus => ({
+		...baseStatus(),
+		google: { enabled: true, has_credentials: true, permitted: true },
+		google_calendar: { enabled: true, calendars: 5, need_access: 0 },
+	})
+
+	it('sits on Google’s page and saves the moment it flips', async () => {
+		const wrapper = mountGoogle(connected())
+		server.status = {
+			...connected(),
+			google_meet: { enabled: false, accounts: 1 },
+		}
+		await service(wrapper, 'google_meet')
+			.get('[role="switch"]')
+			.trigger('click')
+		await flushPromises()
+		expect(server.calls).toEqual([
+			{ url: SAVE_URL, params: { changes: { google_meet: false } } },
+		])
+		expect(service(wrapper, 'google_meet').attributes('data-enabled')).toBe(
+			'false'
+		)
+	})
+
+	it('opens Calendars and Meet accounts in the sidebar', async () => {
+		const wrapper = mountGoogle(connected())
+		expect(serviceButton(wrapper, 'google_calendar').text()).toBe('Calendars')
+		expect(serviceButton(wrapper, 'google_meet').text()).toBe('Accounts')
+		await serviceButton(wrapper, 'google_calendar').trigger('click')
+		await serviceButton(wrapper, 'google_meet').trigger('click')
 		expect(navigation.slugs).toEqual(['google-calendar', 'google-meet'])
 	})
 
+	it('keeps a list shut while its switch is off', () => {
+		const wrapper = mountGoogle({
+			...connected(),
+			google_calendar: { enabled: false, calendars: 0, need_access: 0 },
+		})
+		expect(
+			serviceButton(wrapper, 'google_calendar').attributes()
+		).toHaveProperty('disabled')
+	})
+
+	it('locks both until Google has its credentials', () => {
+		const wrapper = mountGoogle({
+			...baseStatus(),
+			google_calendar: { enabled: false, calendars: 0, need_access: 0 },
+			google_meet: { enabled: false, accounts: 0 },
+		})
+		for (const key of ['google_calendar', 'google_meet'])
+			expect(
+				service(wrapper, key).get('[role="switch"]').attributes()
+			).toHaveProperty('disabled')
+	})
+
 	it('sends calendars that need access to their list', async () => {
-		const wrapper = await mountGrid()
-		expect(buttons(wrapper, 'google_calendar')).toEqual([
-			'Grant calendar access',
-		])
-		await action(wrapper, 'google_calendar').trigger('click')
+		const wrapper = mountGoogle(baseStatus())
+		expect(serviceButton(wrapper, 'google_calendar').text()).toBe(
+			'Grant calendar access'
+		)
+		await serviceButton(wrapper, 'google_calendar').trigger('click')
 		expect(navigation.slugs).toEqual(['google-calendar'])
+	})
+
+	it('opens a create form for a missing Meet account once nothing blocks it', async () => {
+		const wrapper = mountGoogle({
+			...connected(),
+			google_meet: { enabled: true, accounts: 0 },
+		})
+		await serviceButton(wrapper, 'google_meet').trigger('click')
+		expect(navigation.slugs).toEqual(['google-meet/new'])
 	})
 })
 

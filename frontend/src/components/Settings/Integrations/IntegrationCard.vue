@@ -25,11 +25,7 @@
 					{{ __(integration.label) }}
 				</h3>
 			</div>
-			<Tooltip
-				v-if="!installUrl"
-				:text="lockedReason"
-				:disabled="!lockedReason"
-			>
+			<Tooltip v-if="!install" :text="lockedReason" :disabled="!lockedReason">
 				<span>
 					<Switch
 						size="sm"
@@ -44,7 +40,7 @@
 		<p class="text-p-sm text-ink-gray-6">{{ __(integration.description) }}</p>
 		<div class="mt-auto flex items-center justify-between gap-3">
 			<Button
-				v-if="status.action && !installUrl"
+				v-if="status.action && !install"
 				size="sm"
 				:label="status.action.label"
 				:tooltip="status.label"
@@ -64,9 +60,9 @@
 				{{ status.label }}
 			</span>
 			<Button
-				v-if="installUrl"
+				v-if="install"
 				size="sm"
-				:label="__('Install required apps')"
+				:label="__(install.action)"
 				data-testid="integration-install"
 				@click="emit('install')"
 			>
@@ -98,7 +94,12 @@
 
 <script setup lang="ts">
 import { Button, Switch, Tooltip } from 'frappe-ui'
-import type { CardAction, CardLine, Integration } from './integrations'
+import type {
+	CardAction,
+	CardLine,
+	Integration,
+	MissingApp,
+} from './integrations'
 
 defineProps<{
 	integration: Integration
@@ -106,7 +107,8 @@ defineProps<{
 	status: CardLine
 	/** Why the switch is locked, or '' when it can be flipped. */
 	lockedReason: string
-	installUrl: string | null
+	/** The next app to install, shown in place of the switch and pages. */
+	install: MissingApp | null
 	canConfigure: boolean
 	canOpenRecords: boolean
 }>()

@@ -30,6 +30,17 @@
 				)
 			"
 		/>
+		<div
+			v-if="integrationStatus"
+			class="flex flex-col gap-5 border-t border-outline-gray-1 pt-5"
+		>
+			<GoogleServiceSwitch
+				v-for="service in googleServices"
+				:key="service.key"
+				:service="service"
+				:status="integrationStatus"
+			/>
+		</div>
 	</IntegrationConfig>
 </template>
 
@@ -40,7 +51,12 @@ import { computed, ref } from 'vue'
 import { FormControl, Password, call, toast } from 'frappe-ui'
 import type { FrappeResourceError } from 'frappe-ui'
 import IntegrationConfig from './IntegrationConfig.vue'
-import { loadIntegrationStatus } from './integrations'
+import GoogleServiceSwitch from './GoogleServiceSwitch.vue'
+import {
+	googleServices,
+	integrationStatus,
+	loadIntegrationStatus,
+} from './integrations'
 import { useDirtyGuard } from '@/composables/useDirtyGuard'
 import {
 	reportSaveFailure,

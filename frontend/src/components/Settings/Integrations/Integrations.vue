@@ -13,8 +13,8 @@
 				v-for="card in cards"
 				:key="card.integration.key"
 				v-bind="card"
-				@toggle="(value) => toggle(card.integration.key, value)"
-				@install="installApp(card.installUrl ?? '', openSettings)"
+				@toggle="(value) => toggleIntegration(card.integration.key, value)"
+				@install="installApp(card.install?.url ?? '', openSettings)"
 				@configure="emit('update:record', card.integration.key)"
 				@open-records="openSettings(card.integration.records?.slug ?? '')"
 				@action="(action) => runAction(card.integration, action)"
@@ -24,9 +24,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onMounted, reactive, type Component } from 'vue'
-import { LoadingIndicator, toast } from 'frappe-ui'
-import type { FrappeResourceError } from 'frappe-ui'
+import { computed, markRaw, onMounted, type Component } from 'vue'
+import { LoadingIndicator } from 'frappe-ui'
 import SettingsLayout from '@/components/Layouts/settings/desktop/SettingsLayout.vue'
 import IntegrationCard from './IntegrationCard.vue'
 import GoogleConfig from './GoogleConfig.vue'
@@ -40,17 +39,16 @@ import {
 	hasRecordsAvailable,
 	integrationStatus as status,
 	isConfigurable,
-	isIntegrationEnabled,
+	isSwitchOn,
 	loadIntegrationStatus,
-	lockedReason,
 	missingApp,
-	saveIntegrations,
 	statusLine,
+	switchLockedReason,
+	toggleIntegration,
 	type CardAction,
 	type Integration,
 	type IntegrationKey,
 } from './integrations'
-import { reportSaveFailure } from '@/composables/useSettingsSource'
 import { openSettings } from '@/utils'
 
 /** The integration whose page is open in place of the grid, kept in the URL. */
@@ -67,27 +65,6 @@ const pages: Partial<Record<IntegrationKey, Component>> = {
 
 const openKey = computed(() => props.record as IntegrationKey | null)
 
-/** Flipped and being written; shown at once and dropped when the write settles. */
-const pending = reactive<Partial<Record<IntegrationKey, boolean>>>({})
-
-const isEnabled = (key: IntegrationKey): boolean =>
-	pending[key] ?? isIntegrationEnabled(key)
-
-// Each switch saves the moment it flips; a refusal puts it back.
-const toggle = async (key: IntegrationKey, value: boolean) => {
-	if (key in pending) return
-	pending[key] = value
-	try {
-		await saveIntegrations({ [key]: value })
-		toast.success(value ? __('Turned on') : __('Turned off'))
-	} catch (error) {
-		reportSaveFailure(error as FrappeResourceError)
-		await loadIntegrationStatus()
-	} finally {
-		delete pending[key]
-	}
-}
-
 const runAction = (integration: Integration, action: CardAction) => {
 	if (action.opens === 'configure') emit('update:record', integration.key)
 	else openSettings(integration.records?.slug ?? '', null, null, action.record)
@@ -96,16 +73,13 @@ const runAction = (integration: Integration, action: CardAction) => {
 const cardFor = (integration: Integration) => {
 	const current = status.value!
 	const key = integration.key
-	const enabled = isEnabled(key)
+	const enabled = isSwitchOn(key)
 	return {
 		integration,
 		enabled,
 		status: statusLine(key, current, enabled),
-		lockedReason:
-			key in pending
-				? __('Saving…')
-				: lockedReason(key, current, { enabled: isEnabled }),
-		installUrl: missingApp(key, current)?.url ?? null,
+		lockedReason: switchLockedReason(key, current),
+		install: missingApp(key, current),
 		canConfigure: isConfigurable(integration, current),
 		canOpenRecords: hasRecordsAvailable(integration, current),
 	}

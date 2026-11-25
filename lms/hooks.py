@@ -185,6 +185,10 @@ doc_events = {
 		"validate": "lms.lms.utils.validate_discussion_reply",
 	},
 	"Notification Log": {"on_change": "lms.lms.utils.publish_notifications"},
+	"Google Settings": {
+		"validate": "lms.lms.integrations.enable_google_on_first_credentials",
+		"on_update": "lms.lms.integrations.enable_google_services_on_first_credentials",
+	},
 	# One rule, two entry points: a child row whose stored parent is not the one it is
 	# being saved under answers to the parent it is leaving.
 	#

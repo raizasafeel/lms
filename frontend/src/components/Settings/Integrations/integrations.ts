@@ -1,5 +1,7 @@
-import { ref } from 'vue'
-import { call } from 'frappe-ui'
+import { reactive, ref } from 'vue'
+import { call, toast } from 'frappe-ui'
+import type { FrappeResourceError } from 'frappe-ui'
+import { reportSaveFailure } from '@/composables/useSettingsSource'
 import { hasCloudSettings } from '@/composables/cloudSettings'
 import { openExternal } from '@/utils/openExternal'
 
@@ -75,6 +77,31 @@ export const saveIntegrations = async (
 	integrationStatus.value = await call(SAVE_URL, { changes })
 }
 
+/** Flipped and being written; shown at once and dropped when the write settles. */
+const pendingSwitches = reactive<IntegrationChanges>({})
+
+export const isSwitchOn = (key: IntegrationKey): boolean =>
+	pendingSwitches[key] ?? isIntegrationEnabled(key)
+
+/** Saves a switch the moment it flips; a refusal puts it back. */
+export const toggleIntegration = async (
+	key: IntegrationKey,
+	value: boolean
+): Promise<void> => {
+	if (key in pendingSwitches) return
+	pendingSwitches[key] = value
+	try {
+		await saveIntegrations({ [key]: value })
+		toast.success(value ? __('Turned on') : __('Turned off'))
+	} catch (error) {
+		reportSaveFailure(error as FrappeResourceError)
+		await loadIntegrationStatus()
+	} finally {
+		delete pendingSwitches[key]
+	}
+}
+
+/** The cards in the Integrations grid. */
 export const integrations: Integration[] = [
 	{
 		key: 'google',
@@ -82,21 +109,6 @@ export const integrations: Integration[] = [
 		icon: 'lucide-key-round',
 		description: 'Lets the school use Google Calendar and Google Meet.',
 		configure: true,
-	},
-	{
-		key: 'google_calendar',
-		label: 'Google Calendar',
-		icon: 'lucide-calendar',
-		description:
-			"Books evaluations into evaluators' free slots and sends invites.",
-		records: { slug: 'google-calendar', label: 'Calendars' },
-	},
-	{
-		key: 'google_meet',
-		label: 'Google Meet',
-		icon: 'lucide-presentation',
-		description: 'Creates a Meet link for each live class and evaluation.',
-		records: { slug: 'google-meet', label: 'Accounts' },
 	},
 	{
 		key: 'zoom',
@@ -138,6 +150,25 @@ export const integrations: Integration[] = [
 	},
 ]
 
+/** Switched on and off inside Google's Configure page. */
+export const googleServices: Integration[] = [
+	{
+		key: 'google_calendar',
+		label: 'Google Calendar',
+		icon: 'lucide-calendar',
+		description:
+			"Books evaluations into evaluators' free slots and sends invites.",
+		records: { slug: 'google-calendar', label: 'Calendars' },
+	},
+	{
+		key: 'google_meet',
+		label: 'Google Meet',
+		icon: 'lucide-presentation',
+		description: 'Creates a Meet link for each live class and evaluation.',
+		records: { slug: 'google-meet', label: 'Accounts' },
+	},
+]
+
 export const isIntegrationEnabled = (key: IntegrationKey): boolean => {
 	const state = integrationStatus.value?.[key]
 	return Boolean(state && 'enabled' in state && state.enabled)
@@ -151,20 +182,29 @@ export const isSidebarItemVisible = (item: {
 	integration?: IntegrationKey
 }): boolean => !item.integration || isIntegrationEnabled(item.integration)
 
-/** The app an integration still needs, or null when nothing is missing. */
+/** The next app to install: its step as the status (English), and its button. */
+export interface MissingApp {
+	label: string
+	action: string
+	url: string
+}
+
+/** Raven comes first; the integration app builds on it. Null when nothing is missing. */
 export const missingApp = (
 	key: IntegrationKey,
 	status: IntegrationStatus
-): { label: string; url: string } | null => {
-	if (key === 'raven' && !status.raven.raven_integration)
-		return {
-			label: 'Needs the Raven integration app',
-			url: 'https://github.com/raizasafeel/raven_integration',
-		}
+): MissingApp | null => {
 	if (key === 'raven' && !status.raven.raven)
 		return {
-			label: 'Needs the Raven app',
+			label: 'Step 1 of 2',
+			action: 'Install Raven',
 			url: 'https://cloud.frappe.io/marketplace/apps/raven',
+		}
+	if (key === 'raven' && !status.raven.raven_integration)
+		return {
+			label: 'Step 2 of 2',
+			action: 'Install Raven integration',
+			url: 'https://github.com/raizasafeel/raven_integration',
 		}
 	return null
 }
@@ -313,9 +353,18 @@ export const lockedReason = (
 		return __("Raven membership sync can't be turned off once it is on.")
 	const needsGoogle = key === 'google_calendar' || key === 'google_meet'
 	if (needsGoogle && !isGoogleReady(status, pending) && !pending.enabled(key))
-		return __('Configure Google first')
+		return __('Turn Google on and save its client ID and secret first')
 	return ''
 }
+
+/** lockedReason, or that the switch is still saving. */
+export const switchLockedReason = (
+	key: IntegrationKey,
+	status: IntegrationStatus
+): string =>
+	key in pendingSwitches
+		? __('Saving…')
+		: lockedReason(key, status, { enabled: isSwitchOn })
 
 /** Google is on and has the client ID and secret Calendar and Meet sign in with. */
 const isGoogleReady = (

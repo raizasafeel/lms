@@ -89,9 +89,32 @@ def get_google_status() -> dict:
 	settings = frappe.get_cached_doc("Google Settings")
 	return {
 		"enabled": bool(settings.enable),
-		"has_credentials": bool(settings.client_id and settings.client_secret),
+		"has_credentials": has_google_credentials(settings),
 		"permitted": bool(frappe.has_permission("Google Settings", "write")),
 	}
+
+
+def has_google_credentials(settings) -> bool:
+	return bool(settings and settings.client_id and settings.client_secret)
+
+
+def is_getting_first_google_credentials(google) -> bool:
+	return has_google_credentials(google) and not has_google_credentials(google.get_doc_before_save())
+
+
+def enable_google_on_first_credentials(google, method=None):
+	"""Google Settings validate: credentials going in for the first time turn Google on."""
+	if is_getting_first_google_credentials(google):
+		google.enable = 1
+
+
+def enable_google_services_on_first_credentials(google, method=None):
+	"""Google Settings on_update: first credentials turn Calendar and Meet on. Later saves leave them be."""
+	if not is_getting_first_google_credentials(google):
+		return
+	settings = frappe.get_doc("LMS Settings")
+	settings.update({SETTINGS_FLAGS["google_calendar"]: 1, SETTINGS_FLAGS["google_meet"]: 1})
+	settings.save()
 
 
 def get_calendar_counts() -> dict:

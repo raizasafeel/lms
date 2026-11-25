@@ -111,3 +111,38 @@ class TestIntegrationSettings(BaseTestUtils):
 		frappe.db.delete("Google Calendar")
 		status = set_integrations_enabled({"google_calendar": True})
 		self.assertTrue(status["google_calendar"]["enabled"])
+
+
+class TestGoogleCredentials(BaseTestUtils):
+	"""Google's first client ID and secret turn Google, Calendar and Meet on."""
+
+	def setUp(self):
+		super().setUp()
+		frappe.db.set_single_value("Google Settings", {"enable": 0, "client_id": "", "client_secret": ""})
+		frappe.db.set_single_value(
+			"LMS Settings", {SETTINGS_FLAGS["google_calendar"]: 0, SETTINGS_FLAGS["google_meet"]: 0}
+		)
+
+	def save_google(self, **values):
+		google = frappe.get_doc("Google Settings")
+		google.update(values)
+		google.save()
+
+	def test_first_credentials_turn_calendar_and_meet_on(self):
+		self.save_google(client_id="id", client_secret="secret")
+		status = get_integration_status()
+		self.assertTrue(status["google"]["enabled"])
+		self.assertTrue(status["google_calendar"]["enabled"])
+		self.assertTrue(status["google_meet"]["enabled"])
+
+	def test_client_id_alone_turns_nothing_on(self):
+		self.save_google(client_id="id")
+		self.assertFalse(get_integration_status()["google_meet"]["enabled"])
+
+	def test_later_saves_keep_a_switch_the_admin_turned_off(self):
+		self.save_google(client_id="id", client_secret="secret")
+		set_integrations_enabled({"google_meet": False})
+		self.save_google(client_id="another-id", client_secret="another-secret")
+		status = get_integration_status()
+		self.assertFalse(status["google_meet"]["enabled"])
+		self.assertTrue(status["google_calendar"]["enabled"])
