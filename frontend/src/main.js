@@ -14,6 +14,7 @@ import { registerDirectives } from './directives'
 import { dedupeToasts } from '@/utils/toastDedupe'
 import { keepFlowUsableBesideDialogs } from '@/utils/flowBesideDialogs'
 import { routeFlowLinks } from '@/utils/flowLinks'
+import { followFlowChanges } from '@/utils/followFlow'
 import { canEditPrograms } from '@/utils/recordRoutes'
 
 let pinia = createPinia()
@@ -29,14 +30,17 @@ app.use(router)
 app.use(translationPlugin)
 registerDirectives(app)
 app.provide('$dayjs', dayjs)
-app.provide('$socket', initSocket())
+const socket = initSocket()
+app.provide('$socket', socket)
 
 const { userResource, allUsers } = usersStore()
 app.provide('$user', userResource)
 app.provide('$allUsers', allUsers)
-routeFlowLinks(router, () => ({
+const recordRouteContext = () => ({
 	canEditPrograms: canEditPrograms(userResource.data),
-}))
+})
+routeFlowLinks(router, recordRouteContext)
+followFlowChanges(router, socket, recordRouteContext)
 
 watch(userResource, () => {
 	if (userResource.data) {

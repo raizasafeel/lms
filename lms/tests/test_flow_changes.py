@@ -39,10 +39,18 @@ class TestFlowChanges(IntegrationTestCase):
 		self.act_as_flow()
 		self.published(self.course()).assert_called_once_with(
 			flow.FLOW_CHANGE_EVENT,
-			{"doctype": "LMS Course", "name": "flow-course", "deleted": False},
+			{"doctype": "LMS Course", "name": "flow-course", "deleted": False, "values": {}},
 			user="Administrator",
 			after_commit=True,
 		)
+
+	def test_flow_write_carries_the_fields_its_page_is_addressed_by(self):
+		self.act_as_flow()
+		lesson = SimpleNamespace(
+			doctype="Course Lesson", name="l1", course="c1", chapter="ch1", meta=frappe._dict(istable=0)
+		)
+		payload = self.published(lesson).call_args.args[1]
+		self.assertEqual(payload["values"], {"course": "c1"})
 
 	def test_flow_delete_says_so(self):
 		self.act_as_flow()

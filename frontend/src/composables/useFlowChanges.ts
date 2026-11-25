@@ -7,6 +7,8 @@ export interface FlowChange {
 	doctype: string
 	name: string
 	deleted?: boolean
+	/** The fields its LMS page is addressed by, such as a lesson's course. */
+	values?: Record<string, string>
 }
 
 export const FLOW_CHANGE_EVENT = 'lms_flow_change'

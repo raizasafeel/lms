@@ -6,6 +6,7 @@ import {
 } from 'vue-router'
 import { createDialog } from '@/utils/dialogs'
 import { MODAL_FORM_ROUTES } from '@/components/CommandPalette/paletteTypes'
+import { hasDirtyForms } from '@/composables/useDirtyGuard'
 
 export interface UnsavedChangesSource {
 	isDirty: () => boolean
@@ -81,12 +82,21 @@ export function confirmLeave(
 const keepsPage = (to: RouteLocationNormalized): boolean =>
 	MODAL_FORM_ROUTES.has(to.name as string)
 
+const guardedPages = new Set<() => boolean>()
+
+/** Whether a mounted page or settings form holds edits a navigation would drop. */
+export function hasUnsavedEdits(): boolean {
+	return [...guardedPages].some((check) => check()) || hasDirtyForms()
+}
+
 /**
  * Confirms before a navigation or a reload drops the form's unsaved edits.
  * Tab and student view switches keep the page mounted, so they pass.
  */
 export function useUnsavedChangesGuard(source: UnsavedChangesSource): void {
 	const hasUnsavedEdits = (): boolean => source.isDirty() && !source.isSaving()
+	guardedPages.add(hasUnsavedEdits)
+	onScopeDispose(() => guardedPages.delete(hasUnsavedEdits))
 
 	const guard = (to: RouteLocationNormalized): true | Promise<boolean> => {
 		if (!hasUnsavedEdits() || keepsPage(to)) return true

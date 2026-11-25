@@ -8,6 +8,8 @@ LEARNER_ROLE = "LMS Student"
 STAFF_ROLES = {*LMS_ROLES, "System Manager"} - {LEARNER_ROLE}
 # The event the LMS pages of the user Flow acts for listen to.
 FLOW_CHANGE_EVENT = "lms_flow_change"
+# The fields a record's LMS page is addressed by besides its name (frontend/src/utils/recordRoutes.ts).
+ROUTE_FIELDS = ("course", "batch", "batch_name", "assignment", "exercise", "username")
 LAUNCHER_SCRIPT = re.compile(r'<script src="[^"]*flow_launcher\.bundle[^"]*"[^>]*></script>')
 
 
@@ -55,12 +57,17 @@ def is_flow_request() -> bool:
 
 
 def publish_flow_change(doc, method=None):
-	"""Tells the open LMS pages of the user Flow acts for which record it changed, so they refresh."""
+	"""Tells the LMS pages of the user Flow acts for which record it changed, so they refresh or open it."""
 	if doc.meta.istable or not is_flow_request() or frappe.get_doctype_app(doc.doctype) != "lms":
 		return
 	frappe.publish_realtime(
 		FLOW_CHANGE_EVENT,
-		{"doctype": doc.doctype, "name": doc.name, "deleted": method == "on_trash"},
+		{
+			"doctype": doc.doctype,
+			"name": doc.name,
+			"deleted": method == "on_trash",
+			"values": {field: getattr(doc, field) for field in ROUTE_FIELDS if getattr(doc, field, None)},
+		},
 		user=frappe.session.user,
 		after_commit=True,
 	)
