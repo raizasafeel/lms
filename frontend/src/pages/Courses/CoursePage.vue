@@ -31,7 +31,7 @@
 					:course="course"
 					:actions="actions"
 					:canPublish="Boolean(user.data?.is_moderator)"
-					@studentView="studentView = 'not-enrolled'"
+					@studentView="openStudentView"
 				/>
 				<CourseSaveButton v-if="isMobile" :form="form" />
 			</template>
@@ -223,7 +223,10 @@ import CourseStudentView from '@/components/Courses/CourseStudentView.vue'
 import { openFormRoute } from '@/composables/useFormRoute'
 import { provideDashboardState } from '@/composables/dashboard/useDashboard'
 import { useCourseForm } from '@/composables/useCourseForm'
-import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
+import {
+	confirmUnsavedChanges,
+	useUnsavedChangesGuard,
+} from '@/composables/useUnsavedChangesGuard'
 import {
 	COURSE_ACTIONS,
 	useCourseActions,
@@ -403,6 +406,17 @@ const studentView = computed<StudentViewMode | null>({
 			},
 		}),
 })
+
+// Student view shows the stored course, so unsaved edits are settled first.
+async function openStudentView(): Promise<void> {
+	const proceed = await confirmUnsavedChanges({
+		isDirty: () => form.isDirty.value,
+		isSaving: form.isSaving,
+		save: form.submitCourse,
+		discard: form.discardChanges,
+	})
+	if (proceed) studentView.value = 'not-enrolled'
+}
 
 // The server answers student view as a learner in that state, so a mode switch refetches.
 watch(studentView, () => course.reload())

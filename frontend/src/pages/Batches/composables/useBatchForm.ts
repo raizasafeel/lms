@@ -62,6 +62,8 @@ export interface BatchForm {
 	/** Resolves true once the batch is saved or had nothing to save. */
 	submitBatch: () => Promise<boolean>
 	isSaving: ComputedRef<boolean>
+	/** Drops unsaved edits and reloads the stored batch. */
+	discardChanges?: () => void
 	/** Set only before a new batch's first save: what to create with it. */
 	draft?: {
 		courses: Ref<string[]>
@@ -283,6 +285,12 @@ export function useBatchForm(
 		return isSaved
 	}
 
+	function discardChanges(): void {
+		if (savedMeta.value) Object.assign(meta, JSON.parse(savedMeta.value))
+		showRequired.value = false
+		resource.value.reload()
+	}
+
 	const form: BatchForm = {
 		doc,
 		people,
@@ -296,6 +304,7 @@ export function useBatchForm(
 		previewRequired,
 		submitBatch,
 		isSaving,
+		discardChanges,
 	}
 	provide(BATCH_FORM, form)
 	return form

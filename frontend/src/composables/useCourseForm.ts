@@ -38,6 +38,8 @@ export interface CourseForm extends CourseFormContext {
 	isSaving: () => boolean
 	/** Resolves true once the course is saved or had nothing to save. */
 	submitCourse: () => Promise<boolean>
+	/** Drops unsaved edits and reloads the stored course. */
+	discardChanges: () => void
 }
 
 /**
@@ -167,6 +169,13 @@ export function useCourseForm(
 		return saved
 	}
 
+	function discardChanges(): void {
+		isDirty.value = false
+		showRequired.value = false
+		resource.reload()
+		if (resource.doc) getMetaInfo('courses', resource.doc.name, meta)
+	}
+
 	const form: CourseForm = {
 		resource,
 		people,
@@ -180,6 +189,7 @@ export function useCourseForm(
 		isMissing,
 		isSaving,
 		submitCourse,
+		discardChanges,
 	}
 	provide<CourseFormContext>('courseForm', form)
 	return form

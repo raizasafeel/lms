@@ -136,7 +136,10 @@ import {
 	saveShortcut,
 } from '@/composables/useKeyboardShortcuts'
 import { useBatchForm } from '@/pages/Batches/composables/useBatchForm'
-import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
+import {
+	confirmUnsavedChanges,
+	useUnsavedChangesGuard,
+} from '@/composables/useUnsavedChangesGuard'
 import { useBatchManage } from '@/pages/Batches/composables/useBatchManage'
 import {
 	BATCH_PREVIEW,
@@ -254,7 +257,15 @@ const hasAnnouncementAction = (tab) =>
 	!window.read_only_mode &&
 	Boolean(batch.data?.student_count)
 
-const openStudentView = (tab) => {
+// Student view shows the stored batch, so unsaved edits are settled first.
+const openStudentView = async (tab) => {
+	const proceed = await confirmUnsavedChanges({
+		isDirty: () => form.isDirty.value,
+		isSaving: () => form.isSaving.value,
+		save: form.submitBatch,
+		discard: () => form.discardChanges?.(),
+	})
+	if (!proceed) return
 	studentMode.value = !tab || tab === 'overview' ? 'not-enrolled' : 'enrolled'
 }
 

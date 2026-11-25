@@ -22,7 +22,10 @@ vi.mock('@/utils/dialogs', () => ({
 	},
 }))
 
-import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
+import {
+	confirmUnsavedChanges,
+	useUnsavedChangesGuard,
+} from '@/composables/useUnsavedChangesGuard'
 
 const isDirty = ref(false)
 const isSaving = ref(false)
@@ -186,5 +189,56 @@ describe('the unsaved changes guard', () => {
 		window.dispatchEvent(event)
 		expect(event.defaultPrevented).toBe(false)
 		wrapper = mount(Blank)
+	})
+})
+
+describe('confirmUnsavedChanges, before student view', () => {
+	const discard = vi.fn()
+	const ask = async () => {
+		const result = confirmUnsavedChanges({
+			isDirty: () => isDirty.value,
+			isSaving: () => isSaving.value,
+			save,
+			discard,
+		})
+		await flushPromises()
+		return { result }
+	}
+
+	beforeEach(() => {
+		dialogs.length = 0
+		isDirty.value = true
+		isSaving.value = false
+		save.mockClear()
+		discard.mockClear()
+	})
+
+	it('goes ahead without asking when nothing changed', async () => {
+		isDirty.value = false
+		await expect((await ask()).result).resolves.toBe(true)
+		expect(dialogs).toHaveLength(0)
+	})
+
+	it('reverts the form on Discard, then goes ahead', async () => {
+		const { result } = await ask()
+		await answer('Discard')
+		await expect(result).resolves.toBe(true)
+		expect(discard).toHaveBeenCalledOnce()
+		expect(save).not.toHaveBeenCalled()
+	})
+
+	it('saves on Save and leave, then goes ahead', async () => {
+		const { result } = await ask()
+		await answer('Save and leave')
+		await expect(result).resolves.toBe(true)
+		expect(save).toHaveBeenCalledOnce()
+		expect(discard).not.toHaveBeenCalled()
+	})
+
+	it('keeps the edits on Stay', async () => {
+		const { result } = await ask()
+		await answer('Stay')
+		await expect(result).resolves.toBe(false)
+		expect(discard).not.toHaveBeenCalled()
 	})
 })

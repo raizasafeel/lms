@@ -16,6 +16,11 @@ export interface UnsavedChangesSource {
 	param?: string
 }
 
+export interface DiscardableChanges extends UnsavedChangesSource {
+	/** Puts the stored values back, for a switch that keeps the page mounted. */
+	discard: () => void
+}
+
 interface DialogContext {
 	close: () => void
 }
@@ -24,7 +29,10 @@ interface DialogContext {
  * Asks whether to save, discard or keep unsaved edits.
  * Resolves true to leave, false to stay; dismissing the dialog stays.
  */
-export function confirmLeave(save: () => Promise<boolean>): Promise<boolean> {
+export function confirmLeave(
+	save: () => Promise<boolean>,
+	onDiscard?: () => void
+): Promise<boolean> {
 	return new Promise((resolve) => {
 		const dialog = reactive({
 			title: __('Discard unsaved changes?'),
@@ -45,6 +53,7 @@ export function confirmLeave(save: () => Promise<boolean>): Promise<boolean> {
 					theme: 'red',
 					variant: 'subtle',
 					onClick: ({ close }: DialogContext) => {
+						onDiscard?.()
 						resolve(true)
 						close()
 					},
@@ -99,4 +108,16 @@ export function useUnsavedChangesGuard(source: UnsavedChangesSource): void {
 	}
 	window.addEventListener('beforeunload', warnOnUnload)
 	onScopeDispose(() => window.removeEventListener('beforeunload', warnOnUnload))
+}
+
+/**
+ * Asks about unsaved edits before a switch that keeps the page mounted, such as
+ * student view, which shows the stored course or batch. Discard reverts the form.
+ * Resolves true to go ahead.
+ */
+export function confirmUnsavedChanges(
+	source: DiscardableChanges
+): Promise<boolean> {
+	if (!source.isDirty() || source.isSaving()) return Promise.resolve(true)
+	return confirmLeave(source.save, source.discard)
 }
