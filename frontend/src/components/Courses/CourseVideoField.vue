@@ -73,6 +73,6 @@ const videoLink = defineModel<string | null | undefined>('videoLink')
 
 const showDialog = ref<boolean>(false)
 const videoLabel = computed(() =>
-	videoLink.value ? __('Change video') : __('Add video')
+	videoLink.value ? __('Edit preview video') : __('Add preview video')
 )
 </script>

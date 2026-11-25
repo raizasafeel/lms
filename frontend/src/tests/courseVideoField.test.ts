@@ -40,11 +40,11 @@ const mountField = (props: Record<string, unknown>) => {
 }
 
 describe('the course video field', () => {
-	it('shows the thumbnail read-only until a video is set, with Add video', () => {
+	it('shows the thumbnail read-only until a video is set, with Add preview video', () => {
 		const wrapper = mountField({ tint: 'Teal', icon: 'rocket' })
 		expect(wrapper.find('[data-testid="course-thumbnail"]').exists()).toBe(true)
 		expect(wrapper.find('.lucide-rocket').exists()).toBe(true)
-		expect(wrapper.get('[data-testid="video-button"]').text()).toBe('Add video')
+		expect(wrapper.get('[data-testid="video-button"]').text()).toBe('Add preview video')
 		expect(wrapper.find('[aria-pressed]').exists()).toBe(false)
 	})
 
@@ -58,7 +58,7 @@ describe('the course video field', () => {
 		const preview = wrapper.getComponent({ name: 'VideoPreview' })
 		expect(preview.props('fallbackImage')).toBe('/files/cover.png')
 		expect(wrapper.get('[data-testid="video-button"]').text()).toBe(
-			'Change video'
+			'Edit preview video'
 		)
 	})
 
