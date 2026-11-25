@@ -27,6 +27,35 @@
 						/>
 					</div>
 
+					<SettingImage
+						v-else-if="field.type == 'image'"
+						:model-value="fileUrl(data[field.name])"
+						:label="__(field.label)"
+						:summary="translated(field.description)"
+						@update:model-value="(url) => setValue(field, url)"
+					/>
+
+					<SettingRow
+						v-else-if="field.type == 'searchPreview'"
+						:label="__(field.label)"
+						:summary="translated(field.description)"
+					>
+						<SearchPreview v-bind="previewFor(field)" />
+					</SettingRow>
+
+					<div
+						v-else-if="field.type == 'textarea' && field.settingRow"
+						@input="report(field, 'typing')"
+						@focusout="report(field, 'now')"
+					>
+						<SettingField
+							v-model="data[field.name]"
+							type="textarea"
+							:label="__(field.label)"
+							:summary="translated(field.description)"
+						/>
+					</div>
+
 					<div v-else-if="field.type == 'code'" class="code-field py-3">
 						<SettingsCodeField
 							v-model="data[field.name]"
@@ -331,6 +360,10 @@ import Link from '@/components/Controls/Link.vue'
 import ImageUploadField from '@/components/Controls/ImageUploadField.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import CautionIcon from '@/components/Controls/CautionIcon.vue'
+import SearchPreview from '@/components/InlineEdit/SearchPreview.vue'
+import SettingField from '@/components/InlineEdit/SettingField.vue'
+import SettingImage from '@/components/InlineEdit/SettingImage.vue'
+import SettingRow from '@/components/InlineEdit/SettingRow.vue'
 import SettingsCodeField from './SettingsCodeField.vue'
 import { seedCheckboxDefaults } from '@/components/Settings/Mobile/mobileRows'
 
@@ -650,6 +683,12 @@ const onSettle = (field) => {
 // become a plain file_url string after a fresh upload. Handle both shapes.
 const fileUrl = (value) =>
 	value && typeof value === 'object' ? value.file_url : value
+
+// The preview names an image by URL, whichever shape the document holds it in.
+const previewFor = (field) => {
+	const preview = field.preview(props.data)
+	return { ...preview, image: fileUrl(preview.image) }
+}
 
 // The row has one description slot: a field with its own description uses
 // it; otherwise it falls back to the attached file name, matching the old

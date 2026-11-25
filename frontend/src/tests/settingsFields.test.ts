@@ -592,3 +592,60 @@ describe('SettingsFields toggles a switch from its label', () => {
 		expect(data.enforce_quiz_completion).toBe(1)
 	})
 })
+
+describe('SettingsFields draws the SEO rows a batch Settings tab uses', () => {
+	const seoFields = [
+		{
+			name: 'meta_description',
+			label: 'Meta description',
+			type: 'textarea',
+			settingRow: true,
+		},
+		{ name: 'meta_image', label: 'Meta image', type: 'image' },
+		{
+			name: 'meta_preview',
+			label: 'Meta preview',
+			type: 'searchPreview',
+			preview: (doc) => ({
+				url: 'school.example',
+				title: 'School',
+				description: doc.meta_description as string,
+				image: doc.meta_image as string,
+			}),
+		},
+	] as SettingsField[]
+
+	it('draws the dropzone and a preview of what the document holds', async () => {
+		const wrapper = await mountFields(seoFields, {
+			meta_description: 'Learn things',
+			meta_image: { file_url: '/files/og.png', file_name: 'og.png' },
+		})
+		expect(wrapper.find('[data-testid="setting-image-drop"]').exists()).toBe(
+			true
+		)
+		expect(
+			wrapper.find('[data-testid="setting-image-drop"] img').attributes('src')
+		).toBe('/files/og.png')
+		expect(wrapper.text()).toContain('Meta preview')
+		expect(wrapper.text()).toContain('Learn things')
+		expect(wrapper.text()).toContain('school.example')
+	})
+
+	it('writes a removed image and commits it at once', async () => {
+		const data: Record<string, unknown> = { meta_image: '/files/og.png' }
+		const wrapper = await mountFields(seoFields, data)
+		await wrapper.get('[data-testid="setting-image-remove"]').trigger('click')
+		expect(data.meta_image).toBe(null)
+		expect(wrapper.emitted('commit')).toEqual([['now']])
+	})
+
+	it('saves the textarea while typing and on leaving it', async () => {
+		const data: Record<string, unknown> = { meta_description: '' }
+		const wrapper = await mountFields(seoFields, data)
+		const box = wrapper.get('textarea')
+		await box.setValue('New words')
+		await box.trigger('focusout')
+		expect(data.meta_description).toBe('New words')
+		expect(wrapper.emitted('commit')).toEqual([['typing'], ['now']])
+	})
+})

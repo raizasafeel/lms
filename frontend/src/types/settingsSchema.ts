@@ -96,7 +96,15 @@ export type SettingsField =
 			 */
 			secret?: boolean
 	  })
-	| (FieldBase & { type: 'textarea'; rows?: number })
+	| (FieldBase & {
+			type: 'textarea'
+			rows?: number
+			/**
+			 * Draws the InlineEdit SettingField a batch's Settings tab uses: label
+			 * and description above an outline box. For a page laid out like one.
+			 */
+			settingRow?: boolean
+	  })
 	| (FieldBase & DisplayFallback & { type: 'select'; options: FieldOptions })
 	| (FieldBase & { type: 'combobox'; options: FieldOptions })
 	| (FieldBase &
@@ -151,6 +159,27 @@ export type SettingsField =
 			public?: boolean
 			size?: 'lg'
 	  })
+	/**
+	 * The InlineEdit SettingImage dropzone a batch's meta image uses. Always
+	 * uploads public, so only for an image crawlers fetch (Open Graph).
+	 */
+	| (FieldBase & { type: 'image' })
+	/**
+	 * A read-only search result drawn from the document, as on a batch's
+	 * Settings tab. Writes nothing; `name` only keys the row.
+	 */
+	| (FieldBase & {
+			type: 'searchPreview'
+			preview: (doc: SettingsListRow) => SearchPreviewProps
+	  })
+
+/** What SearchPreview draws: address, title, description and thumbnail. */
+export interface SearchPreviewProps {
+	url: string
+	title?: string | null
+	description?: string | null
+	image?: string | null
+}
 
 export type SettingsFieldType = SettingsField['type']
 

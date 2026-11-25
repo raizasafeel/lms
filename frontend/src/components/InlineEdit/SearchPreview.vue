@@ -25,13 +25,9 @@
 </template>
 
 <script setup lang="ts">
+import type { SearchPreviewProps } from '@/types/settingsSchema'
 import { safeUrl } from '@/utils/safeUrl'
 
 /** A search result as engines show it: address, title, description and thumbnail. */
-defineProps<{
-	url: string
-	title?: string | null
-	description?: string | null
-	image?: string | null
-}>()
+defineProps<SearchPreviewProps>()
 </script>

@@ -27,6 +27,7 @@ import Integrations from '@/components/Settings/Integrations/Integrations.vue'
 import Preferences from '@/components/Settings/Preferences.vue'
 import CloudPanel from '@/components/Settings/CloudPanel.vue'
 import { hasCloudSettings } from '@/composables/cloudSettings'
+import { sessionStore } from '@/stores/session'
 import { usersStore } from '@/stores/user'
 import type { CloudSettingsPanel } from '@frappe/cloud-sdk'
 
@@ -509,33 +510,44 @@ export const settingsTree: SettingsGroup[] = [
 							label: __('SEO'),
 							fields: [
 								{
-									label: __('Meta Description'),
+									label: __('Meta description'),
 									name: 'meta_description',
 									type: 'textarea',
-									rows: 4,
+									settingRow: true,
 									description: __(
 										"This description will be shown on lists and pages that don't have meta description"
 									),
 								},
 								{
-									label: __('Meta Keywords'),
+									label: __('Meta keywords'),
 									name: 'meta_keywords',
 									type: 'textarea',
-									rows: 4,
+									settingRow: true,
 									description: __(
 										'Comma separated keywords for search engines to find your website.'
 									),
 								},
 								{
-									label: __('Meta Image'),
+									label: __('Meta image'),
 									name: 'meta_image',
-									type: 'upload',
-									size: 'lg',
-									// Open Graph image: unauthenticated crawlers fetch it.
-									public: true,
+									type: 'image',
 									description: __(
 										'Default social-share image used when pages lack their own meta image.'
 									),
+								},
+								{
+									label: __('Meta preview'),
+									name: 'meta_preview',
+									type: 'searchPreview',
+									description: __(
+										'Edit the meta description and meta image to change this.'
+									),
+									preview: (doc) => ({
+										url: window.location.host,
+										title: sessionStore().brand.name,
+										description: doc.meta_description,
+										image: doc.meta_image,
+									}),
 								},
 							],
 						},
