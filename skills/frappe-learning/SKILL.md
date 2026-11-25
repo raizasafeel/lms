@@ -19,6 +19,8 @@ A learner can ask for an evaluation (`LMS Certificate Request`), and the evaluat
 
 A paid course or batch records each payment in an `LMS Payment`: the member, the amount and currency, the document paid for, any `LMS Coupon` used, and whether the payment came in.
 
+A course or batch is priced in its own `currency`, by default the primary currency in LMS Settings (`default_currency`, USD when empty). Its `prices` rows (`LMS Price`) set a price in another currency: `price_type` `Fixed` with an `amount`, or `Percent Off` with a `percent_off` from the primary price at today's exchange rate. A buyer whose billing country uses a row's currency pays that row; everyone else pays the primary price.
+
 Read and change these documents with `frappectl`. Use the app's own methods where this file names one, because they keep chapter and lesson order, permissions and progress correct. Use plain document calls for the rest.
 
 ## 1. Connect
