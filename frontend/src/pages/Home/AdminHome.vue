@@ -1,5 +1,5 @@
 <template>
-	<div>
+	<div class="flex flex-1 flex-col">
 		<div class="mt-10 space-y-10">
 			<div v-if="evals?.data?.length">
 				<div class="text-lg-semibold text-ink-gray-9 mb-3">
@@ -132,26 +132,18 @@
 			</div>
 		</div>
 
-		<div
+		<EmptyStateLayout
 			v-if="!createdCourses.data?.length && !createdBatches.data?.length"
-			class="flex flex-col items-center justify-center mt-60"
+			name="Courses"
+			:title="__('No courses created')"
+			:description="
+				__(
+					'There are no courses currently. Create your first course to get started!'
+				)
+			"
 		>
-			<span class="lucide-graduation-cap size-10 mx-auto text-ink-gray-5" />
-			<div class="text-lg-semibold text-ink-gray-7 mb-1.5">
-				{{ __('No courses created') }}
-			</div>
-			<div
-				class="leading-5 text-base w-full md:w-2/5 text-base text-center text-ink-gray-7"
-			>
-				{{
-					__(
-						'There are no courses currently. Create your first course to get started!'
-					)
-				}}
-			</div>
 			<Button
 				:route="{ name: 'NewCourse' }"
-				class="mt-4"
 				@click="setFormSource('admin_home')"
 			>
 				<template #prefix>
@@ -159,7 +151,7 @@
 				</template>
 				{{ __('New Course') }}
 			</Button>
-		</div>
+		</EmptyStateLayout>
 	</div>
 </template>
 <script setup lang="ts">
@@ -169,6 +161,7 @@ import { formatTime } from '@/utils'
 import { formatTimezone } from '@/utils/timezone'
 import { profileRoute } from '@/utils/routes'
 import CourseCard from '@/components/CourseCard.vue'
+import EmptyStateLayout from '@/components/Layouts/EmptyStateLayout.vue'
 import { setFormSource } from '@/composables/formTracking'
 import BatchCard from '@/pages/Batches/components/BatchCard.vue'
 import LiveClassCard from '@/pages/Home/LiveClassCard.vue'

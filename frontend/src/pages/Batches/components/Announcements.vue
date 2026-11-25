@@ -1,5 +1,5 @@
 <template>
-	<div class="w-[90%] lg:w-[75%] mx-auto mt-5">
+	<div class="mx-auto mt-5 flex w-[90%] flex-1 flex-col lg:w-[75%]">
 		<h2
 			v-if="communications.data?.length"
 			class="text-ink-gray-9 text-lg-semibold mb-5"
@@ -29,7 +29,6 @@
 		</ul>
 		<EmptyStateLayout
 			v-else-if="communications.data && canAnnounce && !hasStudents"
-			class="min-h-[60vh]"
 			name="Announcements"
 			icon="lucide-users"
 			width="lg"
@@ -52,7 +51,6 @@
 		</EmptyStateLayout>
 		<EmptyStateLayout
 			v-else-if="communications.data"
-			class="min-h-[60vh]"
 			name="Announcements"
 			icon="lucide-mail"
 			width="lg"

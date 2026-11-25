@@ -106,7 +106,6 @@
 				<EmptyStateLayout
 					v-if="isNew"
 					data-testid="quiz-unnamed-state"
-					class="flex-1"
 					name="Quiz"
 					icon="lucide-pencil-line"
 					:title="__('Name the quiz first')"
@@ -152,7 +151,6 @@
 
 				<EmptyStateLayout
 					v-if="!isNew && !questions.length && !draft"
-					class="flex-1"
 					name="Questions"
 					icon="lucide-circle-dot"
 					:title="__('No questions yet')"

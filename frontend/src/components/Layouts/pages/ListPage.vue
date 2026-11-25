@@ -67,22 +67,20 @@
 				<slot name="selection-actions" v-bind="bannerProps" />
 			</template>
 		</ResponsiveListView>
-		<!-- Bottom padding lifts the empty state: dead centre reads as too low. -->
-		<div v-else class="flex-1 pb-24">
-			<EmptyStateLayout
-				:name="emptyName"
-				:icon="emptyIcon"
-				:title="isFiltered ? undefined : emptyTitle || undefined"
-				:description="emptyStateDescription"
-			>
-				<Button
-					v-if="isFiltered"
-					:label="__('Clear filters')"
-					@click="clearFilters"
-				/>
-				<slot v-else name="empty-actions" />
-			</EmptyStateLayout>
-		</div>
+		<EmptyStateLayout
+			v-else
+			:name="emptyName"
+			:icon="emptyIcon"
+			:title="isFiltered ? undefined : emptyTitle || undefined"
+			:description="emptyStateDescription"
+		>
+			<Button
+				v-if="isFiltered"
+				:label="__('Clear filters')"
+				@click="clearFilters"
+			/>
+			<slot v-else name="empty-actions" />
+		</EmptyStateLayout>
 
 		<slot name="after" />
 

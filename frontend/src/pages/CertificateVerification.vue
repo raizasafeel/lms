@@ -81,24 +81,21 @@
 				</component>
 			</aside>
 		</div>
-		<div
+		<EmptyStateLayout
 			v-else-if="certificate.error"
-			class="flex flex-1 items-center justify-center px-6 py-24"
+			name="Certificate"
+			title-tag="h1"
+			icon="lucide-search-x"
+			width="lg"
+			:title="missing.title"
+			:description="missing.description"
 		>
-			<div class="flex max-w-md flex-col items-center gap-3 text-center">
-				<span
-					class="lucide-search-x size-7 text-ink-gray-5"
-					aria-hidden="true"
-				/>
-				<h1 class="text-lg-medium text-ink-gray-8">{{ missing.title }}</h1>
-				<p class="text-p-base text-ink-gray-6">{{ missing.description }}</p>
-				<Button
-					icon-left="lucide-book-open"
-					:label="__('Browse courses')"
-					:route="{ name: 'Courses' }"
-				/>
-			</div>
-		</div>
+			<Button
+				icon-left="lucide-book-open"
+				:label="__('Browse courses')"
+				:route="{ name: 'Courses' }"
+			/>
+		</EmptyStateLayout>
 	</div>
 </template>
 
@@ -106,6 +103,7 @@
 import { computed } from 'vue'
 import { Avatar, Badge, Button, createResource, usePageMeta } from 'frappe-ui'
 import CertificatePreview from '@/components/CertificatePreview.vue'
+import EmptyStateLayout from '@/components/Layouts/EmptyStateLayout.vue'
 import CertificateAwardedFor from '@/components/Certificates/CertificateAwardedFor.vue'
 import CertificateValidityCard from '@/components/Certificates/CertificateValidityCard.vue'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'

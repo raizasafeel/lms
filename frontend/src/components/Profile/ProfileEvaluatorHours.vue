@@ -15,6 +15,7 @@
 				:name="__('Hours')"
 				icon="lucide-calendar-x-2"
 				width="lg"
+				compact
 				:title="__('Could not load hours')"
 				:description="__('The request did not get through. Try again.')"
 			>
@@ -32,6 +33,7 @@
 				:name="__('Hours')"
 				icon="lucide-calendar-clock"
 				width="lg"
+				compact
 				:title="emptyWeekTitle"
 				:description="emptyWeekDescription"
 			>

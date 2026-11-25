@@ -1,13 +1,13 @@
 <template>
-	<div class="py-5 px-5 w-full lg:w-3/4 lg:px-0 mx-auto">
+	<div class="flex flex-1 flex-col py-5 px-5 w-full lg:w-3/4 lg:px-0 mx-auto">
 		<div class="flex items-center justify-between mb-5">
 			<h1 class="text-lg-semibold text-ink-gray-9">
 				{{ __('All Programs') }}
 			</h1>
 			<TabButtons v-model="currentTab" :options="tabs" class="w-fit" />
 		</div>
-		<div v-for="(data, category) in programs.data" :key="category">
-			<div v-if="category == currentTab">
+		<template v-for="(data, category) in programs.data" :key="category">
+			<template v-if="category == currentTab">
 				<div
 					v-if="data.length > 0"
 					class="grid grid-cols-1 @4xl:grid-cols-3 gap-5"
@@ -54,14 +54,13 @@
 						</div>
 					</button>
 				</div>
-				<div v-else class="flex-1">
-					<EmptyStateLayout
-						:name="__('{0} Programs').format(__(convertToTitleCase(category)))"
-						icon="lucide-graduation-cap"
-					/>
-				</div>
-			</div>
-		</div>
+				<EmptyStateLayout
+					v-else
+					:name="__('{0} Programs').format(__(convertToTitleCase(category)))"
+					icon="lucide-graduation-cap"
+				/>
+			</template>
+		</template>
 	</div>
 </template>
 <script setup lang="ts">

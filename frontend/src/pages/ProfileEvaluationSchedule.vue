@@ -9,6 +9,7 @@
 				:name="__('Evaluations')"
 				icon="lucide-calendar-x-2"
 				width="lg"
+				compact
 				:title="__('Could not load evaluations')"
 				:description="__('The request did not get through. Try again.')"
 			>
@@ -30,6 +31,7 @@
 				:name="__('Evaluations')"
 				icon="lucide-calendar-check"
 				width="lg"
+				compact
 				:title="__('No evaluations yet')"
 				:description="emptyDescription"
 			/>

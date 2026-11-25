@@ -1,5 +1,5 @@
 <template>
-	<div class="p-5">
+	<div class="flex flex-1 flex-col p-5">
 		<template v-if="liveClasses.data?.length">
 			<Alert
 				v-if="canManageClasses() && !hasProviderAccount()"
@@ -128,7 +128,6 @@
 		</div>
 		<EmptyStateLayout
 			v-else-if="liveClasses.data"
-			class="min-h-[60vh]"
 			name="Live Classes"
 			icon="lucide-laptop"
 			width="lg"
