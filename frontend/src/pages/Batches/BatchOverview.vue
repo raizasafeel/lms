@@ -15,6 +15,12 @@
 					<BatchOverlay v-else :batch="batch" />
 				</div>
 
+				<BatchSchedule
+					v-if="doc || batch.data.is_student"
+					:batchName="batch.data.name"
+					:editable="Boolean(doc)"
+				/>
+
 				<BatchCourseList
 					v-model:draft="draftCourses"
 					v-model:count="courseCount"
@@ -25,10 +31,10 @@
 					:category="doc?.category ?? batch.data.category"
 				/>
 
-				<BatchSchedule
-					v-if="doc || batch.data.is_student"
+				<BatchAssessmentList
+					v-if="doc"
+					v-model:draft="draftAssessments"
 					:batchName="batch.data.name"
-					:editable="Boolean(doc)"
 				/>
 
 				<section v-if="doc" class="space-y-3">
@@ -61,12 +67,6 @@
 					v-if="batch.data.batch_details_raw"
 					v-safe-html:rich="batch.data.batch_details_raw"
 					class="batch-description"
-				/>
-
-				<BatchAssessmentList
-					v-if="doc"
-					v-model:draft="draftAssessments"
-					:batchName="batch.data.name"
 				/>
 			</div>
 
