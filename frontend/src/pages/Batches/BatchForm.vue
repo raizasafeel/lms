@@ -51,6 +51,13 @@
 			/>
 		</SettingsGroup>
 
+		<PricesGroup
+			v-if="doc.paid_batch"
+			v-model:prices="prices"
+			:amount="doc.amount"
+			:currency="doc.currency"
+		/>
+
 		<PeopleGroup
 			v-model="form!.people.value"
 			doctype="LMS Batch"
@@ -163,6 +170,7 @@
 import { DatePicker } from 'frappe-ui'
 import { computed, inject, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import PricesGroup from '@/components/InlineEdit/PricesGroup.vue'
 import SettingField from '@/components/InlineEdit/SettingField.vue'
 import SettingImage from '@/components/InlineEdit/SettingImage.vue'
 import SettingLink from '@/components/InlineEdit/SettingLink.vue'
@@ -178,6 +186,7 @@ import { openBatchForm } from '@/composables/useBatchForms'
 import { injectBatchForm } from '@/pages/Batches/composables/useBatchForm'
 import { openSettings } from '@/utils'
 import type { BatchDetails, Resource, SessionUser } from '@/types'
+import type { LMSPrice } from '@/types/lms/LMSPrice'
 
 /** Batch settings: what is not edited in place on the overview. */
 const props = defineProps<{ batch: Resource<BatchDetails | null> }>()
@@ -197,6 +206,13 @@ const evaluated = computed<boolean>({
 	get: () => Boolean(doc.value?.evaluation),
 	set: (on) => {
 		if (doc.value) (doc.value as Record<string, unknown>).evaluation = on
+	},
+})
+
+const prices = computed({
+	get: () => doc.value?.prices ?? [],
+	set: (rows) => {
+		if (doc.value) doc.value.prices = rows as LMSPrice[]
 	},
 })
 

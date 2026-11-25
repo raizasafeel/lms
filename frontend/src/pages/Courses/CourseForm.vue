@@ -18,6 +18,14 @@
 
 		<CoursePublishSettings />
 
+		<PricesGroup
+			v-if="form.resource.doc.paid_course || form.resource.doc.paid_certificate"
+			:prices="form.resource.doc.prices ?? []"
+			:amount="form.resource.doc.course_price"
+			:currency="form.resource.doc.currency"
+			@update:prices="(value) => setField('prices', value)"
+		/>
+
 		<SettingsGroup :title="__('Search and sharing')" icon="lucide-search">
 			<SettingField
 				v-model="form.meta.description"
@@ -96,6 +104,7 @@
 import { computed, inject } from 'vue'
 import { useRoute } from 'vue-router'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import PricesGroup from '@/components/InlineEdit/PricesGroup.vue'
 import CourseThumbnailPicker from '@/components/InlineEdit/CourseThumbnailPicker.vue'
 import SettingAction from '@/components/InlineEdit/SettingAction.vue'
 import SettingField from '@/components/InlineEdit/SettingField.vue'

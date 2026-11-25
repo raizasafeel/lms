@@ -1,5 +1,6 @@
 import { ChapterReference } from './ChapterReference'
 import { CourseInstructor } from './CourseInstructor'
+import { LMSPrice } from './LMSPrice'
 import { LMSRoleAssignment } from './LMSRoleAssignment'
 import { RelatedCourses } from './RelatedCourses'
 
@@ -52,8 +53,8 @@ export interface LMSCourse {
 	paid_course?: 0 | 1
 	/**	Amount : Currency	*/
 	course_price?: number
-	/**	Amount (USD) : Currency - If you set an amount here, then the USD equivalent setting will not get applied.	*/
-	amount_usd?: number
+	/**	Prices in Other Currencies : Table - LMS Price	*/
+	prices?: LMSPrice[]
 	/**	Published On : Date	*/
 	published_on?: string
 	/**	Featured : Check	*/

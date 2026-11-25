@@ -1,5 +1,6 @@
 import { BatchCourse } from './BatchCourse'
 import { CourseInstructor } from './CourseInstructor'
+import { LMSPrice } from './LMSPrice'
 import { LMSRoleAssignment } from './LMSRoleAssignment'
 import { LMSAssessment } from './LMSAssessment'
 import { LMSBatchTimetable } from './LMSBatchTimetable'
@@ -68,8 +69,8 @@ export interface LMSBatch {
 	allow_future?: 0 | 1
 	/**	Evaluation End Date : Date	*/
 	evaluation_end_date?: string
-	/**	Amount (USD) : Currency - If you set an amount here, then the USD equivalent setting will not get applied.	*/
-	amount_usd?: number
+	/**	Prices in Other Currencies : Table - LMS Price	*/
+	prices?: LMSPrice[]
 	/**	Allow Self Enrollment : Check	*/
 	allow_self_enrollment?: 0 | 1
 	/**	Timezone : Data	*/
