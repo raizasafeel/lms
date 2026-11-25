@@ -12,7 +12,14 @@ NO_PILOT_CONF = {"pilot_endpoint": None, "pilot_auth_token": None}
 
 
 class TestCloudSettingsContext(BaseTestUtils):
+	def setUp(self):
+		super().setUp()
+		# The test site is a .localhost site; pretend it is hosted for the v2 cases.
+		self.site_patch = patch.object(frappe.local, "site", "school.frappe.cloud")
+		self.site_patch.start()
+
 	def tearDown(self):
+		self.site_patch.stop()
 		frappe.set_user("Administrator")
 		super().tearDown()
 
@@ -54,3 +61,17 @@ class TestCloudSettingsContext(BaseTestUtils):
 			user = get_user_info()
 		self.assertTrue(user["is_fc_site"])
 		self.assertEqual(user["cloud_settings"], {"enabled": False})
+
+	def test_disabled_on_localhost_site_with_pilot_config(self):
+		frappe.set_user("Administrator")
+		with (
+			patch.object(frappe.local, "site", "lms.localhost"),
+			patch.dict(frappe.local.conf, PILOT_CONF),
+		):
+			self.assertEqual(get_user_info()["cloud_settings"], {"enabled": False})
+
+	def test_disabled_when_pilot_runs_on_this_machine(self):
+		frappe.set_user("Administrator")
+		for endpoint in ("http://localhost:7004", "http://127.0.0.1:7004", "http://192.168.1.4"):
+			with patch.dict(frappe.local.conf, {**PILOT_CONF, "pilot_endpoint": endpoint}):
+				self.assertEqual(get_user_info()["cloud_settings"], {"enabled": False}, endpoint)

@@ -155,7 +155,28 @@ def get_cloud_settings_context() -> dict:
 	except ImportError:
 		# Frappe without Cloud Settings is older than any Frappe Cloud v2 site.
 		return {"enabled": False}
+	if is_local_site():
+		return {"enabled": False}
 	return get_boot_context()
+
+
+def is_local_site() -> bool:
+	"""A local bench also writes pilot credentials, so a site on localhost or managed by a
+	pilot on this machine is never Frappe Cloud v2."""
+	import ipaddress
+	from urllib.parse import urlsplit
+
+	hosts = (frappe.local.site, urlsplit(frappe.conf.get("pilot_endpoint") or "").hostname or "")
+	for host in hosts:
+		if host == "localhost" or host.endswith(".localhost"):
+			return True
+		try:
+			address = ipaddress.ip_address(host)
+		except ValueError:
+			continue
+		if address.is_loopback or address.is_private:
+			return True
+	return False
 
 
 def can_use_flow() -> bool:
