@@ -301,9 +301,10 @@ describe('CertifiedParticipants', () => {
 	const member = (values: Record<string, unknown>) => ({
 		full_name: 'Rashid Shaikh',
 		username: 'rashid',
-		headline: 'Frappe developer',
-		open_to: '',
-		latest_certificate: { name: 'cert1', title: 'Frappe Framework' },
+		certificates: [
+			{ name: 'cert2', title: 'ERPNext' },
+			{ name: 'cert1', title: 'Frappe Framework' },
+		],
 		...values,
 	})
 
@@ -336,22 +337,31 @@ describe('CertifiedParticipants', () => {
 		expect(wrapper.find('h1').text()).toBe('All certified members 1063')
 	})
 
-	it("shows each member's latest certificate and links to their profile", async () => {
+	it('shows only the member name over their certificate stack', async () => {
 		const wrapper = await mountMembers([member({})])
 		const card = wrapper.find('[data-card]')
-		expect(card.find('[data-thumbnail]').text()).toBe('cert1')
-		expect(card.text()).toContain('Rashid Shaikh')
-		expect(card.text()).toContain('Frappe developer')
-		expect(card.text()).toContain('Frappe Framework')
-		expect(card.text()).not.toContain('Open to work')
+		expect(card.find('[data-thumbnail]').text()).toBe('cert2')
+		expect(card.findAll('[data-sheet]')).toHaveLength(2)
+		const text = card.text().replace('cert2', '')
+		expect(text).toContain('Rashid Shaikh')
+		expect(text.replaceAll('Rashid Shaikh', '')).toBe('')
 		expect(card.findComponent(RouterLinkStub).props('to')).toEqual({
 			name: 'ProfileAbout',
 			params: { username: 'rashid' },
 		})
 	})
 
-	it('flags members open to work', async () => {
-		const wrapper = await mountMembers([member({ open_to: 'Work' })])
-		expect(wrapper.find('[data-card]').text()).toContain('· Open to work')
+	it('plays the stack while the card is hovered or focused', async () => {
+		const wrapper = await mountMembers([member({})])
+		const card = wrapper.find('[data-card] > *')
+		const stack = wrapper.findComponent({ name: 'CertificateStack' })
+		await card.trigger('mouseenter')
+		expect(stack.props('playing')).toBe(true)
+		await card.trigger('mouseleave')
+		expect(stack.props('playing')).toBe(false)
+		await card.trigger('focusin')
+		expect(stack.props('playing')).toBe(true)
+		await card.trigger('focusout')
+		expect(stack.props('playing')).toBe(false)
 	})
 })

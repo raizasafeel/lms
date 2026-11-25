@@ -165,12 +165,30 @@ class TestRawCertificateRoutes(CertificateVerificationFixture):
 
 
 class TestCertifiedParticipantsCertificate(CertificateVerificationFixture):
-	def test_each_member_carries_their_latest_certificate(self):
+	def find_member_row(self):
 		participants = get_certified_participants(
 			filters={"member_name": ["like", "%Maya Fernandes%"]}, page_length=500
 		)
-		row = next(row for row in participants if row["username"] == self.member.username)
+		return next(row for row in participants if row["username"] == self.member.username)
+
+	def test_each_member_carries_their_published_certificates(self):
 		self.assertEqual(
-			row["latest_certificate"],
-			{"name": self.certificate.name, "title": self.course.title},
+			self.find_member_row()["certificates"],
+			[{"name": self.certificate.name, "title": self.course.title}],
 		)
+
+	def test_the_card_carries_only_the_name_avatar_and_certificates(self):
+		self.assertEqual(
+			set(self.find_member_row()),
+			{"full_name", "user_image", "username", "certificates"},
+		)
+
+	def test_certificates_come_latest_first(self):
+		self.set_certificate(issue_date="2020-01-01")
+		course = self._create_course(
+			title=f"Verify Second {frappe.generate_hash(length=6)}", instructor=self.author.name
+		)
+		self._create_enrollment(self.member.name, course.name)
+		newer = self._create_certificate(course.name, self.member.name)
+		names = [certificate["name"] for certificate in self.find_member_row()["certificates"]]
+		self.assertEqual(names, [newer.name, self.certificate.name])

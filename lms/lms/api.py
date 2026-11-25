@@ -1342,39 +1342,32 @@ def get_certified_participants(
 	query = get_certification_query(filters)
 	query = query.orderby("issue_date", order=frappe.qb.desc).offset(start).limit(page_length)
 	participants = query.run(as_dict=True)
-	for participant in participants:
-		details = get_certified_participant_details(participant.member)
-		participant.update(details)
-		participant.pop("member", None)
-
-	return participants
+	return [get_certified_participant_details(participant.member) for participant in participants]
 
 
-def get_certified_participant_details(member: str):
-	count = frappe.db.count("LMS Certificate", {"member": member})
-	details = frappe.db.get_value(
-		"User",
-		member,
-		["full_name", "user_image", "username", "creation", "headline", "open_to"],
-		as_dict=1,
-	)
-	details["certificate_count"] = count
-	details["latest_certificate"] = get_latest_published_certificate(member)
+CERTIFICATE_STACK_SIZE = 5
+
+
+def get_certified_participant_details(member: str) -> dict:
+	"""A certified member's card: name, avatar and latest published certificates."""
+	details = frappe.db.get_value("User", member, ["full_name", "user_image", "username"], as_dict=1)
+	details["certificates"] = get_latest_published_certificates(member)
 	return details
 
 
-def get_latest_published_certificate(member: str) -> dict | None:
-	"""The certificate a certified member's card shows."""
-	certificate = frappe.db.get_value(
+def get_latest_published_certificates(member: str) -> list[dict]:
+	"""A member's newest published certificates, latest first."""
+	certificates = frappe.get_all(
 		"LMS Certificate",
-		{"member": member, "published": 1},
-		["name", "course_title", "batch_title"],
+		filters={"member": member, "published": 1},
+		fields=["name", "course_title", "batch_title"],
 		order_by="issue_date desc, creation desc",
-		as_dict=True,
+		limit=CERTIFICATE_STACK_SIZE,
 	)
-	if not certificate:
-		return None
-	return {"name": certificate.name, "title": certificate.course_title or certificate.batch_title}
+	return [
+		{"name": certificate.name, "title": certificate.course_title or certificate.batch_title}
+		for certificate in certificates
+	]
 
 
 def get_certification_query(filters: dict = None):

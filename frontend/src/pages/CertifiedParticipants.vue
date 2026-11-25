@@ -75,47 +75,23 @@
 				:class="
 					row.username ? 'hover:border-outline-gray-3 hover:shadow-sm' : ''
 				"
+				@mouseenter="playingCard = row.key"
+				@mouseleave="playingCard = null"
+				@focusin="playingCard = row.key"
+				@focusout="playingCard = null"
 			>
-				<div class="flex justify-center bg-surface-gray-1 p-4">
-					<CertificateThumbnail
-						v-if="row.latest_certificate"
-						:certificate="row.latest_certificate.name"
-						:title="row.latest_certificate.title"
+				<div class="flex justify-center bg-surface-gray-1 px-4 pt-3 pb-4">
+					<CertificateStack
+						v-if="row.certificates?.length"
+						:certificates="row.certificates"
+						:playing="playingCard === row.key"
 						class="w-52 max-w-full"
 					/>
 				</div>
-				<div class="flex flex-1 flex-col gap-2 p-3">
-					<div class="flex items-center gap-2.5">
-						<Avatar :label="row.full_name" :image="row.user_image" size="md" />
-						<div class="min-w-0">
-							<div class="truncate text-p-sm-medium text-ink-gray-9">
-								{{ row.full_name }}
-							</div>
-							<div class="truncate text-p-xs text-ink-gray-6">
-								{{
-									row.headline ||
-									__('Joined {0}').format(serverTime(row.creation).fromNow())
-								}}
-							</div>
-						</div>
-					</div>
-					<div
-						v-if="row.latest_certificate"
-						class="mt-auto flex max-w-full items-center gap-1.5 text-p-xs text-ink-gray-6"
-					>
-						<span
-							class="lucide-circle-check size-3.5 shrink-0"
-							aria-hidden="true"
-						/>
-						<span class="min-w-0 truncate">{{
-							row.latest_certificate.title
-						}}</span>
-						<span
-							v-if="row.open_to === 'Work'"
-							class="shrink-0 text-ink-green-6"
-						>
-							· {{ __('Open to work') }}
-						</span>
+				<div class="flex items-center gap-2.5 p-3">
+					<Avatar :label="row.full_name" :image="row.user_image" size="md" />
+					<div class="min-w-0 truncate text-p-sm-medium text-ink-gray-9">
+						{{ row.full_name }}
 					</div>
 				</div>
 			</component>
@@ -137,11 +113,10 @@ import { computed, inject, onMounted, ref, watch } from 'vue'
 import { sessionStore } from '../stores/session'
 import { useRouter } from 'vue-router'
 import { setFormSource } from '@/composables/formTracking'
-import CertificateThumbnail from '@/components/Certificates/CertificateThumbnail.vue'
+import CertificateStack from '@/components/Certificates/CertificateStack.vue'
 import ListPage from '@/components/Layouts/pages/ListPage.vue'
 import EmptyStateActions from '@/components/EmptyStateActions.vue'
 import { profileRoute } from '@/utils/routes'
-import { serverTime } from '@/utils/dayjs'
 
 const filters = ref({})
 const currentCategory = ref('')
@@ -152,6 +127,7 @@ const { brand } = sessionStore()
 const memberCount = ref(0)
 const user = inject('$user')
 const router = useRouter()
+const playingCard = ref(null)
 
 // Learners keep the default wording and the Get Certified button above.
 const emptyState = computed(() => {
