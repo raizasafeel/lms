@@ -178,7 +178,9 @@ doc_events = {
 	"*": {
 		"on_change": [
 			"lms.lms.doctype.lms_badge.lms_badge.process_badges",
-		]
+			"lms.lms.flow.publish_flow_change",
+		],
+		"on_trash": "lms.lms.flow.publish_flow_change",
 	},
 	"Discussion Reply": {
 		"after_insert": "lms.lms.utils.handle_notifications",

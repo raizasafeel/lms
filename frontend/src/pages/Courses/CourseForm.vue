@@ -114,6 +114,7 @@ import SettingRow from '@/components/InlineEdit/SettingRow.vue'
 import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import CoursePublishSettings from '@/pages/Courses/CoursePublishSettings.vue'
 import { COURSE_ACTIONS } from '@/composables/useCourseActions'
+import { useCourseFlowChanges } from '@/composables/useFlowChanges'
 import type {
 	CourseDetails,
 	CourseFormContext,
@@ -123,9 +124,10 @@ import type {
 import type { LMSCourse } from '@/types/lms/LMSCourse'
 
 /** The Settings tab: settings that have no place on the course page itself. */
-defineProps<{ course: Resource<CourseDetails | null> }>()
+const props = defineProps<{ course: Resource<CourseDetails | null> }>()
 
 const form = inject<CourseFormContext>('courseForm')!
+useCourseFlowChanges(props.course)
 const route = useRoute()
 // ?section=thumbnail, from the overview card's Edit thumbnail, opens there.
 const openSection = computed(() => route.query.section as string | undefined)

@@ -201,6 +201,7 @@ import CourseCard from '@/components/CourseCard.vue'
 import { useRouter } from 'vue-router'
 import { openFormRoute } from '@/composables/useFormRoute'
 import { setFormSource } from '@/composables/formTracking'
+import { useFlowChanges } from '@/composables/useFlowChanges'
 import { useTelemetry } from '@framework/ui/telemetry/index'
 
 const user = inject('$user')
@@ -345,6 +346,14 @@ const reloadCourses = async () => {
 		reloading.value = false
 	}
 }
+
+useFlowChanges({
+	doctypes: ['LMS Course'],
+	reload: () => {
+		reloadCourses()
+		courseCountResource.reload()
+	},
+})
 
 const pageLength = computed({
 	get: () => courses.pageLength,

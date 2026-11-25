@@ -38,7 +38,7 @@
 				<LessonForm
 					v-else-if="selected"
 					ref="lessonFormRef"
-					:key="`edit-${selected.formKey}`"
+					:key="`edit-${selected.formKey}-${lessonRevision}`"
 					:courseName="props.course.data.name"
 					:chapterNumber="selected.chapterNumber"
 					:lessonNumber="selected.lessonNumber"
@@ -140,6 +140,10 @@ import CourseChaptersHeader from '@/components/Courses/CourseChaptersHeader.vue'
 import { useFoldablePanel } from '@/composables/useFoldablePanel'
 import ScormUploadDialog from '@/components/Modals/ScormUploadDialog.vue'
 import { openFormRoute } from '@/composables/useFormRoute'
+import {
+	useCourseFlowChanges,
+	useFlowChanges,
+} from '@/composables/useFlowChanges'
 import { setFormSource } from '@/composables/formTracking'
 import { useTelemetry } from '@framework/ui/telemetry/index'
 import BottomSheet from '@/components/BottomSheet.vue'
@@ -320,6 +324,12 @@ const outline = createResource({
 	auto: false,
 })
 
+useCourseFlowChanges(props.course)
+useFlowChanges({
+	doctypes: ['Course Chapter', 'Course Lesson'],
+	reload: () => outline.reload(),
+})
+
 // Our own URL writes come back through the route watcher; skip those, and
 // take anything else as a new target.
 const ownWrites = new Set()
@@ -416,6 +426,16 @@ watch(
 )
 
 const lessonFormRef = ref(null)
+
+// A fresh form shows Flow's change: rendering into the open editor would
+// leave its mounted blocks behind.
+const lessonRevision = ref(0)
+useFlowChanges({
+	doctypes: ['Course Lesson'],
+	name: () => selected.value?.name,
+	isDirty: () => Boolean(lessonFormRef.value?.isDirty),
+	reload: () => lessonRevision.value++,
+})
 
 function saveSelectedLesson() {
 	lessonFormRef.value?.saveLesson?.()

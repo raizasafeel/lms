@@ -161,6 +161,7 @@ import { sessionStore } from '@/stores/session'
 import BatchCard from '@/pages/Batches/components/BatchCard.vue'
 import ListPage from '@/components/Layouts/pages/ListPage.vue'
 import { setFormSource } from '@/composables/formTracking'
+import { useFlowChanges } from '@/composables/useFlowChanges'
 import EmptyStateActions from '@/components/EmptyStateActions.vue'
 
 const user = inject('$user')
@@ -278,6 +279,14 @@ const batchCountResource = createResource({
 })
 
 const batchCount = computed(() => batchCountResource.data ?? null)
+
+useFlowChanges({
+	doctypes: ['LMS Batch'],
+	reload: () => {
+		batches.reload()
+		batchCountResource.reload()
+	},
+})
 
 // The watcher refetches once for however many of these change together.
 const clearFilters = () => {

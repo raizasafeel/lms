@@ -429,6 +429,7 @@ import Discussions from '@/components/Discussions.vue'
 import CertificationLinks from '@/components/CertificationLinks.vue'
 import CourseOutline from '@/components/CourseOutline.vue'
 import { useFoldablePanel } from '@/composables/useFoldablePanel'
+import { useFlowChanges } from '@/composables/useFlowChanges'
 import LockedLessonNotice from '@/components/LockedLessonNotice.vue'
 import LessonNavButtons from '@/components/LessonNavButtons.vue'
 import LessonTitle from '@/components/LessonTitle.vue'
@@ -889,6 +890,16 @@ const reloadAsStudent = (): void => {
 	outline.reload()
 }
 watch(() => studentViewMode(route.query.studentView), reloadAsStudent)
+
+useFlowChanges({
+	doctypes: ['Course Lesson'],
+	name: () => lesson.data?.name,
+	reload: () => lesson.reload(),
+})
+useFlowChanges({
+	doctypes: ['LMS Course', 'Course Chapter', 'Course Lesson'],
+	reload: () => outline.reload(),
+})
 
 watch(
 	() => props.courseName,

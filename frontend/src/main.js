@@ -13,6 +13,8 @@ import { telemetryPlugin } from '@framework/ui/telemetry/index'
 import { registerDirectives } from './directives'
 import { dedupeToasts } from '@/utils/toastDedupe'
 import { keepFlowUsableBesideDialogs } from '@/utils/flowBesideDialogs'
+import { routeFlowLinks } from '@/utils/flowLinks'
+import { canEditPrograms } from '@/utils/recordRoutes'
 
 let pinia = createPinia()
 let app = createApp(App)
@@ -32,6 +34,9 @@ app.provide('$socket', initSocket())
 const { userResource, allUsers } = usersStore()
 app.provide('$user', userResource)
 app.provide('$allUsers', allUsers)
+routeFlowLinks(router, () => ({
+	canEditPrograms: canEditPrograms(userResource.data),
+}))
 
 watch(userResource, () => {
 	if (userResource.data) {

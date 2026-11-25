@@ -64,6 +64,7 @@ import DashboardKpiCards from '@/components/Dashboard/DashboardKpiCards.vue'
 import DashboardEmptyState from '@/components/Dashboard/DashboardEmptyState.vue'
 import LoadError from '@/components/LoadError.vue'
 import { openFormRoute } from '@/composables/useFormRoute'
+import { useCourseFlowChanges } from '@/composables/useFlowChanges'
 import { syncDashboardState } from '@/composables/dashboard/useDashboard'
 import { useDashboardColumns } from '@/composables/dashboard/useDashboardColumns'
 import router from '@/router'
@@ -98,6 +99,7 @@ const props = defineProps<{
 }>()
 
 const courseName = props.course.data?.name ?? ''
+useCourseFlowChanges(props.course)
 const { gridClass } = useDashboardColumns()
 const stage = ref<StudentFilter | null>(null)
 const showProgressModal = ref<boolean>(false)

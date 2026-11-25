@@ -141,6 +141,7 @@
 </template>
 <script setup>
 import { Avatar, Badge, createResource, usePageMeta } from 'frappe-ui'
+import { useFlowChanges } from '@/composables/useFlowChanges'
 import { inject, ref, computed, watch, nextTick } from 'vue'
 import { sessionStore } from '../stores/session'
 import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
@@ -170,6 +171,11 @@ const job = createResource({
 	},
 	cache: ['job', props.job],
 	auto: true,
+})
+useFlowChanges({
+	doctypes: ['Job Opportunity'],
+	name: () => props.job,
+	reload: () => job.reload(),
 })
 
 const jobApplication = createResource({

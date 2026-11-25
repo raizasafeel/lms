@@ -132,6 +132,7 @@ import CourseHeading from '@/components/Courses/CourseHeading.vue'
 import DraftCourseOutline from '@/components/Courses/DraftCourseOutline.vue'
 import RichTextField from '@/components/InlineEdit/RichTextField.vue'
 import { isInstructorOf } from '@/utils/instructors'
+import { useCourseFlowChanges } from '@/composables/useFlowChanges'
 
 /** The course page. Instructors edit it in place; learners and previews read it. */
 const props = defineProps<{
@@ -143,6 +144,7 @@ const emit = defineEmits<{ enroll: [] }>()
 
 const user = inject<SessionUser>('$user')
 const form = inject<CourseFormContext | null>('courseForm', null)
+useCourseFlowChanges(props.course)
 const aboutHeadingId = useId()
 
 const editable = computed<boolean>(
