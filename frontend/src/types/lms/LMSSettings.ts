@@ -1,5 +1,4 @@
 import { LMSSidebarItem } from './LMSSidebarItem'
-import { PaymentCountry } from './PaymentCountry'
 
 export interface LMSSettings {
 	creation: string
@@ -38,16 +37,10 @@ export interface LMSSettings {
 	default_home?: 0 | 1
 	/**	Send calendar invite for evaluations : Check	*/
 	send_calendar_invite_for_evaluations?: 0 | 1
-	/**	Default Currency : Link - Currency	*/
+	/**	Primary Currency : Link - Currency - New courses and batches are priced in it. USD when empty.	*/
 	default_currency?: string
 	/**	Apply GST for India : Check	*/
 	apply_gst?: 0 | 1
-	/**	Show USD Equivalent : Check	*/
-	show_usd_equivalent?: 0 | 1
-	/**	Primary Countries : Table MultiSelect - Payment Country	*/
-	exception_country?: PaymentCountry[]
-	/**	Apply Rounding on Equivalent : Check	*/
-	apply_rounding?: 0 | 1
 	/**	Batch Confirmation Template : Link - Email Template	*/
 	batch_confirmation_template?: string
 	/**	Courses : Check	*/

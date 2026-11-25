@@ -342,37 +342,15 @@ export const settingsTree: SettingsGroup[] = [
 							label: __('Configuration'),
 							fields: [
 								{
-									label: __('Default Currency'),
+									label: __('Primary currency'),
 									name: 'default_currency',
 									type: 'link',
 									doctype: 'Currency',
 									query: 'lms.lms.api.search_currencies',
-									description: __(
-										'Default currency used for course and batch pricing.'
-									),
-									// Shown, never written by being shown. Nothing on the
-									// server resolves a blank default_currency: LMS Course's
-									// desk form copies this value (blank included) into a new
-									// course's currency, so the page must answer for itself.
-									// USD is the app's reference currency already:
-									// check_multicurrency converts into it and short-circuits.
+									description: __('New courses and batches are priced in it.'),
+									// Shown, never written by being shown: the server reads a
+									// blank one as USD too (get_primary_currency).
 									displayFallback: 'USD',
-								},
-								{
-									label: __('Show USD equivalent amount'),
-									name: 'show_usd_equivalent',
-									type: 'checkbox',
-									description: __(
-										'If enabled, it shows the USD equivalent amount for all transactions based on the current exchange rate.'
-									),
-								},
-								{
-									label: __('Apply rounding on equivalent'),
-									name: 'apply_rounding',
-									type: 'checkbox',
-									description: __(
-										'If enabled, it applies rounding on the USD equivalent amount.'
-									),
 								},
 								{
 									label: __('Payment Gateway'),
