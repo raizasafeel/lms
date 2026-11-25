@@ -155,6 +155,16 @@ describe('placeholder-only filters', () => {
 		expect(w.find('input').attributes('aria-label')).toBe('Category')
 		w.unmount()
 	})
+
+	it('ClearableCombobox titles the input with the full selected label', () => {
+		const label = 'HR and Payroll Management'
+		const w = mount(ClearableCombobox, {
+			props: { modelValue: label, options: [{ label, value: label }] },
+			global: { mocks },
+		})
+		expect(w.find('input').attributes('title')).toBe(label)
+		w.unmount()
+	})
 })
 
 describe('named controls and focus outlines', () => {

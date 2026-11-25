@@ -177,11 +177,15 @@ class TestCertifiedParticipantsCertificate(CertificateVerificationFixture):
 			[{"name": self.certificate.name, "title": self.course.title}],
 		)
 
-	def test_the_card_carries_only_the_name_avatar_and_certificates(self):
+	def test_the_card_carries_only_the_profile_summary_and_certificates(self):
 		self.assertEqual(
 			set(self.find_member_row()),
-			{"full_name", "user_image", "username", "certificates"},
+			{"full_name", "user_image", "username", "headline", "creation", "open_to", "certificates"},
 		)
+
+	def test_the_card_carries_the_open_to_status(self):
+		frappe.db.set_value("User", self.member.name, "open_to", "Hiring")
+		self.assertEqual(self.find_member_row()["open_to"], "Hiring")
 
 	def test_certificates_come_latest_first(self):
 		self.set_certificate(issue_date="2020-01-01")

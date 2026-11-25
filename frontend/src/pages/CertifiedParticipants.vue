@@ -71,27 +71,48 @@
 			<component
 				:is="row.username ? 'router-link' : 'div'"
 				:to="profileRoute(row.username, 'ProfileAbout')"
-				class="flex flex-col overflow-hidden rounded-6 border border-outline-gray-2 text-start transition"
+				class="flex h-full flex-col rounded-6 border border-outline-gray-2 bg-surface-base p-2 text-start transition"
 				:class="
 					row.username ? 'hover:border-outline-gray-3 hover:shadow-sm' : ''
 				"
-				@mouseenter="playingCard = row.key"
-				@mouseleave="playingCard = null"
+				@pointerenter="playingCard = row.key"
+				@pointerleave="playingCard = null"
 				@focusin="playingCard = row.key"
 				@focusout="playingCard = null"
 			>
-				<div class="flex justify-center bg-surface-gray-1 px-4 pt-3 pb-4">
+				<!-- The top sheet spans the frame and may run off its bottom edge. -->
+				<div
+					class="h-40 shrink-0 overflow-hidden rounded-4 bg-surface-gray-2 px-4 pt-3"
+				>
 					<CertificateStack
 						v-if="row.certificates?.length"
 						:certificates="row.certificates"
 						:playing="playingCard === row.key"
-						class="w-52 max-w-full"
 					/>
 				</div>
-				<div class="flex items-center gap-2.5 p-3">
-					<Avatar :label="row.full_name" :image="row.user_image" size="md" />
-					<div class="min-w-0 truncate text-p-sm-medium text-ink-gray-9">
-						{{ row.full_name }}
+				<div class="flex items-center gap-2.5 px-2 pb-1.5 pt-3">
+					<Avatar :label="row.full_name" :image="row.user_image" size="lg" />
+					<div class="min-w-0 flex-1">
+						<div class="flex items-center gap-2">
+							<div class="min-w-0 truncate text-base-semibold text-ink-gray-9">
+								{{ row.full_name }}
+							</div>
+							<Badge
+								v-if="OPEN_TO_BADGES[row.open_to]"
+								class="ms-auto shrink-0"
+								:theme="OPEN_TO_BADGES[row.open_to].theme"
+								:label="OPEN_TO_BADGES[row.open_to].label"
+							/>
+						</div>
+						<div
+							class="truncate text-p-sm text-ink-gray-6"
+							:title="row.headline || undefined"
+						>
+							{{
+								shortHeadline(row.headline) ||
+								__('Joined {0}').format(timeAgo(row.creation))
+							}}
+						</div>
 					</div>
 				</div>
 			</component>
@@ -101,6 +122,7 @@
 <script setup>
 import {
 	Avatar,
+	Badge,
 	Button,
 	call,
 	createListResource,
@@ -117,6 +139,7 @@ import CertificateStack from '@/components/Certificates/CertificateStack.vue'
 import ListPage from '@/components/Layouts/pages/ListPage.vue'
 import EmptyStateActions from '@/components/EmptyStateActions.vue'
 import { profileRoute } from '@/utils/routes'
+import { timeAgo } from '@/utils/format'
 
 const filters = ref({})
 const currentCategory = ref('')
@@ -128,6 +151,24 @@ const memberCount = ref(0)
 const user = inject('$user')
 const router = useRouter()
 const playingCard = ref(null)
+
+/** One badge per value of the User `open_to` field. */
+const OPEN_TO_BADGES = {
+	Work: { label: __('Open to work'), theme: 'green' },
+	Hiring: { label: __('Hiring'), theme: 'blue' },
+}
+
+const HEADLINE_WORDS = 3
+
+/** The first few words of a headline, without emoji or stray symbols. */
+function shortHeadline(headline) {
+	const words = (headline || '')
+		.replace(/[\p{S}\p{Extended_Pictographic}\u200d\ufe0f]/gu, ' ')
+		.split(/\s+/)
+		.filter((word) => /[\p{L}\p{N}]/u.test(word))
+	const short = words.slice(0, HEADLINE_WORDS).join(' ')
+	return words.length > HEADLINE_WORDS ? `${short}…` : short
+}
 
 // Learners keep the default wording and the Get Certified button above.
 const emptyState = computed(() => {

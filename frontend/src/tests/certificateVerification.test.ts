@@ -22,7 +22,11 @@ vi.mock('frappe-ui', () => ({
 		props: ['label'],
 		template: '<span data-avatar>{{ label }}</span>',
 	},
-	Badge: { template: '<span data-badge><slot name="prefix" /><slot /></span>' },
+	Badge: {
+		props: ['label', 'theme'],
+		template:
+			'<span data-badge :data-theme="theme"><slot name="prefix" />{{ label }}<slot /></span>',
+	},
 	Button: {
 		props: ['label', 'route'],
 		emits: ['click'],
@@ -301,6 +305,9 @@ describe('CertifiedParticipants', () => {
 	const member = (values: Record<string, unknown>) => ({
 		full_name: 'Rashid Shaikh',
 		username: 'rashid',
+		headline: '',
+		creation: '2026-07-25 10:00:00',
+		open_to: '',
 		certificates: [
 			{ name: 'cert2', title: 'ERPNext' },
 			{ name: 'cert1', title: 'Frappe Framework' },
@@ -337,27 +344,59 @@ describe('CertifiedParticipants', () => {
 		expect(wrapper.find('h1').text()).toBe('All certified members 1063')
 	})
 
-	it('shows only the member name over their certificate stack', async () => {
-		const wrapper = await mountMembers([member({})])
+	it('shows the member over their certificate stack and links to their profile', async () => {
+		const wrapper = await mountMembers([
+			member({ headline: 'Frappe developer' }),
+		])
 		const card = wrapper.find('[data-card]')
 		expect(card.find('[data-thumbnail]').text()).toBe('cert2')
 		expect(card.findAll('[data-sheet]')).toHaveLength(2)
-		const text = card.text().replace('cert2', '')
-		expect(text).toContain('Rashid Shaikh')
-		expect(text.replaceAll('Rashid Shaikh', '')).toBe('')
+		expect(card.text()).toContain('Rashid Shaikh')
+		expect(card.text()).toContain('Frappe developer')
+		expect(card.find('[data-badge]').exists()).toBe(false)
 		expect(card.findComponent(RouterLinkStub).props('to')).toEqual({
 			name: 'ProfileAbout',
 			params: { username: 'rashid' },
 		})
 	})
 
+	it.each([
+		[
+			'Enabling Digital Transformation for Enterprises 🟧',
+			'Enabling Digital Transformation…',
+		],
+		['🚀 Frappe | Developer', 'Frappe Developer'],
+		['ERPNext Consultant', 'ERPNext Consultant'],
+	])('shortens the headline "%s" to three words', async (headline, shown) => {
+		const wrapper = await mountMembers([member({ headline })])
+		const line = wrapper
+			.findAll('[data-card] div')
+			.find((div) => div.attributes('title') === headline)
+		expect(line?.text()).toBe(shown)
+	})
+
+	it('says when a member without a headline joined', async () => {
+		const wrapper = await mountMembers([member({})])
+		expect(wrapper.find('[data-card]').text()).toMatch(/Joined .+ ago/)
+	})
+
+	it.each([
+		['Work', 'Open to work', 'green'],
+		['Hiring', 'Hiring', 'blue'],
+	])('badges a member open to %s', async (openTo, label, theme) => {
+		const wrapper = await mountMembers([member({ open_to: openTo })])
+		const badge = wrapper.find('[data-card] [data-badge]')
+		expect(badge.text()).toBe(label)
+		expect(badge.attributes('data-theme')).toBe(theme)
+	})
+
 	it('plays the stack while the card is hovered or focused', async () => {
 		const wrapper = await mountMembers([member({})])
 		const card = wrapper.find('[data-card] > *')
 		const stack = wrapper.findComponent({ name: 'CertificateStack' })
-		await card.trigger('mouseenter')
+		await card.trigger('pointerenter')
 		expect(stack.props('playing')).toBe(true)
-		await card.trigger('mouseleave')
+		await card.trigger('pointerleave')
 		expect(stack.props('playing')).toBe(false)
 		await card.trigger('focusin')
 		expect(stack.props('playing')).toBe(true)

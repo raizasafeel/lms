@@ -10,6 +10,7 @@
 			:error="error"
 			:required="required"
 			:aria-label="ariaLabel"
+			:title="selectedLabel"
 			@update:modelValue="
 				(value) => emit('update:modelValue', value ? String(value) : null)
 			"
@@ -42,13 +43,14 @@
 
 <script setup lang="ts">
 import { Combobox } from 'frappe-ui'
+import { computed } from 'vue'
 
 interface ComboboxOption {
 	label: string
 	value: string
 }
 
-defineProps<{
+const props = defineProps<{
 	modelValue: string | null
 	options: ComboboxOption[]
 	placeholder?: string
@@ -59,5 +61,16 @@ defineProps<{
 	ariaLabel?: string
 }>()
 
+/** Long values are cut short with an ellipsis, so the full one shows on hover. */
+const selectedLabel = computed(
+	() => props.options.find((option) => option.value === props.modelValue)?.label
+)
+
 const emit = defineEmits<{ 'update:modelValue': [string | null] }>()
 </script>
+
+<style scoped>
+:deep(input[data-slot='input']) {
+	text-overflow: ellipsis;
+}
+</style>

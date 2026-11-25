@@ -88,6 +88,49 @@ describe('CertificateStack', () => {
 		expect(order(wrapper)[0].name).toBe('newest')
 	})
 
+	it('slides the old top sheet off to the right, then sends it to the back', async () => {
+		const wrapper = mountStack()
+		await wrapper.setProps({ playing: true })
+		vi.advanceTimersByTime(1300)
+		await nextTick()
+		const leaving = wrapper.find('[data-leaving]')
+		expect(leaving.attributes('data-position')).toBe('2')
+		expect((leaving.element as HTMLElement).style.transform).toContain(
+			'translateX(115%)'
+		)
+		vi.advanceTimersByTime(1300)
+		await nextTick()
+		const sheets = wrapper.findAll('[data-sheet]')
+		expect(sheets[0].attributes('data-leaving')).toBeUndefined()
+		expect(sheets[1].attributes('data-leaving')).toBeDefined()
+	})
+
+	it('settles back in order when it scrolls out of view', async () => {
+		let report: (entries: { isIntersecting: boolean }[]) => void = () => {}
+		vi.stubGlobal(
+			'IntersectionObserver',
+			class {
+				constructor(callback: typeof report) {
+					report = callback
+				}
+				observe() {}
+				disconnect() {}
+			}
+		)
+		const wrapper = mountStack()
+		await nextTick()
+		await wrapper.setProps({ playing: true })
+		vi.advanceTimersByTime(1300)
+		await nextTick()
+		report([{ isIntersecting: false }])
+		await nextTick()
+		expect(order(wrapper)[0].name).toBe('newest')
+		expect(wrapper.find('[data-leaving]').exists()).toBe(false)
+		vi.advanceTimersByTime(5000)
+		await nextTick()
+		expect(order(wrapper)[0].name).toBe('newest')
+	})
+
 	it('returns to the latest on top when it stops', async () => {
 		const wrapper = mountStack()
 		await wrapper.setProps({ playing: true })

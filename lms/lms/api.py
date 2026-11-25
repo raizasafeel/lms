@@ -1349,8 +1349,13 @@ CERTIFICATE_STACK_SIZE = 5
 
 
 def get_certified_participant_details(member: str) -> dict:
-	"""A certified member's card: name, avatar and latest published certificates."""
-	details = frappe.db.get_value("User", member, ["full_name", "user_image", "username"], as_dict=1)
+	"""A certified member's card: who they are, their status and latest published certificates."""
+	details = frappe.db.get_value(
+		"User",
+		member,
+		["full_name", "user_image", "username", "headline", "creation", "open_to"],
+		as_dict=1,
+	)
 	details["certificates"] = get_latest_published_certificates(member)
 	return details
 
