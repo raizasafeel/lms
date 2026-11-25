@@ -43,6 +43,7 @@ import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
 import CourseOverview from '@/pages/Courses/CourseOverview.vue'
 import { filledFields, takeFormSource } from '@/composables/formTracking'
 import { chaptersToCreate, useCourseDraft } from '@/composables/useCourseDraft'
+import { useSettings } from '@/stores/settings'
 import {
 	saveShortcut,
 	useKeyboardShortcuts,
@@ -66,7 +67,8 @@ let isLeaving = false
 const creator = user.data?.name
 const form = useCourseDraft(
 	creator && creator !== 'Administrator' ? creator : null,
-	onCreated
+	onCreated,
+	useSettings().settings.data?.primary_currency
 )
 
 function onCreated(name: string): void {

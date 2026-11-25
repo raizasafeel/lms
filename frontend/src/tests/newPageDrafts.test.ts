@@ -167,6 +167,16 @@ describe('a new course before its first save', () => {
 	})
 })
 
+describe('the currency a new course or batch starts in', () => {
+	it('is the primary currency it was given', () => {
+		const course = withSetup(() => useCourseDraft('me@x.com', vi.fn(), 'EUR'))
+		const batch = withSetup(() => useBatchDraft(vi.fn(), 'EUR'))
+		expect(course.resource.doc?.currency).toBe('EUR')
+		expect(batch.doc.value?.currency).toBe('EUR')
+		expect(course.hasEdits.value).toBe(false)
+	})
+})
+
 describe('a new batch before its first save', () => {
 	it('sends its courses and assessments as rows of the one insert', () => {
 		expect(

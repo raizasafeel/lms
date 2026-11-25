@@ -33,7 +33,7 @@ export function chaptersToCreate(chapters: DraftChapter[]): DraftChapter[] {
 		.filter((chapter) => chapter.title || chapter.lessons.length)
 }
 
-function blankCourse(): Partial<LMSCourse> {
+function blankCourse(currency?: string): Partial<LMSCourse> {
 	const thumbnail = shuffleThumbnail()
 	return {
 		title: '',
@@ -47,6 +47,7 @@ function blankCourse(): Partial<LMSCourse> {
 		paid_course: 0,
 		enable_certification: 0,
 		paid_certificate: 0,
+		currency,
 	}
 }
 
@@ -71,11 +72,12 @@ async function createOutline(
  */
 export function useCourseDraft(
 	instructor: string | null,
-	onCreated: (name: string) => void
+	onCreated: (name: string) => void,
+	currency?: string
 ): CourseDraft {
 	const saving = ref<boolean>(false)
 	const resource = reactive({
-		doc: blankCourse(),
+		doc: blankCourse(currency),
 		setValue: { loading: saving },
 	}) as unknown as Resource<LMSCourse | null>
 	const instructors = ref<string[]>(instructor ? [instructor] : [])

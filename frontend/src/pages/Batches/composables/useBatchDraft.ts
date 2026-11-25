@@ -20,7 +20,7 @@ export interface BatchDraft extends BatchForm {
 	hasEdits: ComputedRef<boolean>
 }
 
-function blankBatch(): Partial<LMSBatch> {
+function blankBatch(currency?: string): Partial<LMSBatch> {
 	return {
 		title: '',
 		description: '',
@@ -35,6 +35,7 @@ function blankBatch(): Partial<LMSBatch> {
 		seat_count: 0,
 		published: 0,
 		paid_batch: 0,
+		currency,
 		allow_self_enrollment: 0,
 		certification: 0,
 		evaluation: 0,
@@ -66,8 +67,12 @@ export function batchInsertDoc(
  * A batch that exists only on the page until its first save. It offers the
  * same form the batch overview edits, so the overview renders it unchanged.
  */
-export function useBatchDraft(onCreated: (name: string) => void): BatchDraft {
-	const doc = reactive(blankBatch()) as LMSBatch
+/** `currency` is the primary currency a new batch is priced in. */
+export function useBatchDraft(
+	onCreated: (name: string) => void,
+	currency?: string
+): BatchDraft {
+	const doc = reactive(blankBatch(currency)) as LMSBatch
 	const instructors = ref<string[]>([])
 	const meta = reactive<BatchMeta>({ description: '', keywords: '' })
 	const courses = ref<string[]>([])

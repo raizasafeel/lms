@@ -42,6 +42,7 @@ import PageHeader from '@/components/Layouts/pages/PageHeader.vue'
 import BatchOverview from '@/pages/Batches/BatchOverview.vue'
 import BatchSaveButton from '@/pages/Batches/components/BatchSaveButton.vue'
 import { useBatchDraft } from '@/pages/Batches/composables/useBatchDraft'
+import { useSettings } from '@/stores/settings'
 import { filledFields, takeFormSource } from '@/composables/formTracking'
 import {
 	saveShortcut,
@@ -70,7 +71,10 @@ const canCreate = computed<boolean>(() => {
 	)
 })
 
-const form = useBatchDraft(onCreated)
+const form = useBatchDraft(
+	onCreated,
+	useSettings().settings.data?.primary_currency
+)
 
 function onCreated(name: string): void {
 	created = true

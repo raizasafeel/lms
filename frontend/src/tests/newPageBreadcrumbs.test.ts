@@ -46,6 +46,9 @@ vi.mock('@/composables/useKeyboardShortcuts', () => ({
 }))
 vi.mock('@/utils', () => ({ canCreateCourse: () => true }))
 vi.mock('@/utils/onboarding', () => ({ seesOnboarding: () => false }))
+vi.mock('@/stores/settings', () => ({
+	useSettings: () => ({ settings: { data: { primary_currency: 'USD' } } }),
+}))
 vi.mock('@/composables/useUnsavedChangesGuard', () => ({
 	useUnsavedChangesGuard: vi.fn(),
 }))
