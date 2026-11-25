@@ -1,6 +1,7 @@
 /**
- * Tests for the settings <-> URL hash sync. The hash is the source of truth:
- * /courses#settings/branding opens the settings dialog on the Branding tab.
+ * Tests for the settings <-> URL sync. The `settings` query key is the source of
+ * truth: /courses?settings=branding opens the settings dialog on Branding. The
+ * hash stays the page's own, so course and batch tabs never clash with it.
  */
 import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest'
 import {
@@ -15,6 +16,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 import {
 	pushSettingsHash,
+	settingsValue,
 	useSettingsHash,
 } from '@/composables/useSettingsHash'
 import type { SettingsRoutableGroup } from '@/types/settingsSchema'
@@ -44,6 +46,8 @@ const tabs = computed<SettingsRoutableGroup[]>(() => [
 		items: [{ label: 'Branding', slug: 'branding' }],
 	},
 ])
+
+const open = (router: Router) => settingsValue(router.currentRoute.value.query)
 
 const item = (slug: string) =>
 	tabs.value.flatMap((tab) => tab.items).find((i) => i.slug === slug)!
@@ -88,10 +92,10 @@ afterEach(() => {
 describe('useSettingsHash', () => {
 	it.each([
 		{ hash: '' },
-		// A bare '#settings' is the batch/course detail pages' own Settings tab —
-		// those pages address their tabs as '#<label>'. It must not open the modal.
+		// The hash is the batch/course detail pages' own tab ('#settings' is one),
+		// so no hash, the old '#settings/<slug>' form included, opens the modal.
 		{ hash: '#settings' },
-		// Other pages' tab hashes are left alone.
+		{ hash: '#settings/general' },
 		{ hash: '#students' },
 	])('stays closed on /courses with hash $hash', async ({ hash }) => {
 		const { router, api } = await setup(`/courses${hash}`)
@@ -102,51 +106,51 @@ describe('useSettingsHash', () => {
 	})
 
 	it('resolves a slug to its tab', async () => {
-		const { api } = await setup('/courses#settings/branding')
+		const { api } = await setup('/courses?settings=branding')
 		expect(api.activeTab.value?.label).toBe('Branding')
 		expect(store.activeTab).toBe('Branding')
 	})
 
-	it('falls back to the default tab on an unknown slug and replaces the hash', async () => {
-		const { router, api } = await setup('/courses#settings/nope')
+	it('falls back to the default tab on an unknown slug and replaces the URL', async () => {
+		const { router, api } = await setup('/courses?settings=nope')
 		await flushPromises()
 		expect(api.activeTab.value?.label).toBe('General')
-		expect(router.currentRoute.value.hash).toBe('#settings/general')
+		expect(open(router)).toBe('general')
 	})
 
 	// The real tab list loads asynchronously, so on a deep link it is still
-	// empty when the hash first arrives. A slug can only be judged unknown
+	// empty when the URL first arrives. A slug can only be judged unknown
 	// once there are tabs to judge it against.
-	it('falls back once the tabs arrive, when they load after the hash', async () => {
+	it('falls back once the tabs arrive, when they load after the URL', async () => {
 		const loaded = ref(false)
 		const asyncTabs = computed<SettingsRoutableGroup[]>(() =>
 			loaded.value ? tabs.value : []
 		)
 
-		const { router, api } = await setup('/courses#settings/nope', asyncTabs)
+		const { router, api } = await setup('/courses?settings=nope', asyncTabs)
 		expect(api.activeTab.value).toBe(null)
-		expect(router.currentRoute.value.hash).toBe('#settings/nope')
+		expect(open(router)).toBe('nope')
 
 		loaded.value = true
 		await flushPromises()
 
 		expect(api.activeTab.value?.label).toBe('General')
-		expect(router.currentRoute.value.hash).toBe('#settings/general')
+		expect(open(router)).toBe('general')
 	})
 
 	it('normalises an empty slug, which still opens the default tab', async () => {
-		const { router, api } = await setup('/courses#settings/')
+		const { router, api } = await setup('/courses?settings=')
 		await flushPromises()
 		expect(api.activeTab.value?.label).toBe('General')
-		expect(router.currentRoute.value.hash).toBe('#settings/general')
+		expect(open(router)).toBe('general')
 	})
 
 	it('does not push a duplicate entry for the tab already shown', async () => {
-		const { router, api } = await setup('/courses#settings/general')
+		const { router, api } = await setup('/courses?settings=general')
 
 		api.selectTab(item('general'))
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/general')
+		expect(open(router)).toBe('general')
 		expect(router.options.history.state.settingsDepth ?? 0).toBe(0)
 	})
 
@@ -155,20 +159,20 @@ describe('useSettingsHash', () => {
 
 		pushSettingsHash(router)
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/general')
+		expect(open(router)).toBe('general')
 
 		api.selectTab(item('branding'))
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/branding')
+		expect(open(router)).toBe('branding')
 
 		router.back()
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/general')
+		expect(open(router)).toBe('general')
 		expect(api.isOpen.value).toBe(true)
 
 		router.back()
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('')
+		expect(open(router)).toBe(null)
 		expect(api.isOpen.value).toBe(false)
 		expect(store.isSettingsOpen).toBe(false)
 	})
@@ -182,38 +186,38 @@ describe('useSettingsHash', () => {
 		await flushPromises()
 		api.selectTab(item('branding'))
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/branding')
+		expect(open(router)).toBe('branding')
 
 		api.close()
 		await flushPromises()
 		expect(api.isOpen.value).toBe(false)
-		expect(router.currentRoute.value.hash).toBe('')
+		expect(open(router)).toBe(null)
 		expect(router.currentRoute.value.path).toBe('/courses')
 		expect(store.isSettingsOpen).toBe(false)
 	})
 
-	it('closing a deep link replaces the hash instead of leaving the app', async () => {
-		const { router, api } = await setup('/courses#settings/branding')
+	it('closing a deep link replaces the URL instead of leaving the app', async () => {
+		const { router, api } = await setup('/courses?settings=branding')
 		const back = vi.spyOn(router, 'go')
 
 		api.close()
 		await flushPromises()
 		expect(back).not.toHaveBeenCalled()
-		expect(router.currentRoute.value.hash).toBe('')
+		expect(open(router)).toBe(null)
 		expect(router.currentRoute.value.path).toBe('/courses')
 	})
 
 	it('closing after switching tabs from a deep link leaves settings entirely', async () => {
-		const { router, api } = await setup('/courses#settings/branding')
+		const { router, api } = await setup('/courses?settings=branding')
 
 		api.selectTab(item('badges'))
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/badges')
+		expect(open(router)).toBe('badges')
 
 		api.close()
 		await flushPromises()
 		expect(api.isOpen.value).toBe(false)
-		expect(router.currentRoute.value.hash).toBe('')
+		expect(open(router)).toBe(null)
 	})
 
 	it('openSettings(slug) opens that tab, and the store mirrors its label', async () => {
@@ -221,17 +225,17 @@ describe('useSettingsHash', () => {
 
 		pushSettingsHash(router, 'members')
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/members')
+		expect(open(router)).toBe('members')
 		expect(store.isSettingsOpen).toBe(true)
 		expect(store.activeTab).toBe('Users')
 	})
 
 	it('openSettings() with no slug is a no-op when settings is already open', async () => {
-		const { router } = await setup('/courses#settings/branding')
+		const { router } = await setup('/courses?settings=branding')
 
 		pushSettingsHash(router)
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/branding')
+		expect(open(router)).toBe('branding')
 		expect(store.activeTab).toBe('Branding')
 	})
 
@@ -240,7 +244,7 @@ describe('useSettingsHash', () => {
 
 		pushSettingsHash(router)
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/general')
+		expect(open(router)).toBe('general')
 		expect(store.activeTab).toBe('General')
 	})
 
@@ -250,7 +254,7 @@ describe('useSettingsHash', () => {
 		store.isSettingsOpen = true
 		store.activeTab = 'branding'
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('')
+		expect(open(router)).toBe(null)
 	})
 
 	// A settingsDepth can outlive the settings entry that stamped it: a real
@@ -269,7 +273,7 @@ describe('useSettingsHash', () => {
 			state: { settingsDepth: 4 },
 		})
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('')
+		expect(open(router)).toBe(null)
 		expect(router.options.history.state.settingsDepth).toBe(4)
 
 		// Opening must stamp depth 1 — there is exactly one entry to pop — not 5.
@@ -282,7 +286,7 @@ describe('useSettingsHash', () => {
 		await flushPromises()
 		expect(go).toHaveBeenCalledWith(-1)
 		expect(router.currentRoute.value.path).toBe('/courses')
-		expect(router.currentRoute.value.hash).toBe('')
+		expect(open(router)).toBe(null)
 	})
 
 	// The query-restore on close is the one replace() that has a page hash to
@@ -297,7 +301,7 @@ describe('useSettingsHash', () => {
 
 		// The page syncs a new filter while the dialog is open.
 		router.replace({
-			query: { title: 'react' },
+			query: { ...router.currentRoute.value.query, title: 'react' },
 			hash: router.currentRoute.value.hash,
 			state: { settingsDepth: 1 },
 		})
@@ -313,31 +317,88 @@ describe('useSettingsHash', () => {
 	})
 })
 
+describe('useSettingsHash over a course or batch Settings tab', () => {
+	// Those pages keep their tab in the hash ('#settings') and a section in
+	// `?section=`. Settings owns only `?settings=`, so neither side moves the other.
+	it('opens without touching the page tab or section', async () => {
+		const { router } = await setup('/courses?section=seo#settings')
+
+		pushSettingsHash(router, 'branding')
+		await flushPromises()
+		expect(router.currentRoute.value.hash).toBe('#settings')
+		expect(router.currentRoute.value.query).toEqual({
+			section: 'seo',
+			settings: 'branding',
+		})
+	})
+
+	it('closes back onto the same page tab and section', async () => {
+		const { router, api } = await setup('/courses?section=seo#settings')
+
+		pushSettingsHash(router, 'branding')
+		await flushPromises()
+		api.close()
+		await flushPromises()
+		expect(router.currentRoute.value.fullPath).toBe(
+			'/courses?section=seo#settings'
+		)
+	})
+
+	it('Back closes settings and leaves the page tab in place', async () => {
+		const { router, api } = await setup('/courses#settings')
+
+		pushSettingsHash(router, 'branding')
+		await flushPromises()
+		router.back()
+		await flushPromises()
+		expect(api.isOpen.value).toBe(false)
+		expect(router.currentRoute.value.fullPath).toBe('/courses#settings')
+	})
+
+	// A reload or shared link used to land on the page's first tab: the page
+	// tab and the dialog fought over the one hash.
+	it('deep links to a page tab and a settings tab at once', async () => {
+		const { router, api } = await setup('/courses?settings=branding#dashboard')
+		expect(api.activeTab.value?.slug).toBe('branding')
+		expect(router.currentRoute.value.hash).toBe('#dashboard')
+
+		api.close()
+		await flushPromises()
+		expect(router.currentRoute.value.fullPath).toBe('/courses#dashboard')
+	})
+
+	it('a page tab switch keeps settings open', async () => {
+		const { router, api } = await setup('/courses?settings=branding#overview')
+
+		await router.push({ ...router.currentRoute.value, hash: '#settings' })
+		await flushPromises()
+		expect(api.activeTab.value?.slug).toBe('branding')
+	})
+})
+
 describe('useSettingsHash records', () => {
 	it('has no record on a list view', async () => {
-		const { api } = await setup('/courses#settings/badges')
+		const { api } = await setup('/courses?settings=badges')
 		expect(api.activeTab.value?.slug).toBe('badges')
 		expect(api.activeRecord.value).toBe(null)
 	})
 
 	it('resolves the second segment to a record', async () => {
-		const { api } = await setup('/courses#settings/badges/BDG-0001')
+		const { api } = await setup('/courses?settings=badges/BDG-0001')
 		expect(api.activeTab.value?.slug).toBe('badges')
 		expect(api.activeRecord.value).toBe('BDG-0001')
 	})
 
 	it("treats 'new' as a record id like any other", async () => {
-		const { api } = await setup('/courses#settings/badges/new')
+		const { api } = await setup('/courses?settings=badges/new')
 		expect(api.activeRecord.value).toBe('new')
 	})
 
 	it('keeps a record name that contains a slash whole', async () => {
-		const { router, api } = await setup('/courses#settings/badges')
+		const { router, api } = await setup('/courses?settings=badges')
 		api.selectRecord('Sales/Support')
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe(
-			'#settings/badges/Sales/Support'
-		)
+		expect(open(router)).toBe('badges/Sales/Support')
 		expect(api.activeRecord.value).toBe('Sales/Support')
 	})
 
@@ -348,12 +409,12 @@ describe('useSettingsHash records', () => {
 		await flushPromises()
 		api.selectRecord('BDG-0001')
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/badges/BDG-0001')
+		expect(open(router)).toBe('badges/BDG-0001')
 		expect(router.options.history.state.settingsDepth).toBe(2)
 
 		router.back()
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/badges')
+		expect(open(router)).toBe('badges')
 		expect(api.activeRecord.value).toBe(null)
 	})
 
@@ -371,15 +432,18 @@ describe('useSettingsHash records', () => {
 		await flushPromises()
 		expect(api.isOpen.value).toBe(false)
 		expect(router.currentRoute.value.path).toBe('/courses')
-		expect(router.currentRoute.value.hash).toBe('')
+		expect(open(router)).toBe(null)
 	})
 
 	it('carries the page query into a record', async () => {
-		const { router, api } = await setup('/courses?title=vue#settings/badges')
+		const { router, api } = await setup('/courses?title=vue&settings=badges')
 
 		api.selectRecord('BDG-0001')
 		await flushPromises()
-		expect(router.currentRoute.value.query).toEqual({ title: 'vue' })
+		expect(router.currentRoute.value.query).toEqual({
+			title: 'vue',
+			settings: 'badges/BDG-0001',
+		})
 	})
 
 	// The bad-id fallback: the detail view could not load the record, so it drops
@@ -395,14 +459,14 @@ describe('useSettingsHash records', () => {
 
 		api.selectRecord(null, { replace: true })
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/badges')
+		expect(open(router)).toBe('badges')
 
 		router.back()
 		await flushPromises()
 		expect(api.isOpen.value).toBe(false)
 	})
 
-	// go() is async: until the pop lands, route.hash and the history state
+	// go() is async: until the pop lands, the URL and the history state
 	// still describe the entry we are leaving. A second drop in the same tick
 	// would read the same depth and pop again, off the settings stack entirely.
 	it('drops a record once when two drops race in the same tick', async () => {
@@ -420,12 +484,12 @@ describe('useSettingsHash records', () => {
 		await flushPromises()
 
 		expect(go).toHaveBeenCalledTimes(1)
-		expect(router.currentRoute.value.hash).toBe('#settings/badges')
+		expect(open(router)).toBe('badges')
 		expect(api.isOpen.value).toBe(true)
 	})
 
-	// A drop can be refused by the unsaved-changes guard, and route.hash never
-	// changes on abort — a `dropping` flag cleared only by the hash watcher
+	// A drop can be refused by the unsaved-changes guard, and the URL never
+	// changes on abort — a `dropping` flag cleared only by the URL watcher
 	// would stay stuck, killing the drop path for the rest of the session.
 	it('can still drop a record after a drop was aborted by a guard', async () => {
 		const { router, api } = await setup('/courses')
@@ -441,57 +505,57 @@ describe('useSettingsHash records', () => {
 		api.selectRecord(null, { replace: true })
 		await flushPromises()
 		// The guard refused, so we are still on the record.
-		expect(router.currentRoute.value.hash).toBe('#settings/badges/BDG-9999')
+		expect(open(router)).toBe('badges/BDG-9999')
 
 		abort = false
 		api.selectRecord(null, { replace: true })
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/badges')
+		expect(open(router)).toBe('badges')
 		stop()
 	})
 
-	// A tab that does not opt into records cannot have one. '#settings/general/x'
+	// A tab that does not opt into records cannot have one. '?settings=general/x'
 	// is nonsense; normalise it away rather than render a list with a phantom id.
 	it('strips a record from a tab that does not take records', async () => {
-		const { router, api } = await setup('/courses#settings/general/BDG-0001')
+		const { router, api } = await setup('/courses?settings=general/BDG-0001')
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/general')
+		expect(open(router)).toBe('general')
 		expect(api.activeRecord.value).toBe(null)
 	})
 
 	// The slug still has to resolve. An unknown tab with a record falls back to
 	// the default tab and drops the record with it.
 	it('falls back to the default tab and drops the record on an unknown slug', async () => {
-		const { router, api } = await setup('/courses#settings/nope/BDG-0001')
+		const { router, api } = await setup('/courses?settings=nope/BDG-0001')
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/general')
+		expect(open(router)).toBe('general')
 		expect(api.activeRecord.value).toBe(null)
 	})
 
 	// A rename keeps the record open but changes its docname.
-	// replaceRecord() rehashes the CURRENT entry in place, so Back still
+	// replaceRecord() rewrites the CURRENT entry in place, so Back still
 	// lands on the list, not on a now-dead old-name entry.
-	it('rehashes the current record in place on rename, keeping depth and Back', async () => {
+	it('rewrites the current record in place on rename, keeping depth and Back', async () => {
 		const { router, api } = await setup('/courses')
 
 		pushSettingsHash(router, 'badges')
 		await flushPromises()
 		api.selectRecord('OLD')
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/badges/OLD')
+		expect(open(router)).toBe('badges/OLD')
 		expect(router.options.history.state.settingsDepth).toBe(2)
 
 		api.replaceRecord('NEW')
 		await flushPromises()
-		// (a) the hash names the new docname
-		expect(router.currentRoute.value.hash).toBe('#settings/badges/NEW')
+		// (a) the URL names the new docname
+		expect(open(router)).toBe('badges/NEW')
 		// (b) depth is unchanged — a replace, not a push
 		expect(router.options.history.state.settingsDepth).toBe(2)
 
 		// (c) Back still returns to the list, one entry down
 		router.back()
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/badges')
+		expect(open(router)).toBe('badges')
 		expect(api.activeRecord.value).toBe(null)
 	})
 })
@@ -509,7 +573,7 @@ describe('useSettingsHash: dismissing twice', () => {
 		await flushPromises()
 		api.selectRecord('badge-1')
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/badges/badge-1')
+		expect(open(router)).toBe('badges/badge-1')
 		expect(router.options.history.state.settingsDepth).toBe(2)
 
 		// createMemoryHistory applies go() synchronously; stubbing it models a real
@@ -526,7 +590,7 @@ describe('useSettingsHash: dismissing twice', () => {
 describe('useSettingsHash: a dismiss the guard refuses', () => {
 	/**
 	 * The re-entrancy flag must clear on aborts too: a refused navigation never
-	 * changes the hash, so a `closing` flag cleared only by the hash watcher
+	 * changes the URL, so a `closing` flag cleared only by the URL watcher
 	 * would leave `close()` dead for the rest of the session.
 	 */
 	it('still closes after an earlier dismiss was refused', async () => {
@@ -536,18 +600,18 @@ describe('useSettingsHash: a dismiss the guard refuses', () => {
 		await flushPromises()
 		api.selectRecord('badge-1')
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/badges/badge-1')
+		expect(open(router)).toBe('badges/badge-1')
 
 		const refuse = router.beforeEach(() => false)
 		api.close()
 		await flushPromises()
-		expect(router.currentRoute.value.hash).toBe('#settings/badges/badge-1')
+		expect(open(router)).toBe('badges/badge-1')
 
 		refuse()
 		api.close()
 		await flushPromises()
 
 		expect(api.isOpen.value).toBe(false)
-		expect(router.currentRoute.value.hash).toBe('')
+		expect(open(router)).toBe(null)
 	})
 })

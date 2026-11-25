@@ -1,5 +1,6 @@
 import { onScopeDispose, ref } from 'vue'
 import type { Router } from 'vue-router'
+import { settingsValue } from '@/composables/useSettingsHash'
 
 // Confirm before a navigation discards an unsaved settings form.
 // A set, not one slot: Settings.vue renders every panel in a `v-for`, so
@@ -44,9 +45,13 @@ export function installDirtyGuard(
 			(entry) => !suppressed.has(entry) && entry.isDirty()
 		)
 		if (!dirty.length) return true
-		// Same view: a query change (the page's filters) is not leaving the form.
-		// Another path under the same hash is a different page, so it still asks.
-		if (to.path === from.path && to.hash === from.hash) return true
+		// Same view: a change to the page's own query (its filters) is not leaving
+		// the form. Another path, page tab or settings tab still asks.
+		const sameView =
+			to.path === from.path &&
+			to.hash === from.hash &&
+			settingsValue(to.query) === settingsValue(from.query)
+		if (sameView) return true
 
 		if (!(await confirm())) return false
 

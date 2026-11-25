@@ -305,7 +305,7 @@ export interface CustomPage {
 export type SettingsPage = FieldsPage | ListPage | CustomPage
 
 /**
- * The slice of an item the URL layer needs. `useSettingsHash` resolves a hash to
+ * The slice of an item the URL layer needs. `useSettingsHash` resolves the URL to
  * a slug and back; it has no business knowing what a page renders, and taking
  * the narrow type is what lets its tests declare two-line fixtures.
  */
@@ -318,7 +318,7 @@ export interface SettingsRoutableItem {
 	 */
 	slug: string
 	/**
-	 * Opt in to '#settings/<slug>/<record>'. Without it a second hash segment is
+	 * Opt in to '?settings=<slug>/<record>'. Without it a second segment is
 	 * stripped, so a page with no detail view cannot grow a phantom record id.
 	 */
 	records?: boolean

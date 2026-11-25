@@ -54,7 +54,7 @@ defineProps<{ label: string }>()
 const router = useRouter()
 
 // The open record, as a model rather than state of its own, the same
-// contract SettingsListPanel has, and what makes '#settings/members/<name>'
+// contract SettingsListPanel has, and what makes '?settings=members/<name>'
 // land on it. A second copy could disagree with the URL; a derived one can't.
 const record = defineModel<string | null>('record', { default: null })
 
@@ -80,8 +80,8 @@ watch(membersRevision, () => list.reload())
 
 const openProfile = (row: SettingsListRow) => {
 	if (!row.username) return
-	// A route with no hash leaves the settings hash behind, and that is what
-	// closes the dialog now that the hash is what opens it.
+	// A route with no query leaves the settings key behind, and that is what
+	// closes the dialog now that the URL is what opens it.
 	router.push({ name: 'Profile', params: { username: row.username } })
 }
 

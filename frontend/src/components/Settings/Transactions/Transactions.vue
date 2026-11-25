@@ -50,7 +50,7 @@ import { NEW_RECORD } from '@/composables/useSettingsSource'
 defineProps<{ label: string }>()
 
 // The open record, as a model rather than state of its own: the same
-// contract SettingsListPanel has, so '#settings/transactions/<name>' can
+// contract SettingsListPanel has, so '?settings=transactions/<name>' can
 // land on it without a second copy able to disagree with the URL.
 const record = defineModel<string | null>('record', { default: null })
 

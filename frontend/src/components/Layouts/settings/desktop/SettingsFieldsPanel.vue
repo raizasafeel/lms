@@ -143,8 +143,8 @@ const commit = (mode: CommitMode | 'cancel') =>
 	mode === 'cancel' ? autosave?.cancel() : autosave?.commit(mode)
 
 // A rename moves the record out from under the URL, so a refresh would
-// deep-link to nothing. The panel doesn't own the hash, so it reports the
-// move for the page above to rehash. Compared against the PREVIOUS name,
+// deep-link to nothing. The panel doesn't own the URL, so it reports the
+// move for the page above to rewrite. Compared against the PREVIOUS name,
 // not the record prop, since a panel opened from a list gets no prop at all.
 watch(
 	() => source.name,

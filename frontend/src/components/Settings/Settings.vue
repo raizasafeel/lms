@@ -163,7 +163,7 @@ const {
 	close,
 } = useSettingsHash(tabs)
 
-// The hash owns the dialog: it is open because the URL says so, and dismissing
+// The URL owns the dialog: it is open because the URL says so, and dismissing
 // it navigates rather than flipping a flag no one else can see.
 watch(
 	() => isOpen.value && hasIntegrations.value,
@@ -193,7 +193,7 @@ const activeSlug = computed({
 	},
 })
 
-// The hash owns the open record too, so a panel's model reads and writes
+// The URL owns the open record too, so a panel's model reads and writes
 // it. Each panel gets only its own tab's record: unmounting a hidden panel
 // isn't guaranteed, so a still-mounted panel must not adopt another tab's.
 const recordFor = (item) =>
@@ -216,7 +216,7 @@ const recordModel = (item) =>
 		  }
 		: {}
 
-// A renamed record is the same record under a new name, so its hash entry
+// A renamed record is the same record under a new name, so its URL entry
 // is rewritten rather than a second one pushed, keeping Back intact.
 // Otherwise a refresh deep-links to a document the server has forgotten.
 const renameRecord = (item, name) => {

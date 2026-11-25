@@ -909,8 +909,14 @@ const insertCategory = (name) => {
 //
 // Takes the tab's slug, not its label, since renaming a label must not break
 // callers. Returns whether Settings actually opened, so a caller that closes
-// itself separately can stay put when it did not.
-export const openSettings = (slug, close = null, field = null) => {
+// itself separately can stay put when it did not. `record` opens one of the
+// tab's records, or 'new' for its create form.
+export const openSettings = (
+	slug,
+	close = null,
+	field = null,
+	record = null
+) => {
 	const settingsStore = useSettings()
 	if (!settingsStore.isSettingsMounted) {
 		toast.error(__('Settings is only available on a larger screen.'))
@@ -920,7 +926,7 @@ export const openSettings = (slug, close = null, field = null) => {
 		close()
 	}
 	settingsStore.focusField = field
-	pushSettingsHash(router, slug)
+	pushSettingsHash(router, slug, record)
 	return true
 }
 

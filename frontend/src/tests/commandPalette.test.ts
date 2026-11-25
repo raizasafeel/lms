@@ -308,10 +308,10 @@ describe('categories and role-gated rows', () => {
 			await mountPalette()
 			await open('Settings')
 
-			// The hash opens the dialog over whatever page is showing; a `name` here
+			// The query opens the dialog over whatever page is showing; a `name` here
 			// would mean the row had navigated away from it instead.
 			const [to] = router.push.mock.calls[0]
-			expect(to.hash).toBe('#settings/general')
+			expect(to.query.settings).toBe('general')
 			expect(to).not.toHaveProperty('name')
 		})
 	})
@@ -393,7 +393,7 @@ describe('categories and role-gated rows', () => {
 			await open('Settings')
 
 			const [to] = router.push.mock.calls[0]
-			expect(to.hash).toBe('#settings/general')
+			expect(to.query.settings).toBe('general')
 		})
 
 		it('does not offer Settings to a searching student', async () => {

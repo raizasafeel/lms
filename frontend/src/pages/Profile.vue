@@ -228,8 +228,8 @@ watchEffect(() => {
 		Schedule: { name: 'ProfileEvaluationSchedule' },
 	}[activeTab.value]
 	// `route.name` is read through the router's current-route ref, so this effect
-	// re-runs on every navigation, a hash-only one included, and a bare {name}
-	// push carries no hash. That took '#settings/<slug>' straight back off the
+	// re-runs on every navigation, a query-only one included, and a bare {name}
+	// push carries no query. That took '?settings=<slug>' straight back off the
 	// URL, so settings never opened on this page.
 	if (!target || route.name === target.name) return
 	if (onBlockedEvaluatorTab.value) router.replace(target)

@@ -124,7 +124,7 @@ const props = defineProps<{
 	title: string
 }>()
 
-// The create id reserved by the settings hash ('#settings/<slug>/new'), so a
+// The create id reserved by the settings URL ('?settings=<slug>/new'), so a
 // record model driven from the URL and one driven from a click agree.
 const NEW_RECORD = 'new'
 
@@ -136,12 +136,12 @@ const isCreateRecord = (value: string | null): boolean =>
 	value === NEW_RECORD || Boolean(value?.startsWith(`${NEW_RECORD}:`))
 
 // The open record, as a model rather than internal state: the URL layer drives
-// this from the hash's second segment, and nothing else here knows about hashes.
+// this from the URL's second segment, and nothing else here knows about the URL.
 const record = defineModel<string | null>('record', { default: null })
 
 // Not `record.value = name`. The record model is the URL, and writing to it
 // PUSHES a history entry. Back from a renamed record must land on the list,
-// not on the same record under its dead name. The page above owns the hash.
+// not on the same record under its dead name. The page above owns the URL.
 const emit = defineEmits<{ renamed: [string] }>()
 
 // The filter's own value, held here rather than in the config module: the
