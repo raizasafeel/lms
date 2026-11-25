@@ -37,8 +37,8 @@
 			<Button
 				size="sm"
 				icon="lucide-video"
-				:label="__('Change video')"
-				:tooltip="__('Change video')"
+				:label="__('Edit preview video')"
+				:tooltip="__('Edit preview video')"
 				class="absolute end-2 top-2 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
 				@click="showVideoDialog = true"
 			/>

@@ -119,7 +119,7 @@ describe('the batch enroll card editor', () => {
 		expect(doc.video_link).toBe('https://youtu.be/x')
 	})
 
-	it('previews a set video above the button, with its change control on it', () => {
+	it('previews a set video above the button, with its edit control on it', () => {
 		const card = mountCard({
 			video_link: 'https://youtu.be/x',
 			meta_image: '/files/m.png',
@@ -129,9 +129,9 @@ describe('the batch enroll card editor', () => {
 			videoLink: 'https://youtu.be/x',
 			fallbackImage: '/files/m.png',
 		})
-		expect(card.text()).toContain('Change video')
+		expect(card.text()).toContain('Edit preview video')
 		expect(card.text()).not.toContain('Add preview video')
-		expect(card.text().indexOf('Change video')).toBeLessThan(
+		expect(card.text().indexOf('Edit preview video')).toBeLessThan(
 			card.text().indexOf('Contact the Administrator')
 		)
 	})
