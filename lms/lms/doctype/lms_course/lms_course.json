@@ -44,7 +44,7 @@
   "section_break_vqbh",
   "course_price",
   "currency",
-  "amount_usd",
+  "prices",
   "column_break_sflq",
   "evaluator",
   "timezone",
@@ -209,10 +209,11 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "If you set an amount here, then the USD equivalent setting will not get applied.",
-   "fieldname": "amount_usd",
-   "fieldtype": "Currency",
-   "label": "Amount (USD)"
+   "depends_on": "eval: doc.paid_course || doc.paid_certificate",
+   "fieldname": "prices",
+   "fieldtype": "Table",
+   "label": "Prices in Other Currencies",
+   "options": "LMS Price"
   },
   {
    "fieldname": "published_on",
@@ -362,7 +363,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-11-25 10:00:00.000000",
+ "modified": "2026-11-25 14:00:00.000000",
  "modified_by": "sayali@frappe.io",
  "module": "LMS",
  "name": "LMS Course",

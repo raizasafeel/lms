@@ -1,0 +1,60 @@
+{
+ "actions": [],
+ "creation": "2026-11-25 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "currency",
+  "price_type",
+  "amount",
+  "percent_off"
+ ],
+ "fields": [
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Currency",
+   "options": "Currency",
+   "reqd": 1
+  },
+  {
+   "default": "Fixed",
+   "fieldname": "price_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Price Type",
+   "options": "Fixed\nPercent Off",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.price_type=='Fixed'",
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "options": "currency"
+  },
+  {
+   "depends_on": "eval:doc.price_type=='Percent Off'",
+   "description": "Off the primary price, converted at the current exchange rate.",
+   "fieldname": "percent_off",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Percent Off"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-25 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "LMS",
+ "name": "LMS Price",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

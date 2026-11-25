@@ -76,11 +76,8 @@
 		"payment_section",
 		"payment_gateway",
 		"default_currency",
-		"exception_country",
 		"column_break_cfcv",
 		"apply_gst",
-		"show_usd_equivalent",
-		"apply_rounding",
 		"send_payment_reminders_for_batch",
 		"send_payment_reminders_for_course",
 		"no_payments_app",
@@ -221,9 +218,10 @@
 			"fieldtype": "Section Break"
 		},
 		{
+			"description": "New courses and batches are priced in it. USD when empty.",
 			"fieldname": "default_currency",
 			"fieldtype": "Link",
-			"label": "Default Currency",
+			"label": "Primary Currency",
 			"options": "Currency"
 		},
 		{
@@ -235,25 +233,6 @@
 			"fieldname": "apply_gst",
 			"fieldtype": "Check",
 			"label": "Apply GST for India"
-		},
-		{
-			"default": "0",
-			"fieldname": "show_usd_equivalent",
-			"fieldtype": "Check",
-			"label": "Show USD Equivalent"
-		},
-		{
-			"depends_on": "show_usd_equivalent",
-			"fieldname": "exception_country",
-			"fieldtype": "Table MultiSelect",
-			"label": "Primary Countries",
-			"options": "Payment Country"
-		},
-		{
-			"default": "0",
-			"fieldname": "apply_rounding",
-			"fieldtype": "Check",
-			"label": "Apply Rounding on Equivalent"
 		},
 		{
 			"fieldname": "batch_confirmation_template",
@@ -652,7 +631,7 @@
 	"index_web_pages_for_search": 1,
 	"issingle": 1,
 	"links": [],
-	"modified": "2026-10-26 16:30:00.000000",
+	"modified": "2026-11-25 14:00:00.000000",
 	"modified_by": "Administrator",
 	"module": "LMS",
 	"name": "LMS Settings",

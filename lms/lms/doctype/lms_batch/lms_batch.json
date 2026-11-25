@@ -69,7 +69,7 @@
   "column_break_iens",
   "amount",
   "currency",
-  "amount_usd",
+  "prices",
   "customisations_tab",
   "section_break_ubxi",
   "custom_component",
@@ -313,10 +313,10 @@
   },
   {
    "depends_on": "paid_batch",
-   "description": "If you set an amount here, then the USD equivalent setting will not get applied.",
-   "fieldname": "amount_usd",
-   "fieldtype": "Currency",
-   "label": "Amount (USD)"
+   "fieldname": "prices",
+   "fieldtype": "Table",
+   "label": "Prices in Other Currencies",
+   "options": "LMS Price"
   },
   {
    "default": "0",
@@ -479,7 +479,7 @@
    "link_fieldname": "payment_for_document"
   }
  ],
- "modified": "2026-11-25 12:00:00.000000",
+ "modified": "2026-11-25 14:00:00.000000",
  "modified_by": "sayali@frappe.io",
  "module": "LMS",
  "name": "LMS Batch",

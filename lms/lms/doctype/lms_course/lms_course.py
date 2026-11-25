@@ -13,6 +13,7 @@ from frappe.utils import cint, comma_and, escape_html, flt, today
 from lms.lms.doctype.course_lesson.course_lesson import get_valid_question_count
 from lms.lms.doctype.lms_certificate.lms_certificate import is_certificate_template
 from lms.lms.people import PeopleTable
+from lms.lms.pricing import get_primary_currency, validate_prices
 
 from ...utils import (
 	generate_slug,
@@ -45,6 +46,12 @@ ICON_NAME = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
 
 
 class LMSCourse(Document):
+	def before_insert(self):
+		# Frappe fills an unset currency with the system default; until it is paid, the
+		# primary currency is the better start.
+		if not (self.paid_course or self.paid_certificate):
+			self.currency = get_primary_currency()
+
 	def validate(self):
 		self.validate_published()
 		self.warn_quizzes_without_questions()
@@ -57,6 +64,7 @@ class LMSCourse(Document):
 		self.validate_certification()
 		self.validate_certificate_template()
 		self.validate_amount_and_currency()
+		validate_prices(self, self.currency)
 		validate_attachable_file(self, "image")
 		self.image = validate_image(self.image)
 		self.validate_card_gradient()

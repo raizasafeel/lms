@@ -57,6 +57,8 @@ READ_ONLY_ENDPOINTS = (
 	"lms.lms.api.get_payment_field_meta",
 	"lms.lms.api.get_payment_gateway_details",
 	"lms.lms.api.get_profile_details",
+	# Prices unsaved rows for the pricing editor, stores nothing.
+	"lms.lms.api.get_price_previews",
 	"lms.lms.api.get_programming_exercise",
 	"lms.lms.api.get_pwa_manifest",
 	"lms.lms.api.get_sidebar_settings",

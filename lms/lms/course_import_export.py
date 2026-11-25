@@ -13,6 +13,7 @@ from frappe import _
 from frappe.utils import escape_html, get_files_path, validate_email_address
 from frappe.utils.file_manager import is_safe_path
 
+from lms.lms.pricing import PRICE_FIELDS
 from lms.lms.utils import create_user as create_lms_user
 from lms.lms.utils import get_editorjs_blocks, has_moderator_role
 
@@ -684,7 +685,6 @@ def get_course_fields():
 		"paid_certificate",
 		"course_price",
 		"currency",
-		"amount_usd",
 		"enable_certification",
 	]
 
@@ -693,6 +693,8 @@ def add_data_to_course(course_doc, course_data):
 	for field in get_course_fields():
 		if field in course_data:
 			course_doc.set(field, course_data[field])
+	for row in course_data.get("prices") or []:
+		course_doc.append("prices", {field: row.get(field) for field in PRICE_FIELDS})
 
 
 def add_instructors_to_course(course_doc, course_data):

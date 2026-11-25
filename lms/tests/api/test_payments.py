@@ -131,10 +131,9 @@ class TestPaymentLink(BaseTestUtils):
 		)
 
 	def _buy_course_billed_to(self, billing_country, country):
-		for field, value in (("apply_gst", 1), ("show_usd_equivalent", 0)):
-			original = frappe.db.get_single_value("LMS Settings", field)
-			frappe.db.set_single_value("LMS Settings", field, value)
-			self.addCleanup(frappe.db.set_single_value, "LMS Settings", field, original)
+		original = frappe.db.get_single_value("LMS Settings", "apply_gst")
+		frappe.db.set_single_value("LMS Settings", "apply_gst", 1)
+		self.addCleanup(frappe.db.set_single_value, "LMS Settings", "apply_gst", original)
 
 		frappe.call(
 			payments_module.get_payment_link,
@@ -165,6 +164,34 @@ class TestPaymentLink(BaseTestUtils):
 		self.assertEqual(self.controller.get_payment_url_calls[0]["amount"], 500)
 		self.assertEqual(payment.amount_with_gst, 0)
 
+	def test_checkout_charges_the_price_for_the_billing_country(self):
+		"""A buyer billed in the United States pays the course's USD price in USD."""
+		self._add_price("USD", 25)
+		payment = self._buy_course_billed_to("United States", country="India")
+
+		call = self.controller.get_payment_url_calls[0]
+		self.assertEqual((call["amount"], call["currency"]), (25, "USD"))
+		self.assertEqual((payment.amount, payment.currency), (25, "USD"))
+
+	def test_checkout_without_a_price_for_the_country_charges_the_primary_price(self):
+		self._add_price("USD", 25)
+		payment = self._buy_course_billed_to("Nepal", country="United States")
+
+		self.assertEqual((payment.amount, payment.currency), (500, "INR"))
+
+	def _add_price(self, currency, amount):
+		frappe.get_doc(
+			{
+				"doctype": "LMS Price",
+				"parenttype": "LMS Course",
+				"parent": self.course.name,
+				"parentfield": "prices",
+				"currency": currency,
+				"price_type": "Fixed",
+				"amount": amount,
+			}
+		).db_insert()
+
 	def test_a_checkout_without_a_billing_country_is_refused(self):
 		"""Without one the price would follow an older address and the GST the
 		profile, which can disagree."""
@@ -180,10 +207,9 @@ class TestPaymentLink(BaseTestUtils):
 	def test_the_summary_takes_currency_and_gst_from_one_country(self):
 		"""A buyer billed in India whose profile says Nepal is charged INR, so GST
 		applies too. GST used to read the profile while the currency read the address."""
-		for field, value in (("apply_gst", 1), ("show_usd_equivalent", 0)):
-			original = frappe.db.get_single_value("LMS Settings", field)
-			frappe.db.set_single_value("LMS Settings", field, value)
-			self.addCleanup(frappe.db.set_single_value, "LMS Settings", field, original)
+		original = frappe.db.get_single_value("LMS Settings", "apply_gst")
+		frappe.db.set_single_value("LMS Settings", "apply_gst", 1)
+		self.addCleanup(frappe.db.set_single_value, "LMS Settings", "apply_gst", original)
 		buyer = self._create_user(
 			f"gst-buyer-{frappe.generate_hash(length=6)}@example.com", "Gst", "Buyer", ["LMS Student"]
 		)

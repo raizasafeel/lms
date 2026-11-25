@@ -28,6 +28,7 @@ from lms.lms.permissions import (
 	is_site_administrator,
 	owns,
 )
+from lms.lms.pricing import get_primary_currency, validate_prices
 from lms.lms.utils import (
 	delete_discussions,
 	format_timezone,
@@ -49,6 +50,12 @@ ZOOM_REQUEST_TIMEOUT_SECONDS = 30
 
 
 class LMSBatch(Document):
+	def before_insert(self):
+		# Frappe fills an unset currency with the system default; until it is paid, the
+		# primary currency is the better start.
+		if not self.paid_batch:
+			self.currency = get_primary_currency()
+
 	def validate(self):
 		self._validate_mandatory()
 		self.validate_added_assessments_and_courses()
@@ -61,6 +68,7 @@ class LMSBatch(Document):
 		self.validate_duplicate_instructors()
 		self.validate_payments_app()
 		self.validate_amount_and_currency()
+		validate_prices(self, self.currency)
 		self.validate_duplicate_assessments()
 		self.validate_timetable()
 		self.validate_evaluation_end_date()

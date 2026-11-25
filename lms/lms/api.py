@@ -88,6 +88,7 @@ from lms.lms.permissions import (
 	is_site_administrator,
 	stored_authors,
 )
+from lms.lms.pricing import get_price_preview, get_primary_currency
 from lms.lms.sidebar import LEGACY_VISIBILITY_FIELDS, ROW_FIELDS, get_sidebar_rows
 from lms.lms.utils import (
 	LMS_ROLES,
@@ -1506,6 +1507,14 @@ def search_currencies(
 	)
 
 
+@frappe.whitelist()
+@rate_limit(limit=120, seconds=60)
+def get_price_previews(amount: float, currency: str, prices: list) -> list:
+	"""What each row of a pricing editor charges, before the course or batch is saved."""
+	frappe.only_for(["Moderator", "Course Creator", "Batch Evaluator", "System Manager"])
+	return [get_price_preview(frappe._dict(row), flt(amount), currency) for row in prices]
+
+
 # nosemgrep: security.guest-whitelisted-method - pre-existing grant, unchanged by this branch; the endpoint gates itself (a guest on a site with allow_guest_access off gets a bare []). Flagged only because semgrep ci re-scans the whole function when its body changes.
 @frappe.whitelist(allow_guest=True)
 @guest_access_required(list)
@@ -2792,6 +2801,7 @@ def get_lms_settings():
 		settings[field] = frappe.get_cached_value("LMS Settings", None, field)
 
 	settings["is_payments_app_installed"] = "payments" in frappe.get_installed_apps()
+	settings["primary_currency"] = get_primary_currency()
 
 	return settings
 

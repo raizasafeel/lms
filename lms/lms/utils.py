@@ -52,6 +52,7 @@ from lms.lms.doctype.lms_enrollment.lms_enrollment import (
 from lms.lms.html_sanitizer import sanitize_rich_text
 from lms.lms.locking import locked_get_all
 from lms.lms.md import find_macros
+from lms.lms.pricing import get_price
 
 RE_SLUG_NOTALLOWED = re.compile("[^a-z0-9]+")
 LMS_ROLES = ["Moderator", "Course Creator", "Batch Evaluator", "LMS Student"]
@@ -1339,41 +1340,6 @@ def attach_file_to_doc(file_url: str, doctype: str, docname: str) -> None:
 	file.insert(ignore_permissions=True)
 
 
-def check_multicurrency(amount: float, currency: str, country: str = None, amount_usd: float = None):
-	settings = frappe.get_single("LMS Settings")
-	show_usd_equivalent = settings.show_usd_equivalent
-
-	# Countries for which currency should not be converted
-	exception_country = settings.exception_country
-	exception_country = [country.country for country in exception_country]
-
-	country = get_billing_country(country)
-
-	# If the country is the one for which conversion is not needed then return as is
-	if not country or (exception_country and country in exception_country):
-		return amount, currency
-
-	# If conversion is disabled from settings or the currency is already USD then return as is
-	if not show_usd_equivalent or currency == "USD":
-		return amount, currency
-
-	# If Explicit USD price is given then return that without conversion
-	if amount_usd and country and country not in exception_country:
-		return amount_usd, "USD"
-
-	# Conversion logic starts here. Exchange rate is fetched and amount is converted.
-	exchange_rate = get_current_exchange_rate(currency, "USD")
-	amount = flt(amount * exchange_rate, 2)
-	currency = "USD"
-
-	# Check if the amount should be rounded and then apply rounding
-	apply_rounding = settings.apply_rounding
-	if apply_rounding and amount % 100 != 0:
-		amount = amount + 100 - amount % 100
-
-	return rounded(amount), currency
-
-
 def get_billing_country(country: str | None = None) -> str | None:
 	"""The country a price and its tax are both worked out for: the one given, else
 	the buyer's latest billing address, else their profile, else their location."""
@@ -1405,14 +1371,6 @@ def apply_gst(amount: float, country: str = None) -> tuple:
 		amount += gst_applied
 
 	return amount, gst_applied
-
-
-def get_current_exchange_rate(source: str, target: str = "USD") -> float:
-	url = f"https://api.frankfurter.app/latest?from={source}&to={target}"
-
-	response = requests.request("GET", url)
-	details = response.json()
-	return details["rates"][target]
 
 
 SELF_SCOPED_FILTERS = ("created", "enrolled")
@@ -1670,8 +1628,8 @@ def get_course_card_details(courses: list) -> list:
 		course.instructors = get_public_instructors("LMS Course", course.name)
 
 		if course.paid_course and course.published == 1:
-			course.amount, course.currency = check_multicurrency(
-				course.course_price, course.currency, None, course.amount_usd
+			course.amount, course.currency = get_price(
+				"LMS Course", course.name, course.course_price, course.currency
 			)
 			course.price = fmt_money(course.amount, 0, course.currency)
 
@@ -1806,7 +1764,6 @@ def get_course_fields():
 		"paid_certificate",
 		"course_price",
 		"currency",
-		"amount_usd",
 		"enable_certification",
 		"lessons",
 		"enrollments",
@@ -1849,10 +1806,10 @@ def build_course_details(course: str) -> dict:
 	course_details.update(get_course_content_stats(course))
 	# course_details.is_instructor = is_instructor(course_details.name)
 	if course_details.paid_course or course_details.paid_certificate:
-		"""course_details.course_price, course_details.currency = check_multicurrency(
-				course_details.course_price, course_details.currency, None, course_details.amount_usd
-		)"""
-		course_details.price = fmt_money(course_details.course_price, 0, course_details.currency)
+		amount, currency = get_price(
+			"LMS Course", course_details.name, course_details.course_price, course_details.currency
+		)
+		course_details.price = fmt_money(amount, 0, currency)
 
 	if frappe.session.user == "Guest":
 		course_details.is_instructor = False
@@ -2412,7 +2369,6 @@ def build_batch_details(batch: str) -> dict:
 			"seat_count",
 			"published",
 			"amount",
-			"amount_usd",
 			"currency",
 			"paid_batch",
 			"evaluation_end_date",
@@ -2466,8 +2422,8 @@ def build_batch_details(batch: str) -> dict:
 	if batch_details.paid_batch and (
 		batch_details.start_date >= getdate() or batch_details.accept_enrollments
 	):
-		batch_details.amount, batch_details.currency = check_multicurrency(
-			batch_details.amount, batch_details.currency, None, batch_details.amount_usd
+		batch_details.amount, batch_details.currency = get_price(
+			"LMS Batch", batch_details.name, batch_details.amount, batch_details.currency
 		)
 		batch_details.price = fmt_money(batch_details.amount, 0, batch_details.currency)
 
@@ -3178,9 +3134,7 @@ def get_order_summary(doctype: str, docname: str, coupon: str | None = None, cou
 	# Resolved once, so the currency and the GST cannot follow different countries.
 	country = get_billing_country(country)
 
-	details.amount, details.currency = check_multicurrency(
-		details.amount, details.currency, country, details.amount_usd
-	)
+	details.amount, details.currency = get_price(doctype, docname, details.amount, details.currency, country)
 
 	details.original_amount = details.amount
 	details.original_amount_formatted = fmt_money(details.amount, 0, details.currency)
@@ -3205,7 +3159,6 @@ def get_paid_course_details(docname: str) -> dict:
 			"paid_certificate",
 			"course_price as amount",
 			"currency",
-			"amount_usd",
 		],
 		as_dict=True,
 	)
@@ -3223,7 +3176,7 @@ def get_paid_batch_details(docname: str) -> dict:
 	details = frappe.db.get_value(
 		"LMS Batch",
 		docname,
-		["title", "name", "paid_batch", "amount", "currency", "amount_usd"],
+		["title", "name", "paid_batch", "amount", "currency"],
 		as_dict=True,
 	)
 
@@ -4005,7 +3958,6 @@ def get_batches(
 			"seat_count",
 			"paid_batch",
 			"amount",
-			"amount_usd",
 			"currency",
 			"start_date",
 			"end_date",
@@ -4154,9 +4106,7 @@ def get_batch_card_details(batches: list) -> list:
 
 		set_late_enrollment(batch)
 		if batch.paid_batch and (batch.start_date >= getdate() or batch.get("enrollment_closes_on")):
-			batch.amount, batch.currency = check_multicurrency(
-				batch.amount, batch.currency, None, batch.amount_usd
-			)
+			batch.amount, batch.currency = get_price("LMS Batch", batch.name, batch.amount, batch.currency)
 			batch.price = fmt_money(batch.amount, 0, batch.currency)
 
 	return batches
