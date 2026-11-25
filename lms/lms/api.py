@@ -1340,7 +1340,11 @@ def get_certified_participants(
 	if limit_start is not None:
 		start = cint(limit_start)
 	query = get_certification_query(filters)
-	query = query.orderby("issue_date", order=frappe.qb.desc).offset(start).limit(page_length)
+	# A bare "issue_date" resolves to one arbitrary certificate per member, not the newest.
+	Certificate = frappe.qb.DocType("LMS Certificate")
+	query = (
+		query.orderby(fn.Max(Certificate.issue_date), order=frappe.qb.desc).offset(start).limit(page_length)
+	)
 	participants = query.run(as_dict=True)
 	return [get_certified_participant_details(participant.member) for participant in participants]
 
@@ -1419,22 +1423,22 @@ def get_count_of_certified_members(filters: dict = None):
 
 @frappe.whitelist()
 def get_certification_categories():
+	"""Course or batch titles of published certificates, trimmed, non-empty and unique ignoring case."""
 	categories = []
 	seen = set()
 	docs = frappe.get_all(
 		"LMS Certificate",
-		filters={
-			"published": 1,
-		},
+		filters={"published": 1},
 		fields=["course_title", "batch_title"],
 	)
 
 	for doc in docs:
-		category = doc.course_title if doc.course_title else doc.batch_title
-		if not category or category in seen:
+		category = cstr(doc.course_title or doc.batch_title).strip()
+		key = " ".join(category.split()).casefold()
+		if not key or key in seen:
 			continue
 
-		seen.add(category)
+		seen.add(key)
 		categories.append({"label": category, "value": category})
 	return categories
 

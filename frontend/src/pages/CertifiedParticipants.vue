@@ -7,7 +7,7 @@
 		:has-next-page="participants.hasNextPage"
 		row-key="key"
 		v-model:page-length="pageLength"
-		:empty-name="__('Certified Members')"
+		:empty-name="__('Certified members')"
 		empty-icon="lucide-badge-check"
 		:empty-title="emptyState?.title"
 		:empty-description="emptyState?.description"
@@ -27,44 +27,83 @@
 				<template #prefix>
 					<span class="lucide-graduation-cap size-4" />
 				</template>
-				{{ __('Get Certified') }}
+				{{ __('Get certified') }}
 			</Button>
 		</template>
 
-		<template #name>
-			{{ __('All certified members') }}
-			<span class="ms-1 text-ink-gray-6">{{ memberCount }}</span>
-		</template>
+		<template #toolbar>
+			<div class="space-y-3 px-5 pb-5 pt-4">
+				<div class="flex items-center gap-2">
+					<FormControl
+						v-model="nameFilter"
+						type="text"
+						class="w-full max-w-sm"
+						:placeholder="__('Search members')"
+						:aria-label="__('Search members')"
+					>
+						<template #prefix>
+							<span class="lucide-search size-4 text-ink-gray-5" />
+						</template>
+					</FormControl>
+					<span class="flex-1" />
+					<Button
+						:variant="openToWork ? 'outline' : 'subtle'"
+						:aria-pressed="openToWork"
+						data-testid="open-to-work"
+						@click="setOpenToWork(!openToWork)"
+					>
+						<template #prefix>
+							<span class="lucide-briefcase size-4" />
+						</template>
+						{{ __('Open to work') }}
+					</Button>
+					<Button
+						:variant="hiring ? 'outline' : 'subtle'"
+						:aria-pressed="hiring"
+						data-testid="hiring"
+						@click="setHiring(!hiring)"
+					>
+						<template #prefix>
+							<span class="lucide-megaphone size-4" />
+						</template>
+						{{ __('Hiring') }}
+					</Button>
+				</div>
 
-		<template #filters>
-			<FormControl
-				v-model="nameFilter"
-				:placeholder="__('Search')"
-				:aria-label="__('Search')"
-				type="text"
-			>
-				<template #prefix>
-					<span class="lucide-search size-4 text-ink-gray-5" />
-				</template>
-			</FormControl>
-			<ClearableCombobox
-				v-if="categories.data?.length"
-				v-model="currentCategory"
-				:options="categories.data.filter((c) => c.value)"
-				:placeholder="__('Category')"
-				:ariaLabel="__('Category')"
-				@update:modelValue="updateParticipants()"
-			/>
-			<ToggleFilter
-				:modelValue="openToWork"
-				:label="__('Open to Work')"
-				@update:modelValue="setOpenToWork"
-			/>
-			<ToggleFilter
-				:modelValue="hiring"
-				:label="__('Hiring')"
-				@update:modelValue="setHiring"
-			/>
+				<div
+					v-if="categoryOptions.length"
+					ref="categoryRow"
+					class="flex gap-2 overflow-x-auto pb-2"
+					role="group"
+					:aria-label="__('Category')"
+				>
+					<button
+						v-for="option in [allCategories, ...categoryOptions]"
+						:key="option.value"
+						type="button"
+						class="max-w-64 shrink-0 truncate rounded-4 border px-2.5 py-1 text-p-sm outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-outline-gray-3"
+						:class="
+							currentCategory === option.value
+								? 'border-transparent bg-surface-gray-2 text-ink-gray-9'
+								: 'border-outline-gray-2 text-ink-gray-7 hover:border-outline-gray-3'
+						"
+						:aria-pressed="currentCategory === option.value"
+						:data-testid="'category-' + option.label"
+						:title="option.label"
+						@click="setCategory(option.value)"
+					>
+						{{ option.label }}
+					</button>
+				</div>
+
+				<p class="text-p-sm text-ink-gray-6" data-testid="member-count">
+					{{
+						memberCount === 1
+							? __('1 certified member')
+							: __('{0} certified members').format(memberCount)
+					}}
+				</p>
+			</div>
 		</template>
 
 		<template #card="{ row }">
@@ -91,18 +130,10 @@
 					/>
 				</div>
 				<div class="flex items-center gap-2.5 px-2 pb-1.5 pt-3">
-					<Avatar :label="row.full_name" :image="row.user_image" size="lg" />
+					<UserAvatar :user="row" size="2xl" />
 					<div class="min-w-0 flex-1">
-						<div class="flex items-center gap-2">
-							<div class="min-w-0 truncate text-base-semibold text-ink-gray-9">
-								{{ row.full_name }}
-							</div>
-							<Badge
-								v-if="OPEN_TO_BADGES[row.open_to]"
-								class="ms-auto shrink-0"
-								:theme="OPEN_TO_BADGES[row.open_to].theme"
-								:label="OPEN_TO_BADGES[row.open_to].label"
-							/>
+						<div class="truncate text-base-semibold text-ink-gray-9">
+							{{ row.full_name }}
 						</div>
 						<div
 							class="truncate text-p-sm text-ink-gray-6"
@@ -121,17 +152,13 @@
 </template>
 <script setup>
 import {
-	Avatar,
-	Badge,
 	Button,
 	call,
 	createListResource,
 	FormControl,
 	usePageMeta,
 } from 'frappe-ui'
-import ClearableCombobox from '@/components/Controls/ClearableCombobox.vue'
-import ToggleFilter from '@/components/Controls/ToggleFilter.vue'
-import { computed, inject, onMounted, ref, watch } from 'vue'
+import { computed, inject, nextTick, onMounted, ref, watch } from 'vue'
 import { sessionStore } from '../stores/session'
 import { useRouter } from 'vue-router'
 import { setFormSource } from '@/composables/formTracking'
@@ -140,6 +167,7 @@ import ListPage from '@/components/Layouts/pages/ListPage.vue'
 import EmptyStateActions from '@/components/EmptyStateActions.vue'
 import { profileRoute } from '@/utils/routes'
 import { timeAgo } from '@/utils/format'
+import UserAvatar from '@/components/UserAvatar.vue'
 
 const filters = ref({})
 const currentCategory = ref('')
@@ -151,12 +179,6 @@ const memberCount = ref(0)
 const user = inject('$user')
 const router = useRouter()
 const playingCard = ref(null)
-
-/** One badge per value of the User `open_to` field. */
-const OPEN_TO_BADGES = {
-	Work: { label: __('Open to work'), theme: 'green' },
-	Hiring: { label: __('Hiring'), theme: 'blue' },
-}
 
 const HEADLINE_WORDS = 3
 
@@ -241,6 +263,11 @@ const setOpenToWork = (value) => {
 	updateParticipants()
 }
 
+const setCategory = (value) => {
+	currentCategory.value = value
+	updateParticipants()
+}
+
 const setHiring = (value) => {
 	hiring.value = value
 	updateParticipants()
@@ -251,10 +278,21 @@ const categories = createListResource({
 	url: 'lms.lms.api.get_certification_categories',
 	cache: ['certification_categories'],
 	auto: user.data ? true : false,
-	transform(data) {
-		data.unshift({ label: __(' '), value: ' ' })
-		return data
-	},
+})
+
+const allCategories = { label: __('All'), value: '' }
+const categoryOptions = computed(() =>
+	(categories.data || []).filter((category) => category.value?.trim())
+)
+
+const categoryRow = ref(null)
+
+// A category picked from the URL may sit past the row's visible end.
+watch([categoryOptions, currentCategory], async () => {
+	await nextTick()
+	categoryRow.value
+		?.querySelector('[aria-pressed="true"]')
+		?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
 })
 
 const updateParticipants = () => {
@@ -327,14 +365,14 @@ const setFiltersFromQuery = () => {
 
 const breadcrumbs = computed(() => [
 	{
-		label: __('Certified Members'),
+		label: __('Certified members'),
 		route: { name: 'CertifiedParticipants' },
 	},
 ])
 
 usePageMeta(() => {
 	return {
-		title: __('Certified Members'),
+		title: __('Certified members'),
 		icon: brand.favicon,
 	}
 })

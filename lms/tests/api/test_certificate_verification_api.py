@@ -5,7 +5,12 @@ from frappe.utils import add_days, nowdate
 from frappe.website.path_resolver import resolve_redirect
 from werkzeug.exceptions import HTTPException
 
-from lms.lms.api import download_certificate_pdf, get_certificate, get_certified_participants
+from lms.lms.api import (
+	download_certificate_pdf,
+	get_certificate,
+	get_certification_categories,
+	get_certified_participants,
+)
 from lms.lms.certificate_verification import redirect_raw_certificate_prints
 from lms.lms.test_helpers import BaseTestUtils
 from lms.lms.utils import get_lms_route
@@ -186,6 +191,47 @@ class TestCertifiedParticipantsCertificate(CertificateVerificationFixture):
 	def test_the_card_carries_the_open_to_status(self):
 		frappe.db.set_value("User", self.member.name, "open_to", "Hiring")
 		self.assertEqual(self.find_member_row()["open_to"], "Hiring")
+
+	def test_members_come_by_their_newest_certificate(self):
+		self.set_certificate(issue_date="2020-01-01")
+		course = self._create_course(
+			title=f"Verify Order {frappe.generate_hash(length=6)}", instructor=self.author.name
+		)
+		self._create_enrollment(self.member.name, course.name)
+		newest = self._create_certificate(course.name, self.member.name)
+		frappe.db.set_value("LMS Certificate", newest.name, "issue_date", "2022-01-01")
+		rival = self._create_user(
+			f"verify-rival-{frappe.generate_hash(length=6).lower()}@example.com",
+			"Maya",
+			"Fernhill",
+			["LMS Student"],
+		)
+		self._create_enrollment(rival.name, self.course.name)
+		rival_certificate = self._create_certificate(self.course.name, rival.name)
+		frappe.db.set_value("LMS Certificate", rival_certificate.name, "issue_date", "2021-06-01")
+
+		usernames = [
+			row["username"]
+			for row in get_certified_participants(
+				filters={"member_name": ["like", "%Maya Fern%"]}, page_length=500
+			)
+		]
+		self.assertLess(usernames.index(self.member.username), usernames.index(rival.username))
+
+	def test_categories_are_trimmed_non_empty_and_unique(self):
+		tag = frappe.generate_hash(length=6)
+		self.set_certificate(course_title=f"  Verify Dup {tag}  ")
+		for title in (f"verify  DUP {tag}", "   "):
+			course = self._create_course(
+				title=f"Verify Category {frappe.generate_hash(length=6)}", instructor=self.author.name
+			)
+			self._create_enrollment(self.member.name, course.name)
+			certificate = self._create_certificate(course.name, self.member.name)
+			frappe.db.set_value("LMS Certificate", certificate.name, "course_title", title)
+
+		labels = [category["label"] for category in get_certification_categories()]
+		self.assertTrue(all(label and label == label.strip() for label in labels))
+		self.assertEqual(len([label for label in labels if tag.casefold() in label.casefold()]), 1)
 
 	def test_certificates_come_latest_first(self):
 		self.set_certificate(issue_date="2020-01-01")

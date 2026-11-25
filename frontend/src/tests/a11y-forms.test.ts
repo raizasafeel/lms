@@ -133,7 +133,6 @@ const FILTERS: Array<[string, string, string]> = [
 	['components/Programs/ProgramProgressSummary.vue', 'FormControl', 'Search'],
 	['pages/Courses/Courses.vue', 'FormControl', 'Search courses'],
 	['pages/Batches/Batches.vue', 'FormControl', 'Search batches'],
-	['pages/CertifiedParticipants.vue', 'ClearableCombobox', 'Category'],
 ]
 
 describe('placeholder-only filters', () => {

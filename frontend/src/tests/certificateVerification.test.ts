@@ -20,8 +20,10 @@ vi.mock('@vueuse/core', async (importOriginal) => ({
 vi.mock('frappe-ui', () => ({
 	Avatar: {
 		props: ['label'],
-		template: '<span data-avatar>{{ label }}</span>',
+		template:
+			'<span data-avatar>{{ label }}<span data-indicator v-if="$slots.indicator"><slot name="indicator" /></span></span>',
 	},
+	Tooltip: { props: ['text'], template: '<span><slot /></span>' },
 	Badge: {
 		props: ['label', 'theme'],
 		template:
@@ -52,7 +54,12 @@ vi.mock('frappe-ui', () => ({
 			reload: () => {},
 		}),
 	call: () => Promise.resolve(1063),
-	FormControl: { template: '<input />' },
+	FormControl: {
+		props: ['modelValue'],
+		emits: ['update:modelValue'],
+		template:
+			'<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+	},
 	usePageMeta: vi.fn(),
 	toast: { success: vi.fn(), error: vi.fn() },
 }))
@@ -61,7 +68,7 @@ vi.mock('@/components/Layouts/pages/ListPage.vue', () => ({
 	default: {
 		props: ['rows'],
 		template:
-			'<div><h1><slot name="name" /></h1><div v-for="row in rows" :key="row.key" data-card><slot name="card" :row="row" /></div></div>',
+			'<div><slot name="toolbar" /><div v-for="row in rows" :key="row.key" data-card><slot name="card" :row="row" /></div></div>',
 	},
 }))
 vi.mock('@/components/Layouts/pages/PageHeader.vue', () => ({
@@ -302,6 +309,13 @@ describe('ProfileCertificates', () => {
 })
 
 describe('CertifiedParticipants', () => {
+	beforeEach(() => {
+		window.history.replaceState({}, '', '/lms/certified-participants')
+		delete resources['lms.lms.api.get_certification_categories']
+		// jsdom has no layout, so no scrollIntoView.
+		Element.prototype.scrollIntoView = vi.fn()
+	})
+
 	const member = (values: Record<string, unknown>) => ({
 		full_name: 'Rashid Shaikh',
 		username: 'rashid',
@@ -339,10 +353,59 @@ describe('CertifiedParticipants', () => {
 		return wrapper
 	}
 
-	it('heads the grid with the member count', async () => {
+	it('counts the members under the filters', async () => {
 		const wrapper = await mountMembers([member({})])
-		expect(wrapper.find('h1').text()).toBe('All certified members 1063')
+		expect(wrapper.find('[data-testid="member-count"]').text()).toBe(
+			'1063 certified members'
+		)
 	})
+
+	it('filters by category chip, with All selected by default', async () => {
+		resources['lms.lms.api.get_certification_categories'] = {
+			data: [{ label: 'ERPNext', value: 'ERPNext' }],
+			error: null,
+		}
+		const wrapper = await mountMembers([member({})])
+		const all = wrapper.find('[data-testid="category-All"]')
+		const erpnext = wrapper.find('[data-testid="category-ERPNext"]')
+		expect(all.attributes('aria-pressed')).toBe('true')
+		await erpnext.trigger('click')
+		await flushPromises()
+		expect(erpnext.attributes('aria-pressed')).toBe('true')
+		expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
+		expect(all.attributes('aria-pressed')).toBe('false')
+		expect(window.location.search).toContain('category=ERPNext')
+		await all.trigger('click')
+		expect(window.location.search).not.toContain('category')
+	})
+
+	it('never shows an empty category chip', async () => {
+		resources['lms.lms.api.get_certification_categories'] = {
+			data: [
+				{ label: ' ', value: ' ' },
+				{ label: '', value: '' },
+				{ label: 'ERPNext', value: 'ERPNext' },
+			],
+			error: null,
+		}
+		const wrapper = await mountMembers([member({})])
+		const chips = wrapper.findAll('[role="group"] button')
+		expect(chips.map((chip) => chip.text())).toEqual(['All', 'ERPNext'])
+	})
+
+	it.each(['open-to-work', 'hiring'])(
+		'toggles the %s filter as a pressed button',
+		async (testid) => {
+			const wrapper = await mountMembers([member({})])
+			const toggle = wrapper.find(`[data-testid="${testid}"]`)
+			expect(toggle.attributes('aria-pressed')).toBe('false')
+			await toggle.trigger('click')
+			expect(toggle.attributes('aria-pressed')).toBe('true')
+			expect(window.location.search).toContain(`${testid}=true`)
+			await toggle.trigger('click')
+			expect(toggle.attributes('aria-pressed')).toBe('false')
+		}
+	)
 
 	it('shows the member over their certificate stack and links to their profile', async () => {
 		const wrapper = await mountMembers([
@@ -353,7 +416,6 @@ describe('CertifiedParticipants', () => {
 		expect(card.findAll('[data-sheet]')).toHaveLength(2)
 		expect(card.text()).toContain('Rashid Shaikh')
 		expect(card.text()).toContain('Frappe developer')
-		expect(card.find('[data-badge]').exists()).toBe(false)
 		expect(card.findComponent(RouterLinkStub).props('to')).toEqual({
 			name: 'ProfileAbout',
 			params: { username: 'rashid' },
@@ -381,13 +443,23 @@ describe('CertifiedParticipants', () => {
 	})
 
 	it.each([
-		['Work', 'Open to work', 'green'],
-		['Hiring', 'Hiring', 'blue'],
-	])('badges a member open to %s', async (openTo, label, theme) => {
-		const wrapper = await mountMembers([member({ open_to: openTo })])
-		const badge = wrapper.find('[data-card] [data-badge]')
-		expect(badge.text()).toBe(label)
-		expect(badge.attributes('data-theme')).toBe(theme)
+		['Work', 'Open to Work'],
+		['Hiring', 'Hiring'],
+	])(
+		'marks a member open to %s with a dot on the avatar',
+		async (openTo, label) => {
+			const wrapper = await mountMembers([member({ open_to: openTo })])
+			expect(
+				wrapper
+					.find('[data-card] [data-indicator] [role="img"]')
+					.attributes('aria-label')
+			).toBe(label)
+		}
+	)
+
+	it('shows no status dot without an open_to value', async () => {
+		const wrapper = await mountMembers([member({})])
+		expect(wrapper.find('[data-card] [data-indicator]').exists()).toBe(false)
 	})
 
 	it('plays the stack while the card is hovered or focused', async () => {

@@ -28,15 +28,19 @@ describe('UserAvatar indicator', () => {
 	// Guards: open-to-work and hiring told apart by colour alone. Introduced in
 	// #2468; test added with the a11y audit remediation.
 	it.each([
-		['Work', 'Open to Work', 'lucide-badge-check'],
+		['Work', 'Open to Work', 'lucide-check'],
 		['Hiring', 'Hiring', 'lucide-briefcase'],
 	])(
 		'names the %s chip in text and shape, not colour',
 		(openTo, label, icon) => {
 			const wrapper = indicator(openTo)
 
-			expect(wrapper.get('.sr-only').text()).toBe(label)
+			expect(wrapper.get('[role="img"]').attributes('aria-label')).toBe(label)
 			expect(wrapper.get(`.${icon}`).attributes('aria-hidden')).toBe('true')
 		}
 	)
+
+	it('draws no dot without a status', () => {
+		expect(indicator('').find('[role="img"]').exists()).toBe(false)
+	})
 })
