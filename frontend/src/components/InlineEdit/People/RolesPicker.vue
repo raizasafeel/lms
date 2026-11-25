@@ -3,7 +3,7 @@
 		:modelValue="roles"
 		:options="options"
 		:hideSearch="true"
-		variant="ghost"
+		variant="outline"
 		size="sm"
 		class="w-52"
 		:aria-label="__('Roles of {0}').format(name)"
