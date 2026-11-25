@@ -1,6 +1,7 @@
 import { call, toast } from 'frappe-ui'
 import type { FrappeResourceError } from 'frappe-ui'
 import { computed, provide, reactive, ref, toRaw } from 'vue'
+import type { ComputedRef } from 'vue'
 import { cleanError } from '@/utils'
 import { missingBatchFields } from '@/utils/batchForm'
 import { sanitizeStringFields } from '@/utils/sanitizeOnWrite'
@@ -15,6 +16,8 @@ import type { LMSBatch } from '@/types/lms/LMSBatch'
 
 export interface BatchDraft extends BatchForm {
 	draft: NonNullable<BatchForm['draft']>
+	/** Anything typed since the page opened, until the batch is created. */
+	hasEdits: ComputedRef<boolean>
 }
 
 function blankBatch(): Partial<LMSBatch> {
@@ -70,6 +73,20 @@ export function useBatchDraft(onCreated: (name: string) => void): BatchDraft {
 	const courses = ref<string[]>([])
 	const assessments = ref<BatchAssessment[]>([])
 	const saving = ref<boolean>(false)
+	const created = ref<boolean>(false)
+
+	const snapshot = (): string =>
+		JSON.stringify([
+			doc,
+			instructors.value,
+			meta,
+			courses.value,
+			assessments.value,
+		])
+	const pristine = snapshot()
+	const hasEdits = computed<boolean>(
+		() => !created.value && snapshot() !== pristine
+	)
 
 	const missingFields = computed(() =>
 		missingBatchFields({ doc, instructors: instructors.value })
@@ -95,21 +112,25 @@ export function useBatchDraft(onCreated: (name: string) => void): BatchDraft {
 				],
 			})
 		}
+		created.value = true
 		onCreated(batch.name)
 	}
 
-	function submitBatch(): void {
-		if (saving.value || !rings.checkRequired()) return
+	async function submitBatch(): Promise<boolean> {
+		if (saving.value || !rings.checkRequired()) return false
 		saving.value = true
-		create()
-			.catch((error: FrappeResourceError) => {
-				toast.error(
-					cleanError(error.messages?.[0]) || __('Could not create the batch')
-				)
-			})
-			.finally(() => {
-				saving.value = false
-			})
+		try {
+			await create()
+			return true
+		} catch (error) {
+			toast.error(
+				cleanError((error as FrappeResourceError).messages?.[0]) ||
+					__('Could not create the batch')
+			)
+			return false
+		} finally {
+			saving.value = false
+		}
 	}
 
 	const form: BatchDraft = {
@@ -133,6 +154,7 @@ export function useBatchDraft(onCreated: (name: string) => void): BatchDraft {
 		submitBatch,
 		isSaving: computed(() => saving.value),
 		draft: { courses, assessments },
+		hasEdits,
 	}
 	provide(BATCH_FORM, form)
 	return form

@@ -137,6 +137,38 @@ describe('the batch inline form', () => {
 		form.submitBatch()
 		expect(state.resource.setValue.submit).toHaveBeenCalledTimes(1)
 	})
+
+	it('resolves true once a save succeeds, for Save and leave', async () => {
+		const form = await mountForm()
+		state.resource.setValue.submit.mockImplementationOnce(
+			(_values: unknown, options: { onSuccess: (doc: unknown) => void }) => {
+				options.onSuccess({ name: 'B1' })
+				return Promise.resolve()
+			}
+		)
+		form.doc.value!.title = 'Summer batch'
+		expect(await form.submitBatch()).toBe(true)
+	})
+
+	it('resolves false when the save fails', async () => {
+		const form = await mountForm()
+		const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+		state.resource.setValue.submit.mockImplementationOnce(
+			(_values: unknown, options: { onError: (error: unknown) => void }) => {
+				options.onError({ messages: ['Conflict'] })
+				return Promise.resolve()
+			}
+		)
+		form.doc.value!.title = 'Summer batch'
+		expect(await form.submitBatch()).toBe(false)
+		logged.mockRestore()
+	})
+
+	it('has nothing to send when nothing changed', async () => {
+		const form = await mountForm()
+		expect(await form.submitBatch()).toBe(true)
+		expect(state.resource.setValue.submit).not.toHaveBeenCalled()
+	})
 })
 
 describe('missing batch fields', () => {

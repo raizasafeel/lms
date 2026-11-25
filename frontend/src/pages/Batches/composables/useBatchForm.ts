@@ -59,7 +59,8 @@ export interface BatchForm {
 	isMissing: (key: string) => boolean
 	saveTooltip: ComputedRef<string>
 	previewRequired: (on: boolean) => void
-	submitBatch: () => void
+	/** Resolves true once the batch is saved or had nothing to save. */
+	submitBatch: () => Promise<boolean>
 	isSaving: ComputedRef<boolean>
 	/** Set only before a new batch's first save: what to create with it. */
 	draft?: {
@@ -248,8 +249,9 @@ export function useBatchForm(
 		Boolean(resource.value.setValue.loading)
 	)
 
-	function submitBatch(): void {
-		if (!isSaving.value && checkRequired()) updateBatch()
+	async function submitBatch(): Promise<boolean> {
+		if (isSaving.value || !checkRequired()) return false
+		return isDirty.value ? updateBatch() : true
 	}
 
 	function payload(): Record<string, unknown> {
@@ -260,11 +262,13 @@ export function useBatchForm(
 		return fields
 	}
 
-	function updateBatch(): void {
-		if (!doc.value) return
+	async function updateBatch(): Promise<boolean> {
+		if (!doc.value) return false
 		const metaChanged = isMetaDirty.value
-		submitResource<LMSBatch>(resource.value.setValue, payload(), {
+		let isSaved = false
+		await submitResource<LMSBatch>(resource.value.setValue, payload(), {
 			onSuccess(saved) {
+				isSaved = true
 				if (metaChanged) {
 					saveMeta(saved.name)
 					savedMeta.value = JSON.stringify(meta)
@@ -276,6 +280,7 @@ export function useBatchForm(
 				reportAutosaveError(error)
 			},
 		})
+		return isSaved
 	}
 
 	const form: BatchForm = {

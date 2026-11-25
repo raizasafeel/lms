@@ -1,7 +1,7 @@
 import { call, toast } from 'frappe-ui'
 import type { FrappeResourceError } from 'frappe-ui'
 import { computed, provide, reactive, ref, toRaw } from 'vue'
-import type { Ref } from 'vue'
+import type { ComputedRef, Ref } from 'vue'
 import type { CourseForm } from '@/composables/useCourseForm'
 import { cleanError, updateMetaInfo } from '@/utils'
 import { joinLabels, missingCourseFields } from '@/utils/courseForm'
@@ -17,6 +17,8 @@ export interface DraftChapter {
 
 export interface CourseDraft extends CourseForm {
 	draftChapters: Ref<DraftChapter[]>
+	/** Anything typed since the page opened, until the course is created. */
+	hasEdits: ComputedRef<boolean>
 }
 
 const hasTitle = (title: string): boolean => Boolean(title.trim())
@@ -81,6 +83,20 @@ export function useCourseDraft(
 	const meta = reactive<CourseFormMeta>({ description: '', keywords: '' })
 	const draftChapters = ref<DraftChapter[]>([{ title: '', lessons: [''] }])
 	const showRequired = ref<boolean>(false)
+	const created = ref<boolean>(false)
+
+	const snapshot = (): string =>
+		JSON.stringify([
+			resource.doc,
+			instructors.value,
+			relatedCourses.value,
+			meta,
+			draftChapters.value,
+		])
+	const pristine = snapshot()
+	const hasEdits = computed<boolean>(
+		() => !created.value && snapshot() !== pristine
+	)
 
 	const missingFields = computed(() =>
 		missingCourseFields({
@@ -110,11 +126,12 @@ export function useCourseDraft(
 		await createOutline(course.name, draftChapters.value).catch(() =>
 			toast.error(__('The course was created, but some chapters were not.'))
 		)
+		created.value = true
 		onCreated(course.name)
 	}
 
-	function submitCourse(): void {
-		if (saving.value) return
+	async function submitCourse(): Promise<boolean> {
+		if (saving.value) return false
 		if (missingFields.value.length) {
 			showRequired.value = true
 			toast.error(
@@ -122,18 +139,21 @@ export function useCourseDraft(
 					joinLabels(missingFields.value.map((f) => f.label))
 				)
 			)
-			return
+			return false
 		}
 		saving.value = true
-		create()
-			.catch((error: FrappeResourceError) => {
-				toast.error(
-					cleanError(error.messages?.[0]) || __('Could not create the course')
-				)
-			})
-			.finally(() => {
-				saving.value = false
-			})
+		try {
+			await create()
+			return true
+		} catch (error) {
+			toast.error(
+				cleanError((error as FrappeResourceError).messages?.[0]) ||
+					__('Could not create the course')
+			)
+			return false
+		} finally {
+			saving.value = false
+		}
 	}
 
 	const form: CourseDraft = {
@@ -150,8 +170,10 @@ export function useCourseDraft(
 		showRequired,
 		missingFields,
 		isMissing,
+		isSaving: () => saving.value,
 		submitCourse,
 		draftChapters,
+		hasEdits,
 	}
 	provide('courseForm', form)
 	return form

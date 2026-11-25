@@ -5,7 +5,7 @@ import type { ComputedRef, Ref } from 'vue'
 import { getMetaInfo, updateMetaInfo } from '@/utils'
 import { joinLabels, missingCourseFields } from '@/utils/courseForm'
 import type { MissingField } from '@/utils/courseForm'
-import { reportAutosaveError } from '@/utils/resource'
+import { reportAutosaveError, submitResource } from '@/utils/resource'
 import {
 	membersWith,
 	withMembers,
@@ -35,7 +35,9 @@ export interface CourseForm extends CourseFormContext {
 	showRequired: Ref<boolean>
 	missingFields: ComputedRef<MissingField[]>
 	isMissing: (key: string) => boolean
-	submitCourse: () => void
+	isSaving: () => boolean
+	/** Resolves true once the course is saved or had nothing to save. */
+	submitCourse: () => Promise<boolean>
 }
 
 /**
@@ -117,8 +119,10 @@ export function useCourseForm(
 		isDirty.value = true
 	}
 
-	function submitCourse(): void {
-		if (resource.setValue.loading) return
+	const isSaving = (): boolean => Boolean(resource.setValue.loading)
+
+	async function submitCourse(): Promise<boolean> {
+		if (isSaving()) return false
 		const missing = missingFields.value
 		if (missing.length) {
 			showRequired.value = true
@@ -127,17 +131,19 @@ export function useCourseForm(
 					joinLabels(missing.map((f) => f.label))
 				)
 			)
-			return
+			return false
 		}
-		if (isDirty.value) updateCourse()
+		return isDirty.value ? updateCourse() : true
 	}
 
 	// Whole-doc last-write-wins: a stale `modified` would trip Frappe's
 	// timestamp guard after a publish toggle or lesson autosave.
-	function updateCourse(): void {
+	async function updateCourse(): Promise<boolean> {
 		const fields: Record<string, unknown> = { ...resource.doc }
 		delete fields.modified
-		resource.setValue.submit(
+		let saved = false
+		await submitResource(
+			resource.setValue,
 			{
 				...fields,
 				people: people.value,
@@ -146,6 +152,7 @@ export function useCourseForm(
 			},
 			{
 				onSuccess() {
+					saved = true
 					updateMetaInfo('courses', resource.doc?.name, meta)
 					toast.success(__('Course updated successfully'))
 					isDirty.value = false
@@ -157,6 +164,7 @@ export function useCourseForm(
 				},
 			}
 		)
+		return saved
 	}
 
 	const form: CourseForm = {
@@ -170,6 +178,7 @@ export function useCourseForm(
 		showRequired,
 		missingFields,
 		isMissing,
+		isSaving,
 		submitCourse,
 	}
 	provide<CourseFormContext>('courseForm', form)

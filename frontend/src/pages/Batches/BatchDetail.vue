@@ -136,6 +136,7 @@ import {
 	saveShortcut,
 } from '@/composables/useKeyboardShortcuts'
 import { useBatchForm } from '@/pages/Batches/composables/useBatchForm'
+import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
 import { useBatchManage } from '@/pages/Batches/composables/useBatchManage'
 import {
 	BATCH_PREVIEW,
@@ -216,6 +217,12 @@ const form = useBatchForm(
 	batch,
 	() => isAdmin.value
 )
+useUnsavedChangesGuard({
+	isDirty: () => form.isDirty.value,
+	isSaving: () => form.isSaving.value,
+	save: form.submitBatch,
+	param: 'batchName',
+})
 useBatchManage(batch)
 
 useKeyboardShortcuts({

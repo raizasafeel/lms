@@ -20,6 +20,9 @@ const { passthrough, selection } = vi.hoisted(() => {
 vi.mock('@/stores/settings', () => ({ useSettings: () => ({}) }))
 vi.mock('@/stores/user', () => ({ usersStore: () => ({ userResource: {} }) }))
 vi.mock('@/stores/session', () => ({ sessionStore: () => ({ brand: {} }) }))
+vi.mock('@/composables/useUnsavedChangesGuard', () => ({
+	useUnsavedChangesGuard: vi.fn(),
+}))
 
 // frappe-ui's Button renders a RouterLink for `route`, which resolves it during
 // render. Doing the same here is what makes an unresolvable route throw.

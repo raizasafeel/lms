@@ -223,6 +223,7 @@ import CourseStudentView from '@/components/Courses/CourseStudentView.vue'
 import { openFormRoute } from '@/composables/useFormRoute'
 import { provideDashboardState } from '@/composables/dashboard/useDashboard'
 import { useCourseForm } from '@/composables/useCourseForm'
+import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
 import {
 	COURSE_ACTIONS,
 	useCourseActions,
@@ -381,6 +382,12 @@ const isAdmin = computed<boolean>(() => {
 })
 
 const form = useCourseForm(props.courseName, course, () => isAdmin.value)
+useUnsavedChangesGuard({
+	isDirty: () => form.isDirty.value,
+	isSaving: form.isSaving,
+	save: form.submitCourse,
+	param: 'courseName',
+})
 const actions = useCourseActions(course)
 provide(COURSE_ACTIONS, actions)
 

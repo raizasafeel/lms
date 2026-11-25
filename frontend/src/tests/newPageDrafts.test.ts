@@ -55,6 +55,19 @@ const fillCourse = (form: CourseDraft) => {
 	})
 }
 
+const fillBatch = (form: BatchDraft) => {
+	Object.assign(form.doc.value!, {
+		title: 'Cohort 1',
+		description: 'For new devs',
+		batch_details: '<p>Weekly</p>',
+		start_date: '2026-12-01',
+		end_date: '2026-12-20',
+		start_time: '10:00',
+		end_time: '11:00',
+	})
+	form.instructors.value = ['me@x.com']
+}
+
 beforeEach(() => {
 	call.mockReset()
 	toastError.mockReset()
@@ -134,6 +147,24 @@ describe('a new course before its first save', () => {
 			'The course was created, but some chapters were not.'
 		)
 	})
+	it('has edits once typed into, and none after it is created', async () => {
+		call.mockResolvedValue({ name: 'intro-to-frappe' })
+		const form = withSetup(() => useCourseDraft('me@x.com', vi.fn()))
+		expect(form.hasEdits.value).toBe(false)
+		fillCourse(form)
+		expect(form.hasEdits.value).toBe(true)
+		expect(await form.submitCourse()).toBe(true)
+		expect(form.hasEdits.value).toBe(false)
+	})
+
+	it('reports a failed create so Save and leave stays', async () => {
+		call.mockRejectedValue({ messages: ['Title taken'] })
+		const form = withSetup(() => useCourseDraft('me@x.com', vi.fn()))
+		fillCourse(form)
+		expect(await form.submitCourse()).toBe(false)
+		expect(form.hasEdits.value).toBe(true)
+		expect(toastError).toHaveBeenCalledWith('Title taken')
+	})
 })
 
 describe('a new batch before its first save', () => {
@@ -188,5 +219,30 @@ describe('a new batch before its first save', () => {
 		await flushPromises()
 		expect(call.mock.calls[0][1].doc.courses).toEqual([{ course: 'course-a' }])
 		expect(onCreated).toHaveBeenCalledWith('cohort-1')
+	})
+	it('has edits once typed into, and none after it is created', async () => {
+		call.mockResolvedValue({ name: 'cohort-1' })
+		const form: BatchDraft = withSetup(() => useBatchDraft(vi.fn()))
+		expect(form.hasEdits.value).toBe(false)
+		fillBatch(form)
+		expect(form.hasEdits.value).toBe(true)
+		expect(await form.submitBatch()).toBe(true)
+		expect(form.hasEdits.value).toBe(false)
+	})
+
+	it('counts a picked course as an edit', () => {
+		const form: BatchDraft = withSetup(() => useBatchDraft(vi.fn()))
+		form.draft.courses.value = ['course-a']
+		expect(form.hasEdits.value).toBe(true)
+	})
+
+	it('reports a failed or incomplete create so Save and leave stays', async () => {
+		const form: BatchDraft = withSetup(() => useBatchDraft(vi.fn()))
+		expect(await form.submitBatch()).toBe(false)
+		call.mockRejectedValue({ messages: ['Title taken'] })
+		fillBatch(form)
+		expect(await form.submitBatch()).toBe(false)
+		expect(toastError).toHaveBeenCalledWith('Title taken')
+		expect(form.hasEdits.value).toBe(true)
 	})
 })

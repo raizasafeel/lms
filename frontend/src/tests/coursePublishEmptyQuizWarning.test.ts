@@ -57,6 +57,9 @@ vi.mock('@/components/LessonHelp.vue', stub)
 vi.mock('@/composables/useCourseForm', () => ({
 	useCourseForm: () => ({ isDirty: { value: false }, submitCourse: vi.fn() }),
 }))
+vi.mock('@/composables/useUnsavedChangesGuard', () => ({
+	useUnsavedChangesGuard: vi.fn(),
+}))
 vi.mock('@/components/Courses/CourseHeaderActions.vue', stub)
 vi.mock('@/components/Courses/CourseSaveButton.vue', stub)
 vi.mock('@/components/Courses/CourseStudentView.vue', stub)

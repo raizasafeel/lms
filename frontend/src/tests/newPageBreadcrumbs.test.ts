@@ -46,6 +46,9 @@ vi.mock('@/composables/useKeyboardShortcuts', () => ({
 }))
 vi.mock('@/utils', () => ({ canCreateCourse: () => true }))
 vi.mock('@/utils/onboarding', () => ({ seesOnboarding: () => false }))
+vi.mock('@/composables/useUnsavedChangesGuard', () => ({
+	useUnsavedChangesGuard: vi.fn(),
+}))
 vi.mock('@/components/Layouts/pages/PageHeader.vue', () => stub('PageHeader'))
 vi.mock('@/components/Courses/CourseSaveButton.vue', () => stub('Save'))
 vi.mock('@/components/InlineEdit/DraftBanner.vue', () => stub('Banner'))

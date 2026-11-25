@@ -47,6 +47,7 @@ import {
 	saveShortcut,
 	useKeyboardShortcuts,
 } from '@/composables/useKeyboardShortcuts'
+import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
 import { canCreateCourse } from '@/utils'
 import { seesOnboarding } from '@/utils/onboarding'
 import type { CourseDetails, Resource, SessionUser } from '@/types'
@@ -57,6 +58,8 @@ const { capture } = useTelemetry()
 const { updateOnboardingStep } = useOnboarding('learning')
 const canCreate = computed<boolean>(() => canCreateCourse())
 let created = false
+// Set while Save and leave creates the course, so it goes where the user was headed.
+let isLeaving = false
 
 // Whoever creates the course usually teaches it. Administrator is a system
 // account, never an instructor.
@@ -78,12 +81,26 @@ function onCreated(name: string): void {
 			updateOnboardingStep('create_first_lesson')
 		}
 	}
+	if (isLeaving) return
 	router.replace({
 		name: 'CourseDetail',
 		params: { courseName: name },
 		hash: '#overview',
 	})
 }
+
+useUnsavedChangesGuard({
+	isDirty: () => form.hasEdits.value,
+	isSaving: form.isSaving,
+	save: async () => {
+		isLeaving = true
+		try {
+			return await form.submitCourse()
+		} finally {
+			isLeaving = false
+		}
+	},
+})
 
 const title = computed<string>(() => form.resource.doc?.title?.trim() || '')
 

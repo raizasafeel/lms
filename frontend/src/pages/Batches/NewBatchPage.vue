@@ -47,6 +47,7 @@ import {
 	saveShortcut,
 	useKeyboardShortcuts,
 } from '@/composables/useKeyboardShortcuts'
+import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
 import { seesOnboarding } from '@/utils/onboarding'
 import type { BatchDetails, Resource, SessionUser } from '@/types'
 
@@ -55,6 +56,8 @@ const user = inject<SessionUser>('$user')!
 const { capture } = useTelemetry()
 const { updateOnboardingStep } = useOnboarding('learning')
 let created = false
+// Set while Save and leave creates the batch, so it goes where the user was headed.
+let isLeaving = false
 
 const canCreate = computed<boolean>(() => {
 	if ((window as Window & { read_only_mode?: boolean }).read_only_mode) {
@@ -72,12 +75,26 @@ const form = useBatchDraft(onCreated)
 function onCreated(name: string): void {
 	created = true
 	if (seesOnboarding(user.data)) updateOnboardingStep('create_first_batch')
+	if (isLeaving) return
 	router.replace({
 		name: 'BatchDetail',
 		params: { batchName: name },
 		hash: '#overview',
 	})
 }
+
+useUnsavedChangesGuard({
+	isDirty: () => form.hasEdits.value,
+	isSaving: () => form.isSaving.value,
+	save: async () => {
+		isLeaving = true
+		try {
+			return await form.submitBatch()
+		} finally {
+			isLeaving = false
+		}
+	},
+})
 
 const title = computed<string>(() => form.doc.value?.title?.trim() || '')
 
