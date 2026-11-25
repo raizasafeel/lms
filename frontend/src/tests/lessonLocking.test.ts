@@ -278,12 +278,10 @@ describe('Lesson.vue Next affordance follows canGoNext', () => {
 		expect(replaceMock).not.toHaveBeenCalled()
 	})
 
-	it('falls back to Back to Course when a next lesson exists but is locked', async () => {
-		// A lesson can be uncompletable for good (quiz attempts exhausted, SCORM that
-		// never reports completion), and hiding the fallback along with Next left the
-		// footer with no forward affordance at all and no way out of the page.
+	it('keeps a locked Next in place, disabled, until the lesson is completed', async () => {
 		wrapper = await mountLesson()
-		findResource('lms.lms.utils.get_course_outline').data = [
+		const outline = findResource('lms.lms.utils.get_course_outline')
+		outline.data = [
 			{
 				name: 'CH-1',
 				lessons: [
@@ -295,11 +293,33 @@ describe('Lesson.vue Next affordance follows canGoNext', () => {
 		findResource('lms.lms.utils.get_lesson').data = { ...baseLesson }
 		await flushPromises()
 
-		expect(wrapper.text()).not.toContain('Next')
-		expect(wrapper.text()).toContain('Back to Course')
+		const locked = wrapper.find(
+			'[data-testid="lesson-nav"] [data-testid="next-locked"]'
+		)
+		expect(locked.exists()).toBe(true)
+		expect(locked.attributes('tabindex')).toBe('0')
+		expect(locked.find('button').attributes('disabled')).toBeDefined()
+		expect(locked.text()).toContain('Complete this lesson to move to the next')
+
+		// Completing the lesson reloads the outline, which unlocks Next in place.
+		outline.data = [
+			{
+				name: 'CH-1',
+				lessons: [
+					{ name: 'L1', number: '1-1', locked: 0 },
+					{ name: 'L2', number: '1-2', locked: 0 },
+				],
+			},
+		]
+		await flushPromises()
+
+		const nav = wrapper.find('[data-testid="lesson-nav"]')
+		expect(nav.find('[data-testid="next-locked"]').exists()).toBe(false)
+		const next = nav.findAll('button').find((b) => b.text() === 'Next')
+		expect(next?.attributes('disabled')).toBeUndefined()
 	})
 
-	it('falls back to Back to Course only when there truly is no next lesson', async () => {
+	it('falls back to Back to course only when there truly is no next lesson', async () => {
 		wrapper = await mountLesson()
 		findResource('lms.lms.utils.get_course_outline').data = [
 			{
@@ -314,7 +334,7 @@ describe('Lesson.vue Next affordance follows canGoNext', () => {
 		await flushPromises()
 
 		expect(wrapper.text()).not.toContain('Next')
-		expect(wrapper.text()).toContain('Back to Course')
+		expect(wrapper.text()).toContain('Back to course')
 	})
 })
 
@@ -616,7 +636,7 @@ describe('Lesson.vue Next survives an outline that never resolves', () => {
 		expect(wrapper.text()).toContain('Next')
 	})
 
-	it('still offers Back to Course on the last lesson with no outline', async () => {
+	it('still offers Back to course on the last lesson with no outline', async () => {
 		wrapper = await mountLesson()
 		findResource('lms.lms.utils.get_lesson').data = {
 			...baseLesson,
@@ -625,7 +645,7 @@ describe('Lesson.vue Next survives an outline that never resolves', () => {
 		await flushPromises()
 
 		expect((wrapper.vm as any).canGoNext).toBe(false)
-		expect(wrapper.text()).toContain('Back to Course')
+		expect(wrapper.text()).toContain('Back to course')
 	})
 
 	it('switchLesson navigates on the unresolved-outline fallback', async () => {

@@ -35,14 +35,19 @@
 				{{ lessonIndex }} / {{ lessonTotal }}
 			</div>
 			<Button
-				v-if="canGoNext"
 				variant="subtle"
 				class="!size-9"
-				:label="__('Next lesson')"
+				:label="
+					isNextLocked
+						? __('Complete this lesson to move to the next')
+						: __('Next lesson')
+				"
+				:disabled="!canGoNext"
 				@click="goNext()"
 			>
 				<template #icon>
-					<span class="lucide-chevron-right size-4 rtl:rotate-180" />
+					<span v-if="isNextLocked" class="lucide-lock size-4" />
+					<span v-else class="lucide-chevron-right size-4 rtl:rotate-180" />
 				</template>
 			</Button>
 		</div>
@@ -190,8 +195,10 @@
 								</Button>
 								<LessonNavButtons
 									:hasPrev="!!lesson.data.prev"
-									:hasNext="!!(lesson.data.next && canGoNext)"
+									:hasNext="hasNextButton"
+									:nextLocked="isNextLocked"
 									:courseName="courseName"
+									:courseQuery="previewQuery"
 									@switch="switchLesson"
 								/>
 							</div>
@@ -269,8 +276,10 @@
 						>
 							<LessonNavButtons
 								:hasPrev="!!lesson.data.prev"
-								:hasNext="!!(lesson.data.next && canGoNext)"
+								:hasNext="hasNextButton"
+								:nextLocked="isNextLocked"
 								:courseName="courseName"
+								:courseQuery="previewQuery"
 								@switch="switchLesson"
 							/>
 						</div>
@@ -917,6 +926,13 @@ const canGoNext = computed(() => {
 	if (!outlineReady.value) return !!lesson.data?.next
 	return hasNext.value && !nextLessonLocked.value
 })
+// Sequential courses keep a locked Next in place, disabled, instead of hiding it.
+const isNextLocked = computed(
+	() => outlineReady.value && hasNext.value && nextLessonLocked.value
+)
+const hasNextButton = computed(
+	() => !!lesson.data?.next && (canGoNext.value || isNextLocked.value)
+)
 
 const goToLessonNumber = (
 	number: string,
