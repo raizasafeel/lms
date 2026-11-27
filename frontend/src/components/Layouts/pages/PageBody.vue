@@ -1,6 +1,6 @@
 <template>
 	<div class="flex flex-1 flex-col sm:min-h-0">
-		<div class="flex flex-1 flex-col sm:min-h-0 sm:overflow-y-auto">
+		<div class="flex flex-1 flex-col sm:min-h-0 sm:overflow-y-auto sm:overflow-x-hidden">
 			<div
 				v-if="hasNameStrip"
 				data-testid="page-header-block"
