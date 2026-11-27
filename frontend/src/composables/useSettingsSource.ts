@@ -100,11 +100,14 @@ const documentResource = (
  */
 const settleRenamedName = (
 	resource: SettingsDocumentResource,
-	renamed: string
+	renamed: string,
+	field: string
 ) => {
 	if (resource.doc) resource.doc.name = renamed
 	if (!resource.originalDoc) return
 	resource.originalDoc.name = renamed
+	// The rename wrote the field a `field:` autoname reads too.
+	resource.originalDoc[field] = renamed
 	resource.isDirty =
 		JSON.stringify(resource.doc) !== JSON.stringify(resource.originalDoc)
 }
@@ -224,7 +227,7 @@ export function useSettingsSource(
 			// the write, and every later reload, addresses a document that is gone.
 			current.name = renamed
 			renamedTo.value = renamed
-			settleRenamedName(current, renamed)
+			settleRenamedName(current, renamed, options.renameField as string)
 		}
 		return current.save.submit()
 	}
