@@ -69,6 +69,7 @@
   "column_break_iens",
   "amount",
   "currency",
+  "enable_country_prices",
   "prices",
   "customisations_tab",
   "section_break_ubxi",
@@ -312,10 +313,18 @@
    "label": "Evaluation End Date"
   },
   {
+   "default": "0",
+   "description": "Learners billed in a country with a price below pay that price.",
+   "fieldname": "enable_country_prices",
+   "fieldtype": "Check",
+   "label": "Subsidized pricing",
+   "depends_on": "paid_batch"
+  },
+  {
    "depends_on": "paid_batch",
    "fieldname": "prices",
    "fieldtype": "Table",
-   "label": "Prices in Other Currencies",
+   "label": "Country Prices",
    "options": "LMS Price"
   },
   {
@@ -479,7 +488,7 @@
    "link_fieldname": "payment_for_document"
   }
  ],
- "modified": "2026-11-25 14:00:00.000000",
+ "modified": "2026-11-27 14:00:00.000000",
  "modified_by": "sayali@frappe.io",
  "module": "LMS",
  "name": "LMS Batch",

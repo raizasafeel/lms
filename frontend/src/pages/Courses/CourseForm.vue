@@ -19,12 +19,27 @@
 		<CoursePublishSettings />
 
 		<PricesGroup
-			v-if="form.resource.doc.paid_course || form.resource.doc.paid_certificate"
+			:paid="
+				Boolean(
+					form.resource.doc.paid_course || form.resource.doc.paid_certificate
+				)
+			"
+			:summary="
+				!form.resource.doc.paid_course && form.resource.doc.paid_certificate
+					? __(
+							'Learners billed in the countries you add pay less for the certificate. Everyone else pays the regular price.'
+					  )
+					: undefined
+			"
 			:prices="form.resource.doc.prices ?? []"
+			:enabled="form.resource.doc.enable_country_prices"
 			:amount="form.resource.doc.course_price"
 			:currency="form.resource.doc.currency"
 			@update:prices="(value) => setField('prices', value)"
-		/>
+			@update:enabled="(value) => setField('enable_country_prices', value)"
+		>
+			<CoursePriceRows />
+		</PricesGroup>
 
 		<SettingsGroup :title="__('Search and sharing')" icon="lucide-search">
 			<SettingField
@@ -113,6 +128,7 @@ import SearchPreview from '@/components/InlineEdit/SearchPreview.vue'
 import SettingRow from '@/components/InlineEdit/SettingRow.vue'
 import SettingsGroup from '@/components/InlineEdit/SettingsGroup.vue'
 import CoursePublishSettings from '@/pages/Courses/CoursePublishSettings.vue'
+import CoursePriceRows from '@/pages/Courses/CoursePriceRows.vue'
 import { COURSE_ACTIONS } from '@/composables/useCourseActions'
 import { useCourseFlowChanges } from '@/composables/useFlowChanges'
 import type {

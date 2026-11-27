@@ -116,6 +116,11 @@
 				"
 			>
 				{{ batch.paid_batch ? batch.price : __('Free') }}
+				<RegularPrice
+					v-if="batch.paid_batch"
+					:price="batch.regular_price"
+					class="ms-1"
+				/>
 			</span>
 		</div>
 	</article>
@@ -126,6 +131,7 @@ import { Badge, Tooltip } from 'frappe-ui'
 import { formatTime, getFormattedDateRange } from '@/utils'
 import { formatTimezone, nextOccurrence } from '@/utils/timezone'
 import CardLink from '@/components/CardLink.vue'
+import RegularPrice from '@/components/RegularPrice.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import { enrollmentClosesLabel } from '@/utils/batchEnrollment'

@@ -10,6 +10,11 @@
 						? formatNumberIntoCurrency(batch.data.amount, batch.data.currency)
 						: __('Free')
 				}}
+				<RegularPrice
+					v-if="batch.data.paid_batch && batch.data.amount"
+					:price="batch.data.regular_price"
+					class="ms-1 text-base"
+				/>
 			</span>
 			<Badge
 				v-if="batch.data.seat_count && batch.data.seats_left > 0"
@@ -101,6 +106,7 @@ import { Badge, Button, createResource, toast } from 'frappe-ui'
 import { formatNumberIntoCurrency } from '@/utils'
 import { redirectToLogin } from '@/utils/login'
 import VideoPreview from '@/components/VideoPreview.vue'
+import RegularPrice from '@/components/RegularPrice.vue'
 import { enrollmentClosesLabel } from '@/utils/batchEnrollment'
 import BatchFacts from '@/pages/Batches/components/overview/BatchFacts.vue'
 import { useStudentView } from '@/composables/useStudentView'

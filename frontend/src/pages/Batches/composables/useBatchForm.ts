@@ -30,6 +30,7 @@ const CHECKBOXES = [
 	'allow_late_enrollment',
 	'certification',
 	'evaluation',
+	'enable_country_prices',
 ] as const
 
 // Child tables other forms own: a whole-doc save must not overwrite them.

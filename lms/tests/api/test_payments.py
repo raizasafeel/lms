@@ -165,32 +165,31 @@ class TestPaymentLink(BaseTestUtils):
 		self.assertEqual(payment.amount_with_gst, 0)
 
 	def test_checkout_charges_the_price_for_the_billing_country(self):
-		"""A buyer billed in the United States pays the course's USD price in USD."""
-		self._add_price("USD", 25)
+		"""A buyer billed in the United States pays its price, in USD."""
+		self._add_price({"country": "United States", "price_type": "Fixed", "amount": 25, "currency": "USD"})
 		payment = self._buy_course_billed_to("United States", country="India")
 
 		call = self.controller.get_payment_url_calls[0]
 		self.assertEqual((call["amount"], call["currency"]), (25, "USD"))
 		self.assertEqual((payment.amount, payment.currency), (25, "USD"))
 
-	def test_checkout_without_a_price_for_the_country_charges_the_primary_price(self):
-		self._add_price("USD", 25)
+	def test_checkout_takes_a_country_percent_off_the_regular_price(self):
+		self._add_price({"country": "Canada", "price_type": "Percent Off", "percent_off": 40})
+		payment = self._buy_course_billed_to("Canada", country="India")
+
+		self.assertEqual((payment.amount, payment.currency), (300, "INR"))
+
+	def test_checkout_without_a_price_for_the_country_charges_the_regular_price(self):
+		self._add_price({"country": "United States", "price_type": "Fixed", "amount": 25, "currency": "USD"})
 		payment = self._buy_course_billed_to("Nepal", country="United States")
 
 		self.assertEqual((payment.amount, payment.currency), (500, "INR"))
 
-	def _add_price(self, currency, amount):
-		frappe.get_doc(
-			{
-				"doctype": "LMS Price",
-				"parenttype": "LMS Course",
-				"parent": self.course.name,
-				"parentfield": "prices",
-				"currency": currency,
-				"price_type": "Fixed",
-				"amount": amount,
-			}
-		).db_insert()
+	def _add_price(self, row):
+		course = frappe.get_doc("LMS Course", self.course.name)
+		course.enable_country_prices = 1
+		course.append("prices", row)
+		course.save()
 
 	def test_a_checkout_without_a_billing_country_is_refused(self):
 		"""Without one the price would follow an older address and the GST the

@@ -66,11 +66,26 @@ function mountOverlay(data: Record<string, unknown>) {
 	})
 }
 
-// get_batch_details answers with the price for the learner's billing country.
+// get_batch_details answers with the price for the learner's billing region.
 describe('the batch price a learner sees', () => {
 	it('shows the price in the currency the server resolved', () => {
 		const w = mountOverlay({ paid_batch: 1, amount: 3210, currency: 'INR' })
 		expect(w.text()).toContain('INR 3210')
+	})
+
+	it('strikes through the regular price a regional one replaces', () => {
+		const w = mountOverlay({
+			paid_batch: 1,
+			amount: 30,
+			currency: 'USD',
+			regular_price: '$ 50',
+		})
+		expect(w.get('[data-testid="regular-price"]').text()).toContain('$ 50')
+	})
+
+	it('shows no regular price when the learner pays it', () => {
+		const w = mountOverlay({ paid_batch: 1, amount: 50, currency: 'USD' })
+		expect(w.find('[data-testid="regular-price"]').exists()).toBe(false)
 	})
 
 	it('calls a free batch free', () => {

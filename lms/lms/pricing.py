@@ -1,16 +1,10 @@
-import functools
-
 import frappe
-import requests
 from frappe import _
-from frappe.geo.country_info import get_all as get_all_country_info
 from frappe.utils import flt, fmt_money, rounded
 
 FALLBACK_CURRENCY = "USD"
 FIXED = "Fixed"
-PERCENT_OFF = "Percent Off"
-PRICE_FIELDS = ["currency", "price_type", "amount", "percent_off"]
-EXCHANGE_RATE_TTL = 6 * 60 * 60
+PRICE_FIELDS = ["country", "price_type", "amount", "currency", "percent_off"]
 
 
 def get_primary_currency() -> str:
@@ -21,45 +15,57 @@ def get_primary_currency() -> str:
 def get_price(doctype: str, name: str, amount: float, currency: str, country: str | None = None) -> tuple:
 	"""The amount and currency a buyer billed in `country` pays for a course or batch.
 
-	A price row in the currency of the buyer's country wins; otherwise the primary price.
-	`country` defaults to the session user's billing country."""
+	With subsidized pricing on, the price row for the buyer's country wins; otherwise
+	the regular price. `country` defaults to the session user's billing country."""
 	from lms.lms.utils import get_billing_country
 
-	buyer_currency = get_country_currency(get_billing_country(country))
-	if not buyer_currency or buyer_currency == currency:
+	if not frappe.db.get_value(doctype, name, "enable_country_prices"):
+		return amount, currency
+	country = get_billing_country(country)
+	if not country:
 		return amount, currency
 
 	row = frappe.db.get_value(
 		"LMS Price",
-		{"parenttype": doctype, "parent": name, "parentfield": "prices", "currency": buyer_currency},
+		{"parenttype": doctype, "parent": name, "parentfield": "prices", "country": country},
 		PRICE_FIELDS,
 		as_dict=True,
 	)
 	if not row:
 		return amount, currency
-	return get_row_amount(row, amount, currency), row.currency
+	return get_row_price(row, amount, currency)
 
 
-def get_row_amount(row: dict, amount: float, currency: str) -> float:
-	"""A row's price: its fixed amount, or the converted primary price less its percent."""
+def get_display_price(
+	doctype: str, name: str, amount: float, currency: str, country: str | None = None
+) -> frappe._dict:
+	"""The buyer's price, formatted, and the regular price when theirs differs."""
+	price, price_currency = get_price(doctype, name, amount, currency, country)
+	is_regular = (flt(price), price_currency) == (flt(amount), currency)
+	return frappe._dict(
+		amount=price,
+		currency=price_currency,
+		price=fmt_money(price, 0, price_currency),
+		regular_price=None if is_regular else fmt_money(amount, 0, currency),
+	)
+
+
+def get_row_price(row: dict, amount: float, currency: str) -> tuple:
+	"""A row's fixed amount and currency, or the regular price less its percent."""
 	if row.get("price_type") == FIXED:
-		return flt(row.get("amount"))
-
-	converted = flt(amount) * get_current_exchange_rate(currency, row.get("currency"))
-	return round_for_currency(converted * (100 - flt(row.get("percent_off"))) / 100, row.get("currency"))
+		return flt(row.get("amount")), row.get("currency") or currency
+	discounted = flt(amount) * (100 - flt(row.get("percent_off"))) / 100
+	return round_for_currency(discounted, currency), currency
 
 
 def get_price_preview(row: dict, amount: float, currency: str) -> dict:
-	"""A row's price, formatted, or why it has none yet."""
-	try:
-		value = get_row_amount(row, amount, currency)
-	except frappe.ValidationError as error:
-		frappe.clear_last_message()
-		return {"currency": row.get("currency"), "error": str(error)}
+	"""A row's price, formatted, for the pricing editor."""
+	value, value_currency = get_row_price(row, amount, currency)
 	return {
-		"currency": row.get("currency"),
+		"country": row.get("country"),
 		"amount": value,
-		"formatted": fmt_money(value, 0, row.get("currency")),
+		"currency": value_currency,
+		"formatted": fmt_money(value, 0, value_currency),
 	}
 
 
@@ -70,61 +76,25 @@ def round_for_currency(amount: float, currency: str) -> float:
 	return flt(rounded(amount / step) * step)
 
 
-def get_country_currency(country: str | None) -> str | None:
-	return get_country_currencies().get(country) if country else None
-
-
-@functools.cache
-def get_country_currencies() -> dict:
-	return {country: info.get("currency") for country, info in get_all_country_info().items()}
-
-
-def get_current_exchange_rate(source: str, target: str) -> float:
-	key = f"lms:exchange_rate:{source}:{target}"
-	rate = frappe.cache.get_value(key)
-	if not rate:
-		rate = fetch_exchange_rate(source, target)
-		frappe.cache.set_value(key, rate, expires_in_sec=EXCHANGE_RATE_TTL)
-	return rate
-
-
-def fetch_exchange_rate(source: str, target: str) -> float:
-	try:
-		response = requests.get(
-			"https://api.frankfurter.app/latest", params={"from": source, "to": target}, timeout=10
-		)
-		rate = response.json().get("rates", {}).get(target) if response.ok else None
-	except requests.RequestException:
-		rate = None
-	if not rate:
-		frappe.throw(_("No exchange rate from {0} to {1} is available.").format(source, target))
-	return flt(rate)
-
-
-def validate_prices(doc, primary_currency: str | None) -> None:
-	"""One row per currency, none in the primary currency, each with a usable value."""
+def validate_prices(doc, currency: str | None) -> None:
+	"""One row per country, each with a usable value."""
 	seen = set()
 	for row in doc.get("prices") or []:
-		if row.currency == primary_currency:
-			frappe.throw(
-				_("Row {0}: {1} is already the primary price's currency.").format(row.idx, row.currency)
-			)
-		if row.currency in seen:
-			frappe.throw(_("Row {0}: {1} has more than one price.").format(row.idx, row.currency))
-		seen.add(row.currency)
-		validate_price_row(row, primary_currency)
+		if row.country in seen:
+			frappe.throw(_("Row {0}: {1} has more than one price.").format(row.idx, row.country))
+		seen.add(row.country)
+		validate_price_row(row, currency)
 
 
-def validate_price_row(row, primary_currency: str | None) -> None:
+def validate_price_row(row, currency: str | None) -> None:
 	if row.price_type == FIXED:
 		row.percent_off = 0
+		row.currency = row.currency or currency
 		if flt(row.amount) <= 0:
-			frappe.throw(_("Row {0}: the price in {1} must be more than zero.").format(row.idx, row.currency))
+			frappe.throw(_("Row {0}: the price for {1} must be more than zero.").format(row.idx, row.country))
 		return
 
 	row.amount = 0
+	row.currency = None
 	if not 0 <= flt(row.percent_off) < 100:
 		frappe.throw(_("Row {0}: the percent off must be from 0 to less than 100.").format(row.idx))
-	if not primary_currency:
-		frappe.throw(_("Set the primary price's currency before a percent off price."))
-	get_current_exchange_rate(primary_currency, row.currency)

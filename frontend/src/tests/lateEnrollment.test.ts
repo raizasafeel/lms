@@ -24,6 +24,7 @@ vi.mock('frappe-ui', () => ({
 		props: ['route'],
 		template: `<button v-bind="$attrs"><slot /></button>`,
 	},
+	Select: { template: '<div />' },
 	DatePicker: {
 		name: 'DatePicker',
 		props: ['modelValue', 'min', 'max'],
@@ -84,6 +85,7 @@ function mountSettings(doc: Record<string, unknown>) {
 				PeopleGroup: true,
 				EvaluationGroup: true,
 				BatchManageGroup: true,
+				PricesGroup: true,
 			},
 		},
 	})

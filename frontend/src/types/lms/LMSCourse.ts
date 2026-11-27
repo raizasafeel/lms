@@ -53,7 +53,9 @@ export interface LMSCourse {
 	paid_course?: 0 | 1
 	/**	Amount : Currency	*/
 	course_price?: number
-	/**	Prices in Other Currencies : Table - LMS Price	*/
+	/**	Subsidized pricing : Check - Learners billed in a country with a price below pay that price.	*/
+	enable_country_prices?: 0 | 1
+	/**	Country Prices : Table - LMS Price	*/
 	prices?: LMSPrice[]
 	/**	Published On : Date	*/
 	published_on?: string

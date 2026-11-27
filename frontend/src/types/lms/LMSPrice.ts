@@ -9,12 +9,14 @@ export interface LMSPrice {
 	parentfield?: string
 	parenttype?: string
 	idx?: number
-	/**	Currency : Link - Currency	*/
-	currency: string
+	/**	Country : Link - Country	*/
+	country: string
 	/**	Price Type : Select	*/
 	price_type: 'Fixed' | 'Percent Off'
 	/**	Amount : Currency - currency	*/
 	amount?: number
-	/**	Percent Off : Percent - Off the primary price, converted at the current exchange rate.	*/
+	/**	Currency : Link - Currency	*/
+	currency?: string | null
+	/**	Percent Off : Percent - Off the course's or batch's own price, in its own currency.	*/
 	percent_off?: number
 }

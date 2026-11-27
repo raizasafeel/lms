@@ -69,7 +69,9 @@ export interface LMSBatch {
 	allow_future?: 0 | 1
 	/**	Evaluation End Date : Date	*/
 	evaluation_end_date?: string
-	/**	Prices in Other Currencies : Table - LMS Price	*/
+	/**	Subsidized pricing : Check - Learners billed in a country with a price below pay that price.	*/
+	enable_country_prices?: 0 | 1
+	/**	Country Prices : Table - LMS Price	*/
 	prices?: LMSPrice[]
 	/**	Allow Self Enrollment : Check	*/
 	allow_self_enrollment?: 0 | 1

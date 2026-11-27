@@ -52,11 +52,30 @@
 		</SettingsGroup>
 
 		<PricesGroup
-			v-if="doc.paid_batch"
 			v-model:prices="prices"
+			v-model:enabled="doc.enable_country_prices"
+			:paid="Boolean(doc.paid_batch)"
 			:amount="doc.amount"
 			:currency="doc.currency"
-		/>
+		>
+			<SettingSwitch
+				:modelValue="Boolean(doc.paid_batch)"
+				:label="__('Paid batch')"
+				:summary="
+					doc.paid_batch ? __('Learners pay to enroll.') : __('Free to enroll.')
+				"
+				@update:modelValue="(value) => (doc!.paid_batch = Boolean(value))"
+			/>
+			<PriceInput
+				v-if="doc.paid_batch"
+				:currency="doc.currency"
+				:amount="doc.amount"
+				:missing="form!.isMissing('currency') || form!.isMissing('amount')"
+				class="mb-3.5 rounded-6 border border-outline-gray-2"
+				@update:currency="(value) => (doc!.currency = value)"
+				@update:amount="(value) => (doc!.amount = value)"
+			/>
+		</PricesGroup>
 
 		<PeopleGroup
 			v-model="form!.people.value"
@@ -170,6 +189,7 @@
 import { DatePicker } from 'frappe-ui'
 import { computed, inject, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import PriceInput from '@/components/InlineEdit/PriceInput.vue'
 import PricesGroup from '@/components/InlineEdit/PricesGroup.vue'
 import SettingField from '@/components/InlineEdit/SettingField.vue'
 import SettingImage from '@/components/InlineEdit/SettingImage.vue'

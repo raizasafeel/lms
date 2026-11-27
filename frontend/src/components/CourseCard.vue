@@ -103,6 +103,11 @@
 						"
 					>
 						{{ priceLabel }}
+						<RegularPrice
+							v-if="course.paid_course"
+							:price="course.regular_price"
+							class="ms-1"
+						/>
 					</span>
 				</template>
 			</div>
@@ -118,6 +123,7 @@ import { courseIcon } from '@/utils/courseIcons'
 import { courseTint } from '@/utils/courseTints'
 import { safeUrl } from '@/utils/safeUrl'
 import CardLink from '@/components/CardLink.vue'
+import RegularPrice from '@/components/RegularPrice.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 

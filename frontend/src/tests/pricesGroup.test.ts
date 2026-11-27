@@ -9,8 +9,8 @@ const { previews } = vi.hoisted(() => ({
 vi.mock('frappe-ui', () => ({
 	createResource: () => previews,
 	Button: {
-		props: ['ariaLabel'],
-		template: `<button v-bind="$attrs"><slot name="icon" /><slot /></button>`,
+		props: ['ariaLabel', 'label'],
+		template: `<button v-bind="$attrs">{{ label }}<slot name="icon" /><slot /></button>`,
 	},
 	FormControl: {
 		props: ['modelValue', 'type', 'options'],
@@ -21,14 +21,21 @@ vi.mock('frappe-ui', () => ({
 			@input="$emit('update:modelValue', $event.target.value)"
 		/>`,
 	},
-	Tooltip: { template: '<div><slot /></div>' },
 }))
 vi.mock('@/components/Controls/Link.vue', () => ({
 	default: {
 		name: 'Link',
-		props: ['modelValue'],
+		props: ['modelValue', 'doctype', 'filters', 'placeholder'],
 		emits: ['update:modelValue'],
-		template: '<div data-testid="add-currency" />',
+		template: '<div :data-doctype="doctype">{{ placeholder }}</div>',
+	},
+}))
+vi.mock('@/components/InlineEdit/SettingSwitch.vue', () => ({
+	default: {
+		name: 'SettingSwitch',
+		props: ['modelValue', 'label'],
+		emits: ['update:modelValue'],
+		template: '<div data-testid="switch" />',
 	},
 }))
 vi.mock('@vueuse/core', () => ({
@@ -43,21 +50,40 @@ import {
 	type PriceRow,
 } from '@/utils/prices'
 
-function mountGroup(prices: PriceRow[]) {
-	const state = reactive({ prices })
+function mountGroup(prices: PriceRow[], { enabled = 1, paid = true } = {}) {
+	const state = reactive({ prices, enabled })
 	const wrapper = mount(PricesGroup, {
 		props: {
+			paid,
 			amount: 100,
 			currency: 'USD',
 			prices: state.prices,
+			enabled: state.enabled,
 			'onUpdate:prices': (value: PriceRow[]) => {
 				state.prices = value
 				wrapper.setProps({ prices: value })
 			},
+			'onUpdate:enabled': (value: number) => {
+				state.enabled = value
+				wrapper.setProps({ enabled: value })
+			},
 		},
+		slots: { default: '<div data-testid="regular-price" />' },
 		global: { mocks: { __: globalThis.__ } },
 	})
 	return { wrapper, state }
+}
+
+const countryPicker = (wrapper: ReturnType<typeof mount>) =>
+	wrapper
+		.findAllComponents({ name: 'Link' })
+		.find((link) => link.props('doctype') === 'Country')!
+
+const india: PriceRow = {
+	country: 'India',
+	price_type: 'Fixed',
+	amount: 4999,
+	currency: 'INR',
 }
 
 beforeEach(() => {
@@ -66,86 +92,138 @@ beforeEach(() => {
 })
 
 describe('the price a row shows', () => {
-	const inr: PriceRow = { currency: 'INR', price_type: 'Fixed', amount: 4999 }
+	const preview = (formatted: string) => ({
+		country: 'India',
+		currency: 'INR',
+		amount: 0,
+		formatted,
+	})
 
 	it('shows a fixed price as is', () => {
-		expect(
-			priceResultLabel(inr, { currency: 'INR', formatted: '₹ 4,999' })
-		).toBe('₹ 4,999')
+		expect(priceResultLabel(india, preview('₹ 4,999'))).toBe('₹ 4,999')
 	})
 
 	it('shows the percent off and what it comes to', () => {
 		const row: PriceRow = {
-			currency: 'INR',
+			country: 'India',
 			price_type: 'Percent Off',
 			percent_off: 40,
 		}
-		expect(
-			priceResultLabel(row, { currency: 'INR', formatted: '₹ 3,210' })
-		).toBe('−40% → ₹ 3,210')
+		expect(priceResultLabel(row, preview('$ 60'))).toBe('−40% → $ 60')
 	})
 
 	it('keeps only the value its type uses', () => {
-		const row = withRowValue({ ...inr, price_type: 'Percent Off' }, 30)
-		expect(row).toMatchObject({ percent_off: 30, amount: 0 })
+		const row = withRowValue({ ...india, price_type: 'Percent Off' }, 30)
+		expect(row).toMatchObject({ percent_off: 30, amount: 0, currency: null })
+	})
+
+	it('gives a fixed row the regular currency when it has none', () => {
+		const row = withRowValue(
+			{ country: 'India', price_type: 'Fixed', currency: null },
+			30,
+			'USD'
+		)
+		expect(row).toMatchObject({ amount: 30, currency: 'USD' })
 	})
 
 	it('skips rows the server cannot price yet', () => {
-		expect(isPriceable({ ...inr, amount: 0 })).toBe(false)
-		expect(isPriceable({ currency: 'INR', price_type: 'Percent Off' })).toBe(
+		expect(isPriceable({ ...india, amount: 0 })).toBe(false)
+		expect(isPriceable({ country: 'India', price_type: 'Percent Off' })).toBe(
 			true
 		)
 	})
 })
 
 describe('the pricing section', () => {
-	it('adds a fixed row for a picked currency, but not the primary one', async () => {
-		const { wrapper, state } = mountGroup([])
-		const add = wrapper.getComponent({ name: 'Link' })
+	it('puts the regular price first and hides subsidies for a free course', () => {
+		const { wrapper } = mountGroup([india], { paid: false })
 
-		add.vm.$emit('update:modelValue', 'USD')
-		add.vm.$emit('update:modelValue', 'INR')
+		expect(wrapper.find('[data-testid="regular-price"]').exists()).toBe(true)
+		expect(wrapper.find('[data-testid="switch"]').exists()).toBe(false)
+		expect(wrapper.findAll('[data-testid="price-row"]')).toHaveLength(0)
+	})
+
+	it('keeps the rows but hides them while subsidized pricing is off', () => {
+		const { wrapper, state } = mountGroup([india], { enabled: 0 })
+
+		expect(wrapper.findAll('[data-testid="price-row"]')).toHaveLength(0)
+		expect(state.prices).toEqual([india])
+	})
+
+	it('offers Add countries when there are no rows yet', () => {
+		const { wrapper } = mountGroup([])
+
+		expect(wrapper.get('[data-testid="no-country-prices"]').text()).toContain(
+			'Add countries'
+		)
+	})
+
+	it('adds a fixed row in the regular currency for a picked country, once', async () => {
+		const { wrapper, state } = mountGroup([])
+
+		countryPicker(wrapper).vm.$emit('update:modelValue', 'India')
+		await flushPromises()
+		countryPicker(wrapper).vm.$emit('update:modelValue', 'India')
 		await flushPromises()
 
 		expect(state.prices).toEqual([
-			{ currency: 'INR', price_type: 'Fixed', amount: 0 },
+			{ country: 'India', price_type: 'Fixed', amount: 0, currency: 'USD' },
 		])
-		expect(wrapper.findAll('[data-testid="price-row"]')).toHaveLength(1)
+		expect(countryPicker(wrapper).props('filters')).toEqual({
+			name: ['not in', ['India']],
+		})
+	})
+
+	it('lists the rows by country name', () => {
+		const { wrapper } = mountGroup([
+			{ ...india, country: 'Pakistan' },
+			{ ...india, country: 'Bangladesh' },
+			india,
+		])
+
+		expect(
+			wrapper
+				.findAll('[data-testid="price-row"] td:first-child')
+				.map((cell) => cell.text())
+		).toEqual(['Bangladesh', 'India', 'Pakistan'])
 	})
 
 	it('asks the server what each row charges and shows it', async () => {
-		previews.data = [{ currency: 'INR', formatted: '₹ 3,210', amount: 3210 }]
-		const { wrapper } = mountGroup([
-			{ currency: 'INR', price_type: 'Percent Off', percent_off: 40 },
-		])
+		previews.data = [
+			{ country: 'India', currency: 'USD', formatted: '$ 60', amount: 60 },
+		]
+		const row: PriceRow = {
+			country: 'India',
+			price_type: 'Percent Off',
+			percent_off: 40,
+		}
+		const { wrapper } = mountGroup([row])
 		await flushPromises()
 
 		expect(previews.submit).toHaveBeenCalledWith({
 			amount: 100,
 			currency: 'USD',
-			prices: [{ currency: 'INR', price_type: 'Percent Off', percent_off: 40 }],
+			prices: [row],
 		})
 		expect(wrapper.get('[data-testid="price-result"]').text()).toBe(
-			'−40% → ₹ 3,210'
+			'−40% → $ 60'
 		)
 	})
 
-	it('shows why a row has no price', async () => {
-		previews.data = [{ currency: 'XTS', error: 'No exchange rate' }]
+	it('offers a currency only for a fixed row', () => {
 		const { wrapper } = mountGroup([
-			{ currency: 'XTS', price_type: 'Percent Off', percent_off: 10 },
+			india,
+			{ country: 'Kenya', price_type: 'Percent Off', percent_off: 50 },
 		])
-		await flushPromises()
+		const currencies = wrapper
+			.findAllComponents({ name: 'Link' })
+			.filter((link) => link.props('doctype') === 'Currency')
 
-		expect(wrapper.get('[data-testid="price-result"]').text()).toBe(
-			'No exchange rate'
-		)
+		expect(currencies.map((link) => link.props('modelValue'))).toEqual(['INR'])
 	})
 
 	it('switches a row to a percent off and removes it', async () => {
-		const { wrapper, state } = mountGroup([
-			{ currency: 'INR', price_type: 'Fixed', amount: 4999 },
-		])
+		const { wrapper, state } = mountGroup([india])
 		const [type, value] = wrapper.findAll('input')
 
 		await type.setValue('Percent Off')
@@ -154,9 +232,10 @@ describe('the pricing section', () => {
 			price_type: 'Percent Off',
 			percent_off: 25,
 			amount: 0,
+			currency: null,
 		})
 
-		await wrapper.get('button').trigger('click')
+		await wrapper.get('[data-testid="price-row"] button').trigger('click')
 		expect(state.prices).toEqual([])
 	})
 })

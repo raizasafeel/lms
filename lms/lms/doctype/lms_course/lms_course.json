@@ -44,6 +44,7 @@
   "section_break_vqbh",
   "course_price",
   "currency",
+  "enable_country_prices",
   "prices",
   "column_break_sflq",
   "evaluator",
@@ -209,10 +210,18 @@
    "fieldtype": "Column Break"
   },
   {
+   "default": "0",
+   "description": "Learners billed in a country with a price below pay that price.",
+   "fieldname": "enable_country_prices",
+   "fieldtype": "Check",
+   "label": "Subsidized pricing",
+   "depends_on": "eval: doc.paid_course || doc.paid_certificate"
+  },
+  {
    "depends_on": "eval: doc.paid_course || doc.paid_certificate",
    "fieldname": "prices",
    "fieldtype": "Table",
-   "label": "Prices in Other Currencies",
+   "label": "Country Prices",
    "options": "LMS Price"
   },
   {
@@ -363,7 +372,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-11-25 14:00:00.000000",
+ "modified": "2026-11-27 14:00:00.000000",
  "modified_by": "sayali@frappe.io",
  "module": "LMS",
  "name": "LMS Course",

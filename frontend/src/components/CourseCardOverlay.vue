@@ -11,6 +11,11 @@
 		<div class="p-5">
 			<div v-if="!membership" class="text-3xl-semibold text-ink-gray-9 mb-4">
 				{{ priceLabel }}
+				<RegularPrice
+					v-if="course.data?.paid_course"
+					:price="course.data?.regular_price"
+					class="ms-1 text-lg"
+				/>
 			</div>
 			<div v-if="!readOnlyMode">
 				<div v-if="membership" class="space-y-2 mb-8">
@@ -131,6 +136,7 @@ import { resourceErrorMessage } from '@/utils/resource'
 import { useRouter } from 'vue-router'
 import CertificationLinks from '@/components/CertificationLinks.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
+import RegularPrice from '@/components/RegularPrice.vue'
 import VideoPreview from '@/components/VideoPreview.vue'
 import CourseIncludes from '@/components/Courses/CourseIncludes.vue'
 import { redirectToLogin } from '@/utils/login'

@@ -36,6 +36,10 @@
 							</div>
 							<div class="text-ink-gray-9">
 								{{ orderSummary.data.original_amount_formatted }}
+								<RegularPrice
+									:price="orderSummary.data.regular_price"
+									class="ms-1"
+								/>
 							</div>
 						</div>
 						<div v-if="orderSummary.data.discount_amount" class="space-y-1">
@@ -56,6 +60,14 @@
 							</div>
 							<div class="font-bold text-ink-gray-9">
 								{{ orderSummary.data.total_amount_formatted }}
+								<RegularPrice
+									v-if="
+										!orderSummary.data.gst_applied &&
+										!orderSummary.data.discount_amount
+									"
+									:price="orderSummary.data.regular_price"
+									class="ms-1"
+								/>
 							</div>
 						</div>
 					</div>
@@ -267,6 +279,7 @@ import PageBody from '@/components/Layouts/pages/PageBody.vue'
 import { sessionStore } from '../stores/session'
 import Link from '@/components/Controls/Link.vue'
 import NotPermitted from '@/components/NotPermitted.vue'
+import RegularPrice from '@/components/RegularPrice.vue'
 import BillingSkeleton from '@/components/Skeletons/BillingSkeleton.vue'
 import { useLoadingAnnouncement } from '@/utils/a11y'
 import { useTelemetry } from '@framework/ui/telemetry/index'

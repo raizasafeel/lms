@@ -52,7 +52,7 @@ from lms.lms.doctype.lms_enrollment.lms_enrollment import (
 from lms.lms.html_sanitizer import sanitize_rich_text
 from lms.lms.locking import locked_get_all
 from lms.lms.md import find_macros
-from lms.lms.pricing import get_price
+from lms.lms.pricing import get_display_price
 
 RE_SLUG_NOTALLOWED = re.compile("[^a-z0-9]+")
 LMS_ROLES = ["Moderator", "Course Creator", "Batch Evaluator", "LMS Student"]
@@ -1628,10 +1628,7 @@ def get_course_card_details(courses: list) -> list:
 		course.instructors = get_public_instructors("LMS Course", course.name)
 
 		if course.paid_course and course.published == 1:
-			course.amount, course.currency = get_price(
-				"LMS Course", course.name, course.course_price, course.currency
-			)
-			course.price = fmt_money(course.amount, 0, course.currency)
+			course.update(get_display_price("LMS Course", course.name, course.course_price, course.currency))
 
 	return courses
 
@@ -1806,10 +1803,10 @@ def build_course_details(course: str) -> dict:
 	course_details.update(get_course_content_stats(course))
 	# course_details.is_instructor = is_instructor(course_details.name)
 	if course_details.paid_course or course_details.paid_certificate:
-		amount, currency = get_price(
+		display = get_display_price(
 			"LMS Course", course_details.name, course_details.course_price, course_details.currency
 		)
-		course_details.price = fmt_money(amount, 0, currency)
+		course_details.price, course_details.regular_price = display.price, display.regular_price
 
 	if frappe.session.user == "Guest":
 		course_details.is_instructor = False
@@ -2422,10 +2419,9 @@ def build_batch_details(batch: str) -> dict:
 	if batch_details.paid_batch and (
 		batch_details.start_date >= getdate() or batch_details.accept_enrollments
 	):
-		batch_details.amount, batch_details.currency = get_price(
-			"LMS Batch", batch_details.name, batch_details.amount, batch_details.currency
+		batch_details.update(
+			get_display_price("LMS Batch", batch_details.name, batch_details.amount, batch_details.currency)
 		)
-		batch_details.price = fmt_money(batch_details.amount, 0, batch_details.currency)
 
 	if batch_details.seat_count:
 		batch_details.seats_left = batch_details.seat_count - len(batch_students)
@@ -3134,10 +3130,11 @@ def get_order_summary(doctype: str, docname: str, coupon: str | None = None, cou
 	# Resolved once, so the currency and the GST cannot follow different countries.
 	country = get_billing_country(country)
 
-	details.amount, details.currency = get_price(doctype, docname, details.amount, details.currency, country)
+	display = get_display_price(doctype, docname, details.amount, details.currency, country)
+	details.update(amount=display.amount, currency=display.currency, regular_price=display.regular_price)
 
 	details.original_amount = details.amount
-	details.original_amount_formatted = fmt_money(details.amount, 0, details.currency)
+	details.original_amount_formatted = display.price
 
 	adjust_amount_for_coupon(details, coupon, doctype, docname)
 	get_gst_details(details, country)
@@ -4106,8 +4103,7 @@ def get_batch_card_details(batches: list) -> list:
 
 		set_late_enrollment(batch)
 		if batch.paid_batch and (batch.start_date >= getdate() or batch.get("enrollment_closes_on")):
-			batch.amount, batch.currency = get_price("LMS Batch", batch.name, batch.amount, batch.currency)
-			batch.price = fmt_money(batch.amount, 0, batch.currency)
+			batch.update(get_display_price("LMS Batch", batch.name, batch.amount, batch.currency))
 
 	return batches
 
